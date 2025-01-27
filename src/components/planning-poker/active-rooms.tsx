@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Skeleton } from "@mantine/core";
 import { Datum } from "@/interfaces/active_rooms";
+import { useNavigate } from "react-router-dom";
 
 const statusConfig = {
   live: {
@@ -46,6 +47,7 @@ export function ActiveRooms() {
   const [data, setData] = useState<ActiveRoom[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,6 +85,11 @@ export function ActiveRooms() {
     };
     fetchData();
   }, []);
+
+  const handleJoinRoom = (room_id: string) => {
+    //TODO: Realizar verificacion de session
+    navigate(`room/${room_id}`);
+  };
 
   return (
     <Card>
@@ -148,7 +155,7 @@ export function ActiveRooms() {
                       ?.label
                   }
                 </Badge>
-                <Button>Unirse</Button>
+                <Button onClick={ () => handleJoinRoom(room.id) }>Unirse</Button>
               </div>
             </div>
           ))}
