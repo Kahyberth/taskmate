@@ -9,6 +9,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { notifications } from "@mantine/notifications";
+import "@mantine/notifications/styles.css";
+
 import {
   Tooltip,
   TooltipContent,
@@ -46,65 +49,6 @@ import { Socket, io } from "socket.io-client";
 import { AuthContext } from "@/context/AuthProvider";
 import { useRef } from "react";
 
-// const mockUsers = [
-//   { id: 1, name: 'Alice Johnson', avatar: '/placeholder.svg?height=40&width=40', role: 'Product Owner' },
-//   { id: 2, name: 'Bob Smith', avatar: '/placeholder.svg?height=40&width=40', role: 'Scrum Master' },
-//   { id: 3, name: 'Charlie Davis', avatar: '/placeholder.svg?height=40&width=40', role: 'Developer' },
-//   { id: 4, name: 'Diana Miller', avatar: '/placeholder.svg?height=40&width=40', role: 'Designer' },
-//   { id: 5, name: 'Ethan Brown', avatar: '/placeholder.svg?height=40&width=40', role: 'QA Engineer' },
-// ]
-
-const mockUserStories = [
-  {
-    id: 1,
-    title: "Implement user authentication",
-    description:
-      "As a user, I want to be able to securely log in to the application",
-    priority: "High",
-    acceptanceCriteria: [
-      "Secure password hashing",
-      "Two-factor authentication option",
-      "Password reset functionality",
-    ],
-  },
-  {
-    id: 2,
-    title: "Create dashboard layout",
-    description:
-      "As a user, I want to see a clear overview of my tasks and projects",
-    priority: "Medium",
-    acceptanceCriteria: [
-      "Responsive design",
-      "Customizable widgets",
-      "Real-time data updates",
-    ],
-  },
-  {
-    id: 3,
-    title: "Develop API integration",
-    description:
-      "As a developer, I want to integrate our app with external APIs",
-    priority: "High",
-    acceptanceCriteria: [
-      "OAuth 2.0 implementation",
-      "Rate limiting",
-      "Error handling and logging",
-    ],
-  },
-  {
-    id: 4,
-    title: "Design responsive UI",
-    description:
-      "As a user, I want the application to work seamlessly on all devices",
-    priority: "Medium",
-    acceptanceCriteria: [
-      "Mobile-first approach",
-      "Cross-browser compatibility",
-      "Accessibility compliance",
-    ],
-  },
-];
-
 const fibonacciSequence = ["0", "1", "2", "3", "5", "8", "13", "21", "34", "?"];
 
 interface User {
@@ -112,6 +56,18 @@ interface User {
   name: string;
   avatar: string;
   role: string;
+}
+
+export interface Story {
+  id: number;
+  title: string;
+  description: string;
+  priority: "High" | "Medium" | "Low" | string;
+  acceptanceCriteria?: string[];
+}
+
+interface message {
+  value: string;
 }
 
 export function PlanningPokerRoom() {
@@ -123,8 +79,7 @@ export function PlanningPokerRoom() {
   const [chatMessages, setChatMessages] = useState<
     { user: string; message: string; timestamp: string }[]
   >([]);
-  const [currentStory, setCurrentStory] = useState(mockUserStories[0]);
-  const [storyIndex, setStoryIndex] = useState(0);
+  const [currentStory, setCurrentStory] = useState<Story | null>(null);
   const [votingHistory, setVotingHistory] = useState<
     { story: string; average: number; date: string }[]
   >([]);
@@ -161,8 +116,33 @@ export function PlanningPokerRoom() {
       socket.emit("join-room", room_id);
     }
 
+    socket.on("story-changed", (story: Story) => {
+      setIsVotingComplete(false);
+      setSelectedCard(null);
+      setCurrentStory(story);
+      setChatMessages([]);
+      setVotes([]);
+      setTimer(null);
+    });
+
+    socket.on("success", ({ value }: message) => {
+      notifications.show({
+        title: "✔️Success",
+        message: value,
+        color: "green",
+      });
+    });
+
     socket.on("participant-list", (participants: User[]) => {
       setUsers(participants);
+    });
+
+    socket.on("error", ({ value }: message) => {
+      notifications.show({
+        title: "❌Error",
+        message: value,
+        color: "red",
+      });
     });
 
     socket.on("message", (messageData: { message: string; sender: User }) => {
@@ -175,6 +155,22 @@ export function PlanningPokerRoom() {
         },
       ]);
     });
+
+    socket.on("voting-repeated", ({ value }) => {
+      // Mostrar notificación, si quieres
+      notifications.show({
+        title: "Voting Reset",
+        message: value,
+        color: "blue",
+      });
+    
+      // Restablecer estados locales para permitir votar otra vez
+      setIsVotingComplete(false);
+      setSelectedCard(null);
+      setVotes([]);
+      setVotingResults(null);
+    });
+    
 
     socket.on("timer-started", ({ duration }) => {
       setTimer(duration);
@@ -246,11 +242,9 @@ export function PlanningPokerRoom() {
   };
 
   const handleNextStory = () => {
-    const nextIndex = (storyIndex + 1) % mockUserStories.length;
-    setCurrentStory(mockUserStories[nextIndex]);
-    setStoryIndex(nextIndex);
-    setIsVotingComplete(false);
-    setSelectedCard(null);
+    if (socketRef.current && room_id) {
+      socketRef.current.emit("next-story", room_id);
+    }
   };
 
   const toggleDarkMode = () => {
@@ -281,10 +275,12 @@ export function PlanningPokerRoom() {
   };
 
   const handleRepeatVoting = () => {
-    setIsVotingComplete(false);
-    setSelectedCard(null);
-    setVotingResults(null);
+    if (room_id && socketRef.current) {
+      socketRef.current.emit("repeat-voting", room_id);
+    }
   };
+  
+
 
   return (
     <div
@@ -400,22 +396,22 @@ export function PlanningPokerRoom() {
                   isDarkMode ? "text-gray-200" : "text-gray-700"
                 }`}
               >
-                {currentStory.title}
+                {currentStory?.title}
               </h2>
               <p
                 className={`text-sm ${
                   isDarkMode ? "text-gray-400" : "text-gray-500"
                 }`}
               >
-                {currentStory.description}
+                {currentStory?.description}
               </p>
             </div>
             <Badge
               variant={
-                currentStory.priority === "High" ? "destructive" : "default"
+                currentStory?.priority === "High" ? "destructive" : "default"
               }
             >
-              {currentStory.priority} Priority
+              {currentStory?.priority} Priority
             </Badge>
           </div>
         </header>
