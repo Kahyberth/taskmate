@@ -5,9 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 interface FormData {
-  firstName: string;
+  name: string;
   lastName: string;
   email: string;
   password: string;
@@ -15,7 +17,7 @@ interface FormData {
 }
 
 interface FormErrors {
-  firstName?: string;
+  name?: string;
   lastName?: string;
   email?: string;
   password?: string;
@@ -24,7 +26,7 @@ interface FormErrors {
 
 export function RegistrationForm() {
   const [formData, setFormData] = useState<FormData>({
-    firstName: "",
+    name: "",
     lastName: "",
     email: "",
     password: "",
@@ -33,6 +35,8 @@ export function RegistrationForm() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  const navigate = useNavigate();
 
   const location = useLocation<{ email?: string }>();
 
@@ -49,8 +53,8 @@ export function RegistrationForm() {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = "El nombre es requerido";
+    if (!formData.name.trim()) {
+      newErrors.name = "El nombre es requerido";
     }
 
     if (!formData.lastName.trim()) {
@@ -84,11 +88,25 @@ export function RegistrationForm() {
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    //MEJORAR
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/auth/register`,
+        formData,
+        { withCredentials: true }
+      );
+  
+      navigate("/dashboard");
 
-    setIsSubmitting(false);
-    setIsSuccess(true);
+      setIsSuccess(true);
+    } catch (error) {
+
+      console.error("Error during registration:", error);
+  
+      // setError("Registration failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,18 +138,18 @@ export function RegistrationForm() {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="firstName">Nombre</Label>
+          <Label htmlFor="name">Nombre</Label>
           <Input
-            id="firstName"
-            name="firstName"
-            value={formData.firstName}
+            id="name"
+            name="name"
+            value={formData.name}
             onChange={handleChange}
-            className={errors.firstName ? "border-red-500" : ""}
+            className={errors.name ? "border-red-500" : ""}
           />
-          {errors.firstName && (
+          {errors.name && (
             <div className="flex items-center gap-2 text-red-500 text-sm">
               <AlertCircle className="h-4 w-4" />
-              {errors.firstName}
+              {errors.name}
             </div>
           )}
         </div>
