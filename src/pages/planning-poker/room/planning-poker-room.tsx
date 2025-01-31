@@ -88,6 +88,7 @@ export function PlanningPokerRoom() {
   const [isExitDialogOpen, setIsExitDialogOpen] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const socketRef = useRef<Socket | null>(null);
+  const lastMessageRef = useRef<HTMLDivElement>(null);
   const [votes, setVotes] = useState<{ value: string; participant: User }[]>(
     []
   );
@@ -102,6 +103,12 @@ export function PlanningPokerRoom() {
 
   const { id: room_id } = useParams();
   const { user: user_data } = useContext(AuthContext);
+
+  useEffect(() => {
+    if (lastMessageRef.current) {
+      lastMessageRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages]);
 
   useEffect(() => {
     const socket = io("http://localhost:8081", {
@@ -780,44 +787,48 @@ export function PlanningPokerRoom() {
                   }`}
                 >
                   <CardHeader>
-                    <CardTitle className="flex items-center">
+                    <CardTitle className="flex items-center ">
                       <MessageSquare className="mr-2 text-blue-600" />
                       Team Chat
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="flex-1 flex flex-col">
-                    <ScrollArea className="flex-1 pr-4">
-                      {chatMessages.map((msg, index) => (
-                        <motion.div
-                          key={index}
-                          className="mb-4"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3 }}
-                        >
-                          <div className="flex items-center mb-1">
-                            <span className="font-semibold text-blue-600">
-                              {msg.user}
-                            </span>
-                            <span
-                              className={`text-xs ${
-                                isDarkMode ? "text-gray-400" : "text-gray-500"
-                              } ml-2`}
-                            >
-                              {msg.timestamp}
-                            </span>
-                          </div>
-                          <p
-                            className={`${
-                              isDarkMode
-                                ? "bg-gray-700 text-gray-200"
-                                : "bg-gray-100 text-gray-700"
-                            } rounded-lg p-2`}
+                  <CardContent className="flex-1 flex flex-col min-h-0">
+                    <ScrollArea className="flex-1 h-full pr-4 pb-4 overflow-y-auto max-h-96">
+                      <div className="space-y-4 pb-4 max-h-80">
+                        {chatMessages.map((msg, index) => (
+                          <motion.div
+                            key={index}
+                            ref={index === chatMessages.length - 1 ? lastMessageRef : null}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="w-full flex flex-col "
                           >
-                            {msg.message}
-                          </p>
-                        </motion.div>
-                      ))}
+                            <div className={`flex items-center mb-1 ${msg.user === "You" ? "ml-auto" : ""}`}>
+                              <span className="font-semibold text-blue-600">
+                                {msg.user}
+                              </span>
+                              <span
+                                className={`text-xs ${
+                                  isDarkMode ? "text-gray-400" : "text-gray-500"
+                                } ml-2`}
+                              >
+                                {msg.timestamp}
+                              </span>
+                            </div>
+                            <div
+                              className={`${
+                                isDarkMode
+                                  ? "bg-gray-700 text-gray-200"
+                                  : "bg-gray-100 text-gray-700"
+                              } rounded-lg p-2 break-words whitespace-pre-wrap max-w-[80%] w-fit 
+                              ${msg.user === "You" ? "ml-auto" : ""}`}
+                            >
+                              {msg.message}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
                     </ScrollArea>
                     <Separator
                       className={`my-4 ${
