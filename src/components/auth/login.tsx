@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "react-router-dom";
 import { AuthContext } from "@/context/AuthProvider";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { notifications } from "@mantine/notifications";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -16,7 +16,6 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const navigate = useNavigate();
   const { login } = useContext(AuthContext);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,20 +23,25 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("Login");
-    console.log({ email, password });
-
-    const response = await axios.post(
+    await axios.post(
       `${import.meta.env.VITE_API_URL}/auth/login`,
       { email, password },
       { withCredentials: true }
-    )    
-
-    if (response.status === 200) {
-      console.log(response.data.data);
-      login(response.data.data);
-      navigate("/dashboard");
+    ).then((res) => {
+      login(res.data.data)
+      notifications.show({ title: "Bienvenido a TaskMate 🎉", 
+        message: "Has iniciado sesión correctamente", 
+        color: "blue" 
+      })
     }
+    ).catch((err) => {
+      notifications.show(
+        { title: "Error", 
+          message: `Ocurrió un error al iniciar sesión: ${err.response.data.message}`, 
+          color: "red" 
+        }
+      )
+    });
   };
 
   return (
