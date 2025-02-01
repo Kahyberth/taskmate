@@ -793,8 +793,8 @@ export function PlanningPokerRoom() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col min-h-0">
-                    <ScrollArea className="flex-1 h-full pr-4 pb-4 overflow-y-auto max-h-96">
-                      <div className="space-y-4 pb-4 max-h-80">
+                    <ScrollArea className="flex-1 h-full pr-4 pb-4 overflow-y-auto max-h-[500px]">
+                      <div className="space-y-4 pb-4 max-h-[500px]">
                         {chatMessages.map((msg, index) => (
                           <motion.div
                             key={index}
@@ -802,7 +802,7 @@ export function PlanningPokerRoom() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3 }}
-                            className="w-full flex flex-col "
+                            className="w-full flex flex-col"
                           >
                             <div className={`flex items-center mb-1 ${msg.user === "You" ? "ml-auto" : ""}`}>
                               <span className="font-semibold text-blue-600">
@@ -817,11 +817,12 @@ export function PlanningPokerRoom() {
                               </span>
                             </div>
                             <div
-                              className={`${
+                               className={`${
                                 isDarkMode
                                   ? "bg-gray-700 text-gray-200"
                                   : "bg-gray-100 text-gray-700"
-                              } rounded-lg p-2 break-words whitespace-pre-wrap max-w-[80%] w-fit 
+                              } rounded-lg p-2 break-words whitespace-pre-wrap max-w-full w-fit
+                              overflow-hidden word-break break-all overflow-wrap-anywhere
                               ${msg.user === "You" ? "ml-auto" : ""}`}
                             >
                               {msg.message}
