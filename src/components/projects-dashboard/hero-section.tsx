@@ -1,33 +1,24 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { CheckCircle, AlertCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { useState } from "react"
+import { motion } from "framer-motion"
+import { CheckCircle, AlertCircle } from 'lucide-react'
+
 export function HeroSection() {
-  const [email, setEmail] = useState("");
-  const [isValid, setIsValid] = useState<boolean | null>(null);
-  const navigate = useNavigate();
+  const [email, setEmail] = useState("")
+  const [isValid, setIsValid] = useState<boolean | null>(null)
 
   const validateEmail = (email: string) => {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(email);
-  };
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return regex.test(email)
+  }
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEmail(e.target.value);
+    setEmail(e.target.value)
     if (e.target.value) {
-      setIsValid(validateEmail(e.target.value));
+      setIsValid(validateEmail(e.target.value))
     } else {
-      setIsValid(null);
-    }
-  };
-
-  const handleInscription = () => {
-    if (isValid) {
-      navigate("/auth/register", {
-        state: { email },
-      });
+      setIsValid(null)
     }
   }
 
@@ -41,12 +32,12 @@ export function HeroSection() {
         ease: "easeInOut",
       },
     },
-  };
+  }
 
   return (
-    <section className="container relative px-4 py-16 md:py-24 mx-auto">
+    <section className="container relative px-4 py-16 md:py-24">
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-        <motion.div
+        <motion.div 
           className="flex flex-col justify-center space-y-4"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -59,30 +50,28 @@ export function HeroSection() {
               transition={{ delay: 0.2 }}
             >
               <span className="inline-block rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-600">
-                Nuevo: TaskMate 1.0
+                Nuevo: Jira 2.0
               </span>
             </motion.div>
-            <motion.h1
+            <motion.h1 
               className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              Con TaskMate, el éxito no solo empieza, se construye.
+              Los buenos resultados comienzan con Jira
             </motion.h1>
-            <motion.p
+            <motion.p 
               className="max-w-[600px] text-gray-500 md:text-xl"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
             >
-              TaskMate es una aplicación de gestión de tareas y proyectos que te
-              ayuda a organizar tu trabajo y a colaborar con tu equipo de manera
-              eficiente.
+              La única herramienta de gestión de proyectos que necesitas para planificar y monitorizar el trabajo de todos los equipos.
             </motion.p>
           </div>
         </motion.div>
-        <motion.div
+        <motion.div 
           className="flex flex-col justify-center"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -90,17 +79,12 @@ export function HeroSection() {
         >
           <div className="mx-auto w-full max-w-sm space-y-4">
             <div className="space-y-2">
-              <h2 className="text-lg font-medium">
-                Dirección de correo electrónico
-              </h2>
+              <h2 className="text-lg font-medium">Dirección de correo electrónico del trabajo</h2>
               <div className="relative">
                 <Input
                   className={`w-full pr-10 ${
-                    isValid === true
-                      ? "border-green-500 focus-visible:ring-green-500"
-                      : isValid === false
-                      ? "border-red-500 focus-visible:ring-red-500"
-                      : ""
+                    isValid === true ? 'border-green-500 focus-visible:ring-green-500' :
+                    isValid === false ? 'border-red-500 focus-visible:ring-red-500' : ''
                   }`}
                   placeholder="tunombre@empresa.com"
                   type="email"
@@ -119,16 +103,13 @@ export function HeroSection() {
                 )}
               </div>
               {isValid === false && (
-                <p className="text-sm text-red-500">
-                  Por favor, introduce un email válido
-                </p>
+                <p className="text-sm text-red-500">Por favor, introduce un email válido</p>
               )}
             </div>
-            <Button
-              className="w-full bg-blue-600 hover:bg-blue-700"
+            <Button 
+              className="w-full bg-blue-600 hover:bg-blue-700" 
               size="lg"
               disabled={!isValid}
-              onClick={handleInscription}
             >
               Inscribirse
             </Button>
@@ -137,17 +118,12 @@ export function HeroSection() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  O seguir con
-                </span>
+                <span className="bg-background px-2 text-muted-foreground">O seguir con</span>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Button
-                variant="outline"
-                className="w-full group relative overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-600 opacity-0 transition-opacity group-hover:opacity-10 m-20" />
+              <Button variant="outline" className="w-full group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-600 opacity-0 transition-opacity group-hover:opacity-10" />
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -168,18 +144,10 @@ export function HeroSection() {
                 </svg>
                 Google
               </Button>
-              <Button
-                variant="secondary"
-                className="w-full relative flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold rounded-lg py-2 px-4 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition duration-200"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-600 opacity-0 transition-opacity hover:opacity-20" />
-                <svg
-                  className="h-6 w-6"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M2 2h10v10H2V2zm12 0h10v10H14V2zM2 14h10v10H2V14zm12 0h10v10H14V14z" />
+              <Button variant="outline" className="w-full group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-600 opacity-0 transition-opacity group-hover:opacity-10" />
+                <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M21.593 7.203a2.506 2.506 0 0 0-1.762-1.766C18.265 5.007 12 5 12 5s-6.264-.007-7.831.404a2.56 2.56 0 0 0-1.766 1.778C2 8.769 2 12 2 12s0 3.231.437 4.796a2.506 2.506 0 0 0 1.767 1.763c1.566.411 7.83.404 7.83.404s6.264.007 7.831-.404a2.506 2.506 0 0 0 1.767-1.763C22 15.231 22 12 22 12s0-3.231-.437-4.797z" />
                 </svg>
                 Microsoft
               </Button>
@@ -188,7 +156,7 @@ export function HeroSection() {
         </motion.div>
       </div>
       <motion.div
-        className="absolute -right-10 top-0 -z-10 h-full w-1/2 bg-gradient-to-bl from-blue-50/10 via-blue-50/15 to-transparent rounded-lg"
+        className="absolute right-0 top-0 -z-10 h-full w-1/2 bg-gradient-to-bl from-blue-50 via-blue-50/50 to-transparent"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1 }}
@@ -202,5 +170,6 @@ export function HeroSection() {
         <div className="h-32 w-32 rounded-full bg-gradient-to-r from-blue-400/20 to-purple-400/20 blur-3xl" />
       </motion.div>
     </section>
-  );
+  )
 }
+

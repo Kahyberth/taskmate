@@ -8,7 +8,7 @@ import { ProjectStatus } from './project-status'
 export function ProjectRow({ project }: { project: any }) {
   return (
     <div className="group relative rounded-lg border p-4 hover:border-blue-600">
-      <Link to={`/dashboard/projects/${project.id}`} className="absolute inset-0 z-10" />
+      <Link to={`/projects/${project.id}`} className="absolute inset-0 z-10" />
       <div className="grid gap-4 md:grid-cols-[1fr_auto_auto_auto_auto_auto_auto]">
         <div className="space-y-1">
           <h3 className="font-semibold">{project.name}</h3>

@@ -158,7 +158,7 @@ export function SiteFooter() {
         </div>
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t pt-8 sm:flex-row">
           <p className="text-sm text-gray-500">
-            © 2025 TaskMate. Todos los derechos reservados.
+            © 2024 Jira. Todos los derechos reservados.
           </p>
           <div className="flex gap-4">
             <Link to="#" className="text-gray-500 hover:text-blue-600">

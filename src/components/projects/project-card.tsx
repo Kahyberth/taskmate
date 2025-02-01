@@ -18,7 +18,7 @@ const statusMap = {
 export function ProjectCard({ project }: { project: any }) {
   return (
     <Card className="group relative overflow-hidden transition-all hover:border-blue-600">
-      <Link to={`/dashboard/projects/${project.id}`} className="absolute inset-0 z-10" />
+      <Link to={`/projects/${project.id}`} className="absolute inset-0 z-10" />
       <CardHeader className="space-y-2">
         <div className="flex items-start justify-between">
           <div className="space-y-1">

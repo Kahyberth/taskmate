@@ -15,6 +15,9 @@ import ProjectsPage from "@/pages/projects/page";
 import { PlanningPokerRoom } from "@/pages/planning-poker/room/planning-poker-room";
 import TeamsPage from "@/pages/teams/team-page";
 import ChatPage from "@/pages/chat/chat-page";
+import ProjectsDashboardLayout from "@/layouts/projects/layout";
+import BacklogPage from "@/pages/projects/backlog/page";
+import BoardPage from "@/pages/projects/board/page";
 
 function AppRoutes() {
   return (
@@ -39,6 +42,20 @@ function AppRoutes() {
           <Route path="teams" element={<TeamsPage />} />
           <Route path="chat" element={<ChatPage />} />
         </Route>
+
+        <Route
+          path="/projects/:project_name"
+          element={
+            <ProtectedRoute>
+              <ProjectsDashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<BacklogPage />} />
+          <Route path="backlog" element={<BacklogPage />} />
+          <Route path="board" element={<BoardPage />} />
+        </Route>
+
 
         <Route
           path="/"

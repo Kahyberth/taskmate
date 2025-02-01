@@ -50,6 +50,8 @@ import { AuthContext } from "@/context/AuthProvider";
 import { useRef } from "react";
 
 const fibonacciSequence = ["0", "1", "2", "3", "5", "8", "13", "21", "34", "?"];
+// const fibonacciModified = ["0", "1", "2", "3", "5", "8", "13", "20", "40", "100", "?"];
+// const tallas = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "?"];
 
 interface User {
   id: number;
@@ -925,6 +927,7 @@ export function PlanningPokerRoom() {
             <Button
               className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
               onClick={handleNextStory}
+              disabled={!isVotingComplete}
             >
               Next User Story
               <ChevronRight className="ml-2 h-5 w-4" />

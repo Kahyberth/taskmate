@@ -1,6 +1,6 @@
 const features = [
   {
-    title: "Desarrollo de softwares",
+    title: "Desarrollo de software",
     video: "/taskmate_1.mp4",
   },
   {
