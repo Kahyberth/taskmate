@@ -1,26 +1,38 @@
-import { useContext, useState } from "react";
+import { useEffect, useState, useContext, FormEvent } from "react";
 import {
   Dialog,
+  DialogHeader,
   DialogContent,
+  DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
-  SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectContent,
+  SelectItem,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import axios from "axios";
+import { Button } from "@/components/ui/button";
 import { AuthContext } from "@/context/AuthProvider";
 import { VotingScale } from "@/enums/room-scale.enum";
+import axios from "axios";
+
+// Interfaz para proyectos
+interface Project {
+  id: string;
+  title: string;
+}
+
+// Interfaz para historias de usuario
+interface UserStory {
+  id: number;
+  title: string;
+}
 
 export function CreateRoomDialog({
   open,
@@ -29,17 +41,116 @@ export function CreateRoomDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [auth, setAuth] = useState(false);
+  
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+
+  // 2. Cargar proyectos al montar el componente
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        // const response = await axios.get(`${import.meta.env.VITE_API_URL}/projects/`);
+        // setProjects(response.data);
+        // if (response.data.length > 0) {
+        //   setSelectedProjectId(response.data[0].id);
+        // }
+
+
+        setProjects([
+          {
+            id: '1',
+            title: 'Proyecto 1'
+          },
+          {
+            id: '2',
+            title: 'Proyecto 2'
+          },
+        ]);
+
+        setSelectedProjectId('1');
+
+      } catch (error) {
+        console.error("Error al cargar proyectos:", error);
+      }
+    };
+
+    fetchProjects();
+  }, []);
+
+  // 3. Cargar historias de usuario según el proyecto seleccionado
+  const [userStories, setUserStories] = useState<UserStory[]>([]);
+  useEffect(() => {
+    if (!selectedProjectId) return;
+
+    const fetchUserStories = async () => {
+      try {
+        // const response = await axios.get(
+        //   `${import.meta.env.VITE_API_URL}/projects/stories/${selectedProjectId}`
+        // );
+        // setUserStories(response.data);
+
+        setUserStories([
+          {
+            id: 1,
+            title: 'Historia 1'
+          },
+          {
+            id: 2,
+            title: 'Historia 2'
+          },
+          {
+            id: 3,
+            title: 'Historia 3'
+          },
+          {
+            id: 4,
+            title: 'Historia 4'
+          },
+          {
+            id: 5,
+            title: 'Historia 5'
+          },
+          {
+            id: 6,
+            title: 'Historia 6'
+          },
+        ]);
+
+      } catch (error) {
+        console.error("Error al cargar historias de usuario:", error);
+      }
+    };
+
+    fetchUserStories();
+  }, [selectedProjectId]);
+
+ 
   const [roomName, setRoomName] = useState("");
   const [description, setDescription] = useState("");
-  const [project, setProject] = useState("");
-  const [scale, setScale] = useState("fibonacci");
-  const [code, setCode] = useState("");
+  const [votingScale, setVotingScale] = useState<VotingScale>(VotingScale.FIBONACCI);
+
+
+  const [requireCode, setRequireCode] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
+
+
+  const [loadAllStories, setLoadAllStories] = useState(true);
+  
+  const [selectedStories, setSelectedStories] = useState<number[]>([]);
+  const handleStorySelection = (id: number) => {
+    setSelectedStories((prev) =>
+      prev.includes(id) ? prev.filter((storyId) => storyId !== id) : [...prev, id]
+    );
+  };
+
+
+  const [isLoading, setIsLoading] = useState(false);
+
 
   const { user } = useContext(AuthContext);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -47,13 +158,17 @@ export function CreateRoomDialog({
       await axios.post(`${import.meta.env.VITE_API_URL}/poker/create-session`, {
         session_name: roomName,
         description,
+        project: selectedProjectId,
+        voting_scale: votingScale,
         created_by: user?.id,
-        voting_scale: scale,
-        session_code: code,
+        requireCode,
+        accessCode: requireCode ? accessCode : undefined,
+        cards: loadAllStories ? userStories : selectedStories,
       });
+
       onOpenChange(false);
     } catch (error) {
-      console.error("Error al crear la sala:", error);
+      console.error("Error creando la sala:", error);
     } finally {
       setIsLoading(false);
     }
@@ -61,117 +176,178 @@ export function CreateRoomDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[540px]">
         <DialogHeader>
-          <DialogTitle>Crear nueva sala de Planning Poker</DialogTitle>
-          <DialogDescription>
-            Configura una nueva sesión de Planning Poker para tu equipo
+          <DialogTitle className="text-lg font-semibold">
+            Crear nueva sala de Planning Poker
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Configura una nueva sesión de Planning Poker para tu equipo.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="roomName">Nombre de la sala</Label>
-            <Input
-              id="roomName"
-              value={roomName}
-              onChange={(e) => setRoomName(e.target.value)}
-              placeholder="Ej: Sprint 23 Planning"
-              required
-            />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Descripción</Label>
-            <Input
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ej: Seguridad y detalles... "
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Proyecto</Label>
-            <Select
-              value={project}
-              onValueChange={(value) => setProject(value)}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona un proyecto" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ecommerce">E-commerce Platform</SelectItem>
-                <SelectItem value="inventory">Inventory System</SelectItem>
-                <SelectItem value="mobile">Mobile App</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Escala de votación</Label>
-            <Select
-              value={scale}
-              onValueChange={(value) => setScale(value)}
-              defaultValue="fibonacci"
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona una escala" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={VotingScale.FIBONACCI}>
-                  Fibonacci (1,2,3,5,8,13,21)
-                </SelectItem>
-                <SelectItem value={VotingScale.MODIFIED_FIBONNACI}>
-                  Modificada (0,½,1,2,3,5,8,13,20,40,100)
-                </SelectItem>
-                <SelectItem value={VotingScale.TSHIRT}>
-                  Tallas (XS,S,M,L,XL)
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            {auth && (
-              <div className="space-y-2">
-                <Label htmlFor="code">Código</Label>
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* SECCIÓN: Datos principales */}
+          <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label htmlFor="roomName" className="font-medium">
+                  Nombre de la sala
+                </Label>
                 <Input
-                  id="code"
-                  maxLength={6}
-                  type="password"
+                  id="roomName"
+                  placeholder="Ej: Sprint 23 Planning"
+                  value={roomName}
+                  onChange={(e) => setRoomName(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label className="font-medium">Proyecto</Label>
+                <Select
+                  // El value es el ID del proyecto seleccionado
+                  value={selectedProjectId}
+                  // Actualiza el ID cuando el usuario selecciona otro proyecto
+                  onValueChange={(val) => {
+                    setSelectedProjectId(val);
+                    setSelectedStories([]); // limpiar historias seleccionadas
+                  }}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un proyecto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.length > 0 ? (
+                      projects.map((proj) => (
+                        <SelectItem key={proj.id} value={proj.id}>
+                          {proj.title}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="" disabled>
+                        (No hay proyectos disponibles)
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="description" className="font-medium">
+                Descripción
+              </Label>
+              <Input
+                id="description"
+                placeholder="Describe el propósito de esta sesión"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          {/* SECCIÓN: Configuración de la votación */}
+          <div className="border rounded-md p-4 space-y-4">
+            <h3 className="text-base font-semibold mb-1">Configuración de la votación</h3>
+            {/* Escala de votación */}
+            <div>
+              <Label className="font-medium mb-2 block">Escala de votación</Label>
+              <Select
+                value={votingScale}
+                onValueChange={(val: VotingScale) => setVotingScale(val)}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una escala" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={VotingScale.FIBONACCI}>
+                    Fibonacci (1,2,3,5,8,13,21)
+                  </SelectItem>
+                  <SelectItem value={VotingScale.MODIFIED_FIBONNACI}>
+                    Modificada (0,½,1,2,3,5,8,13,20,40,100)
+                  </SelectItem>
+                  <SelectItem value={VotingScale.TSHIRT}>
+                    Tallas (XS,S,M,L,XL)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Checkboxes de configuración */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="requireCode"
+                  checked={requireCode}
+                  onCheckedChange={(checked) => setRequireCode(checked === true)}
+                />
+                <Label htmlFor="requireCode">Requerir código de acceso</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="loadAllStories"
+                  checked={loadAllStories}
+                  onCheckedChange={(checked) => {
+                    setLoadAllStories(!!checked);
+                    // Al desmarcar, limpiar historias seleccionadas
+                    if (!checked) setSelectedStories([]);
+                  }}
+                />
+                <Label htmlFor="loadAllStories">Cargar todas las historias</Label>
+              </div>
+            </div>
+
+            {requireCode && (
+              <div className="mt-3">
+                <Label htmlFor="accessCode" className="font-medium">
+                  Código de acceso
+                </Label>
+                <Input
+                  id="accessCode"
+                  type="text"
                   placeholder="Ej: A123..."
-                  onChange={(e) => setCode(e.target.value)}
+                  maxLength={6}
+                  value={accessCode}
+                  onChange={(e) => setAccessCode(e.target.value)}
                   required
                 />
               </div>
             )}
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="assignCode"
-                checked={auth}
-                onCheckedChange={() => setAuth(!auth)}
-              />
-              <Label htmlFor="assignCode">Asignar código</Label>
+          {/* SECCIÓN: Selección de historias (si NO se cargan todas) */}
+          {!loadAllStories && (
+            <div className="border rounded-md p-4 space-y-4">
+              <h3 className="text-base font-semibold mb-1">
+                Selecciona las historias de usuario
+              </h3>
+              <div className="max-h-44 overflow-y-auto space-y-2">
+                {userStories.length > 0 ? (
+                  userStories.map((story) => (
+                    <div key={story.id} className="flex items-center space-x-2 text-sm">
+                      <Checkbox
+                        id={`story-${story.id}`}
+                        checked={selectedStories.includes(story.id)}
+                        onCheckedChange={() => handleStorySelection(story.id)}
+                      />
+                      <Label htmlFor={`story-${story.id}`}>{story.title}</Label>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No hay historias de usuario disponibles.
+                  </p>
+                )}
+              </div>
             </div>
+          )}
 
-            <div className="flex items-center space-x-2">
-              <Checkbox id="autoReveal" />
-              <Label htmlFor="autoReveal">Revelar votos automáticamente</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="timer" />
-              <Label htmlFor="timer">Activar temporizador de votación</Label>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+          {/* Botones del formulario */}
+          <DialogFooter className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
             <Button type="submit" disabled={isLoading}>
