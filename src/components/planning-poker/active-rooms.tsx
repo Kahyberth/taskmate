@@ -28,7 +28,6 @@ const statusConfig = {
   },
 };
 
-
 export function ActiveRooms() {
   interface ActiveRoom {
     id: string;
@@ -64,7 +63,7 @@ export function ActiveRooms() {
                 name: session.created_by,
                 image: "/placeholder.svg",
               },
-              participants: 8,
+              participants: 8, // Puedes ajustar este valor según lo requieras
               status: session.status,
               currentIssue: session.session_code,
               duration: "25min",
@@ -87,7 +86,7 @@ export function ActiveRooms() {
   }, []);
 
   const handleJoinRoom = (room_id: string) => {
-    //TODO: Realizar verificacion de session
+    // TODO: Realizar verificación de sesión
     navigate(`room/${room_id}`);
   };
 
@@ -105,10 +104,19 @@ export function ActiveRooms() {
             <Skeleton height={8} mt={6} width="70%" radius="xl" />
           </>
         )}
-        {error && <div>Error al cargar las salas</div>}
+
+        {error && <div>Error al cargar las salas: {error}</div>}
+
+        {/* Mostrar mensaje si no hay error, no está cargando y no se encontraron salas */}
+        {!loading && !error && data.length === 0 && (
+          <div className="text-center text-sm text-muted-foreground">
+            No se encontraron salas activas.
+          </div>
+        )}
+
         {!loading &&
           !error &&
-          data &&
+          data.length > 0 &&
           data.map((room) => (
             <div
               key={room.id}
@@ -146,16 +154,12 @@ export function ActiveRooms() {
                 <Badge variant="secondary" className="gap-1">
                   <div
                     className={`h-1.5 w-1.5 rounded-full ${
-                      statusConfig[room.status as keyof typeof statusConfig]
-                        ?.color
+                      statusConfig[room.status as keyof typeof statusConfig]?.color
                     }`}
                   />
-                  {
-                    statusConfig[room.status as keyof typeof statusConfig]
-                      ?.label
-                  }
+                  {statusConfig[room.status as keyof typeof statusConfig]?.label}
                 </Badge>
-                <Button onClick={ () => handleJoinRoom(room.id) }>Unirse</Button>
+                <Button onClick={() => handleJoinRoom(room.id)}>Unirse</Button>
               </div>
             </div>
           ))}

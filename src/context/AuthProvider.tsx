@@ -1,4 +1,3 @@
-import { notifications } from "@mantine/notifications";
 import React, { createContext, useState, useEffect } from "react";
 
 interface UserInterface {

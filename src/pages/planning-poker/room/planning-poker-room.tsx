@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { notifications } from "@mantine/notifications";
+import { IconCheck } from "@tabler/icons-react";
 import "@mantine/notifications/styles.css";
 
 import {
@@ -44,7 +45,7 @@ import {
   LogOut,
 } from "lucide-react";
 // import { useFetch } from '@mantine/hooks'
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Socket, io } from "socket.io-client";
 import { AuthContext } from "@/context/AuthProvider";
 import { useRef } from "react";
@@ -83,7 +84,7 @@ export function PlanningPokerRoom() {
   >([]);
   const [currentStory, setCurrentStory] = useState<Story | null>(null);
   const [votingHistory, setVotingHistory] = useState<
-    { story: string; average: number; date: string }[]
+    { story_title: string; card_value: number; history_date: string }[]
   >([]);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -91,6 +92,8 @@ export function PlanningPokerRoom() {
   const [users, setUsers] = useState<User[]>([]);
   const socketRef = useRef<Socket | null>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
+  const [isLastStory, setIsLastStory] = useState(false);
+  const navigate = useNavigate();
   const [votes, setVotes] = useState<{ value: string; participant: User }[]>(
     []
   );
@@ -125,13 +128,20 @@ export function PlanningPokerRoom() {
       socket.emit("join-room", room_id);
     }
 
-    socket.on("story-changed", (story: Story) => {
+    socket.on("story-changed", (payload: { story: Story; isLast: boolean }) => {
+      console.log(payload.story);
+
       setIsVotingComplete(false);
       setSelectedCard(null);
-      setCurrentStory(story);
+      setCurrentStory(payload.story);
+      setIsLastStory(payload.isLast);
       setChatMessages([]);
       setVotes([]);
       setTimer(null);
+    });
+
+    socket.on("voting-history-updated", (updatedHistory) => {
+      setVotingHistory(updatedHistory);
     });
 
     socket.on("success", ({ value }: message) => {
@@ -139,6 +149,7 @@ export function PlanningPokerRoom() {
         title: "✔️Success",
         message: value,
         color: "green",
+        position: "top-right",
       });
     });
 
@@ -146,12 +157,48 @@ export function PlanningPokerRoom() {
       setUsers(participants);
     });
 
+    socket.on("voting-history-updated", (updatedHistory) => {
+      setVotingHistory(updatedHistory);
+    });
+
     socket.on("error", ({ value }: message) => {
       notifications.show({
         title: "❌Error",
         message: value,
         color: "red",
+        position: "top-right",
       });
+    });
+
+    socket.on("session-ended", () => {
+      const id = notifications.show({
+        title: "Session Ended",
+        message: "The planning poker session has ended 🎉",
+        position: "top-right",
+        loading: true,
+      });
+
+      setIsVotingComplete(false);
+      setSelectedCard(null);
+      setCurrentStory(null);
+      setIsLastStory(false);
+      setChatMessages([]);
+      setVotes([]);
+      setTimer(null);
+
+      setTimeout(() => {
+        notifications.update({
+          id,
+          color: "teal",
+          title: "Session Ended ✔",
+          message: "The planning poker session has ended ✔. Redirecting... ",
+          icon: <IconCheck size={18} />,
+          loading: false,
+          autoClose: 2000,
+        });
+
+        navigate("/");
+      }, 2000);
     });
 
     socket.on("message", (messageData: { message: string; sender: User }) => {
@@ -166,20 +213,18 @@ export function PlanningPokerRoom() {
     });
 
     socket.on("voting-repeated", ({ value }) => {
-      // Mostrar notificación, si quieres
       notifications.show({
         title: "Voting Reset",
         message: value,
         color: "blue",
+        position: "top-right",
       });
-    
-      // Restablecer estados locales para permitir votar otra vez
+
       setIsVotingComplete(false);
       setSelectedCard(null);
       setVotes([]);
       setVotingResults(null);
     });
-    
 
     socket.on("timer-started", ({ duration }) => {
       setTimer(duration);
@@ -199,7 +244,6 @@ export function PlanningPokerRoom() {
       setIsVotingComplete(true);
     });
 
-    // Solicitar estado actual del timer al unirse
     if (room_id) {
       socket.emit("request-timer-update", room_id);
     }
@@ -217,7 +261,7 @@ export function PlanningPokerRoom() {
     return () => {
       socket.disconnect();
     };
-  }, [user_data, room_id]);
+  }, [user_data, room_id, navigate]);
 
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -240,7 +284,6 @@ export function PlanningPokerRoom() {
     }
   };
 
-  // Modificar el handler para iniciar timer
   const handleStartTimer = (duration: number) => {
     if (room_id && socketRef.current) {
       socketRef.current.emit("start-timer", {
@@ -251,9 +294,8 @@ export function PlanningPokerRoom() {
   };
 
   const handleNextStory = () => {
-    if (socketRef.current && room_id) {
-      socketRef.current.emit("next-story", room_id);
-    }
+    if (!socketRef.current || !room_id) return;
+    socketRef.current.emit("next-story", room_id);
   };
 
   const toggleDarkMode = () => {
@@ -261,10 +303,8 @@ export function PlanningPokerRoom() {
   };
 
   const handleExitRoom = () => {
-    // In a real app, you'd handle the room exit logic here
     console.log("Exiting room...");
     setIsExitDialogOpen(false);
-    // Redirect to home page or perform other necessary actions
   };
 
   const handleCardSelect = (card: string) => {
@@ -274,6 +314,12 @@ export function PlanningPokerRoom() {
         vote: card,
       });
       setSelectedCard(card);
+    }
+  };
+
+  const handleFinishSession = () => {
+    if (socketRef.current && room_id) {
+      socketRef.current.emit("end-session", room_id);
     }
   };
 
@@ -288,8 +334,6 @@ export function PlanningPokerRoom() {
       socketRef.current.emit("repeat-voting", room_id);
     }
   };
-  
-
 
   return (
     <div
@@ -800,13 +844,21 @@ export function PlanningPokerRoom() {
                         {chatMessages.map((msg, index) => (
                           <motion.div
                             key={index}
-                            ref={index === chatMessages.length - 1 ? lastMessageRef : null}
+                            ref={
+                              index === chatMessages.length - 1
+                                ? lastMessageRef
+                                : null
+                            }
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3 }}
                             className="w-full flex flex-col"
                           >
-                            <div className={`flex items-center mb-1 ${msg.user === "You" ? "ml-auto" : ""}`}>
+                            <div
+                              className={`flex items-center mb-1 ${
+                                msg.user === "You" ? "ml-auto" : ""
+                              }`}
+                            >
                               <span className="font-semibold text-blue-600">
                                 {msg.user}
                               </span>
@@ -819,7 +871,7 @@ export function PlanningPokerRoom() {
                               </span>
                             </div>
                             <div
-                               className={`${
+                              className={`${
                                 isDarkMode
                                   ? "bg-gray-700 text-gray-200"
                                   : "bg-gray-100 text-gray-700"
@@ -891,14 +943,14 @@ export function PlanningPokerRoom() {
                                 isDarkMode ? "text-gray-200" : "text-gray-800"
                               }`}
                             >
-                              {vote.story}
+                              {vote.story_title}
                             </span>
                             <span
                               className={`text-sm ${
                                 isDarkMode ? "text-gray-400" : "text-gray-500"
                               }`}
                             >
-                              {vote.date}
+                              {vote.history_date}
                             </span>
                           </div>
                           <div className="flex items-center">
@@ -914,7 +966,7 @@ export function PlanningPokerRoom() {
                                 isDarkMode ? "text-gray-100" : "text-gray-800"
                               }`}
                             >
-                              {vote.average}
+                              {vote.card_value}
                             </span>
                           </div>
                         </div>
@@ -924,14 +976,24 @@ export function PlanningPokerRoom() {
                 </Card>
               </TabsContent>
             </Tabs>
-            <Button
-              className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={handleNextStory}
-              disabled={!isVotingComplete}
-            >
-              Next User Story
-              <ChevronRight className="ml-2 h-5 w-4" />
-            </Button>
+            {isLastStory ? (
+              <Button
+                className="mt-4 bg-red-600 hover:bg-red-700 text-white"
+                disabled={!isVotingComplete}
+                onClick={handleFinishSession}
+              >
+                Finalizar sesión
+              </Button>
+            ) : (
+              <Button
+                className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={!isVotingComplete}
+                onClick={handleNextStory}
+              >
+                Next User Story
+                <ChevronRight className="ml-2 h-5 w-4" />
+              </Button>
+            )}
           </div>
         </main>
       </div>
