@@ -303,7 +303,13 @@ export function PlanningPokerRoom() {
   };
 
   const handleExitRoom = () => {
-    console.log("Exiting room...");
+    
+    if (socketRef.current && room_id) {
+      socketRef.current.emit("leave-room", room_id);
+    }
+
+    navigate("/");
+
     setIsExitDialogOpen(false);
   };
 
