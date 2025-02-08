@@ -24,14 +24,16 @@ import axios from "axios";
 
 // Interfaz para proyectos
 interface Project {
-  id: string;
-  title: string;
+  id: number;
+  name: string;
 }
 
 // Interfaz para historias de usuario
 interface UserStory {
-  id: number;
+  id: string;
   title: string;
+  description: string;
+  priority: string;
 }
 
 export function CreateRoomDialog({
@@ -41,7 +43,6 @@ export function CreateRoomDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
 
@@ -55,20 +56,20 @@ export function CreateRoomDialog({
         //   setSelectedProjectId(response.data[0].id);
         // }
 
-
         setProjects([
-          {
-            id: '1',
-            title: 'Proyecto 1'
-          },
-          {
-            id: '2',
-            title: 'Proyecto 2'
-          },
+          { id: 1, name: "Proyecto Alfa" },
+          { id: 2, name: "Proyecto Beta" },
+          { id: 3, name: "Proyecto Gamma" },
+          { id: 4, name: "Proyecto Delta" },
+          { id: 5, name: "Proyecto Epsilon" },
+          { id: 6, name: "Proyecto Zeta" },
+          { id: 7, name: "Proyecto Eta" },
+          { id: 8, name: "Proyecto Theta" },
+          { id: 9, name: "Proyecto Iota" },
+          { id: 10, name: "Proyecto Kappa" },
         ]);
 
-        setSelectedProjectId('1');
-
+        setSelectedProjectId("1");
       } catch (error) {
         console.error("Error al cargar proyectos:", error);
       }
@@ -91,31 +92,115 @@ export function CreateRoomDialog({
 
         setUserStories([
           {
-            id: 1,
-            title: 'Historia 1'
+            id: "1",
+            title: 'Implement user authentication',
+            description: 'As a user, I want to be able to securely log in ...',
+            priority: 'High',
           },
           {
-            id: 2,
-            title: 'Historia 2'
+            id: "2",
+            title: 'Create dashboard layout',
+            description: 'As a user, I want to see a clear overview ...',
+            priority: 'Medium',
           },
           {
-            id: 3,
-            title: 'Historia 3'
+            id: "3",
+            title: 'Login page design',
+            description: 'As a user, I want to see a beautiful login page ...',
+            priority: 'Low',
           },
           {
-            id: 4,
-            title: 'Historia 4'
+            id: "4",
+            title: 'Manage user roles',
+            description: 'As an admin, I want to be able to manage user roles ...',
+            priority: 'High',
           },
           {
-            id: 5,
-            title: 'Historia 5'
+            id: "5",
+            title: 'Create user profile page',
+            description: 'As a user',
+            priority: 'Medium',
           },
           {
-            id: 6,
-            title: 'Historia 6'
+            id: "6",
+            title: 'Add user settings',
+            description: 'As a user, I want to be able to change my settings ...',
+            priority: 'Low',
           },
-        ]);
+          {
+            id: "7",
+            title: 'Implement user authentication',
+            description: 'As a user, I want to be able to securely log in ...',
+            priority: 'High',
+          },
+          {
+            id: "8",
+            title: 'Create dashboard layout',
+            description: 'As a user, I want to see a clear overview ...',
+            priority: 'Medium',
+          },
+          {
+            id: "9",
+            title: 'Login page design',
+            description: 'As a user, I want to see a beautiful login page ...',
+            priority: 'Low',
+          },
+          {
+            id: "10",
+            title: 'Manage user roles',
+            description: 'As an admin, I want to be able to manage user roles ...',
+            priority: 'High',
+          },
+          {
+            id: "11",
+            title: 'Create user profile page',
+            description: 'As a user, I want to see my profile page ...',
+            priority: 'Medium',
+          },
+          {
+            id: "12",
+            title: 'Add user settings',
+            description: 'As a user, I want to be able to change my settings ...',
+            priority: 'Low',
+          },
+          {
+            id: "13",
+            title: 'Implement user authentication',
+            description: 'As a user, I want to be able to securely log in ...',
+            priority: 'High',
+          },
+          {
+            id: "14",
+            title: 'Create dashboard layout',
+            description: 'As a user, I want to see a clear overview ...',
+            priority: 'Medium',
+          },
+          {
+            id: "15",
+            title: 'Login page design',
+            description: 'As a user, I want to see a beautiful login page ...',
+            priority: 'Low',
+          },
+          {
+            id: "16",
+            title: 'Manage user roles',
+            description: 'As an admin, I want to be able to manage user roles ...',
+            priority: 'High',
+          },
+          {
+            id: "17",
+            title: 'Create user profile page',
+            description: 'As a user, I want to see my profile page ...',
+            priority: 'Medium',
+          },
+          {
+            id: "18",
+            title: 'Add user settings',
+            description: 'As a user, I want to be able to change my settings ...',
+            priority: 'Low',
+          }
 
+        ]);
       } catch (error) {
         console.error("Error al cargar historias de usuario:", error);
       }
@@ -124,46 +209,45 @@ export function CreateRoomDialog({
     fetchUserStories();
   }, [selectedProjectId]);
 
- 
   const [roomName, setRoomName] = useState("");
   const [description, setDescription] = useState("");
-  const [votingScale, setVotingScale] = useState<VotingScale>(VotingScale.FIBONACCI);
-
+  const [votingScale, setVotingScale] = useState<VotingScale>(
+    VotingScale.FIBONACCI
+  );
 
   const [requireCode, setRequireCode] = useState(false);
   const [accessCode, setAccessCode] = useState("");
 
-
   const [loadAllStories, setLoadAllStories] = useState(true);
-  
-  const [selectedStories, setSelectedStories] = useState<number[]>([]);
-  const handleStorySelection = (id: number) => {
-    setSelectedStories((prev) =>
-      prev.includes(id) ? prev.filter((storyId) => storyId !== id) : [...prev, id]
-    );
-  };
 
+  const [selectedStories, setSelectedStories] = useState<UserStory[]>([]);
+  const handleStorySelection = (story: UserStory) => {
+      setSelectedStories((prev) =>
+        prev.some((s) => s.id === story.id)
+          ? prev.filter((s) => s.id !== story.id)
+          : [...prev, story]
+      );
+    };
 
   const [isLoading, setIsLoading] = useState(false);
 
-
   const { user } = useContext(AuthContext);
-
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
+    console.log("Creando sala con los siguientes datos:");
+
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/poker/create-session`, {
         session_name: roomName,
         description,
-        project: selectedProjectId,
+        project_id: selectedProjectId,
         voting_scale: votingScale,
         created_by: user?.id,
-        requireCode,
-        accessCode: requireCode ? accessCode : undefined,
-        cards: loadAllStories ? userStories : selectedStories,
+        session_code: requireCode ? accessCode : "",
+        deck: loadAllStories ? userStories : selectedStories,
       });
 
       onOpenChange(false);
@@ -220,8 +304,8 @@ export function CreateRoomDialog({
                   <SelectContent>
                     {projects.length > 0 ? (
                       projects.map((proj) => (
-                        <SelectItem key={proj.id} value={proj.id}>
-                          {proj.title}
+                        <SelectItem key={proj.id} value={proj.id.toString()}>
+                          {proj.name}
                         </SelectItem>
                       ))
                     ) : (
@@ -250,10 +334,14 @@ export function CreateRoomDialog({
 
           {/* SECCIÓN: Configuración de la votación */}
           <div className="border rounded-md p-4 space-y-4">
-            <h3 className="text-base font-semibold mb-1">Configuración de la votación</h3>
+            <h3 className="text-base font-semibold mb-1">
+              Configuración de la votación
+            </h3>
             {/* Escala de votación */}
             <div>
-              <Label className="font-medium mb-2 block">Escala de votación</Label>
+              <Label className="font-medium mb-2 block">
+                Escala de votación
+              </Label>
               <Select
                 value={votingScale}
                 onValueChange={(val: VotingScale) => setVotingScale(val)}
@@ -282,7 +370,9 @@ export function CreateRoomDialog({
                 <Checkbox
                   id="requireCode"
                   checked={requireCode}
-                  onCheckedChange={(checked) => setRequireCode(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setRequireCode(checked === true)
+                  }
                 />
                 <Label htmlFor="requireCode">Requerir código de acceso</Label>
               </div>
@@ -296,7 +386,9 @@ export function CreateRoomDialog({
                     if (!checked) setSelectedStories([]);
                   }}
                 />
-                <Label htmlFor="loadAllStories">Cargar todas las historias</Label>
+                <Label htmlFor="loadAllStories">
+                  Cargar todas las historias
+                </Label>
               </div>
             </div>
 
@@ -327,11 +419,14 @@ export function CreateRoomDialog({
               <div className="max-h-44 overflow-y-auto space-y-2">
                 {userStories.length > 0 ? (
                   userStories.map((story) => (
-                    <div key={story.id} className="flex items-center space-x-2 text-sm">
+                    <div
+                      key={story.id}
+                      className="flex items-center space-x-2 text-sm"
+                    >
                       <Checkbox
                         id={`story-${story.id}`}
-                        checked={selectedStories.includes(story.id)}
-                        onCheckedChange={() => handleStorySelection(story.id)}
+                        checked={selectedStories.some((s) => s.id === story.id)}
+                        onCheckedChange={() => handleStorySelection(story)}
                       />
                       <Label htmlFor={`story-${story.id}`}>{story.title}</Label>
                     </div>

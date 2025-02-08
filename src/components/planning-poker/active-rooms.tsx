@@ -2,12 +2,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Clock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Users, Clock, Lock } from "lucide-react";
+import { useContext, useEffect, useState } from "react";
 import axios from "axios";
 import { Skeleton } from "@mantine/core";
-import { Datum } from "@/interfaces/active_rooms";
+import type { Datum } from "@/interfaces/active_rooms";
 import { useNavigate } from "react-router-dom";
+import "@mantine/notifications/styles.css";
+import { notifications } from "@mantine/notifications";
+import { AuthContext } from "@/context/AuthProvider";
 
 const statusConfig = {
   live: {
@@ -41,20 +44,24 @@ export function ActiveRooms() {
     currentIssue: string;
     duration: string;
     project: string;
+    hasPassword: boolean;
   }
 
   const [data, setData] = useState<ActiveRoom[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { user: user_data } = useContext(AuthContext);
 
   useEffect(() => {
     const fetchData = async () => {
+
+      console.log(import.meta.env.VITE_API_URL);
+
       await axios
         .get(`${import.meta.env.VITE_API_URL}/poker/all-sessions`)
         .then((response) => {
           console.log(response.data.data);
-
           const active_sessions = response.data.data.map((session: Datum) => {
             return {
               id: session.session_id,
@@ -63,15 +70,17 @@ export function ActiveRooms() {
                 name: session.created_by,
                 image: "/placeholder.svg",
               },
-              participants: 8, // Puedes ajustar este valor según lo requieras
+              participants: session.capacity,
               status: session.status,
               currentIssue: session.session_code,
               duration: "25min",
-              project: "Test",
+              project: session.project_name,
+              hasPassword: session.session_code ? session.session_code.length > 0 : false,
             };
           });
+          
+          console.log(active_sessions);
 
-          console.log("Salas:", active_sessions);
           setData(active_sessions);
         })
         .catch((error) => {
@@ -85,9 +94,22 @@ export function ActiveRooms() {
     fetchData();
   }, []);
 
-  const handleJoinRoom = (room_id: string) => {
-    // TODO: Realizar verificación de sesión
-    navigate(`room/${room_id}`);
+  const handleJoinRoom = async (room_id: string) => {
+    await axios
+      .post(`${import.meta.env.VITE_API_URL}/poker/join-session`, {
+        session_id: room_id,
+        user_id: user_data?.id,
+      })
+      .then(() => {
+        navigate(`room/${room_id}`);
+      })
+      .catch((error) => {
+        notifications.show({
+          title: "Error",
+          message: error.message,
+          color: "red",
+        });
+      });
   };
 
   return (
@@ -107,7 +129,6 @@ export function ActiveRooms() {
 
         {error && <div>Error al cargar las salas: {error}</div>}
 
-        {/* Mostrar mensaje si no hay error, no está cargando y no se encontraron salas */}
         {!loading && !error && data.length === 0 && (
           <div className="text-center text-sm text-muted-foreground">
             No se encontraron salas activas.
@@ -125,6 +146,9 @@ export function ActiveRooms() {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold">{room.name}</h3>
+                  {room.hasPassword && (
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                  )}
                   <Badge variant="secondary" className="text-xs">
                     {room.project}
                   </Badge>
@@ -154,10 +178,14 @@ export function ActiveRooms() {
                 <Badge variant="secondary" className="gap-1">
                   <div
                     className={`h-1.5 w-1.5 rounded-full ${
-                      statusConfig[room.status as keyof typeof statusConfig]?.color
+                      statusConfig[room.status as keyof typeof statusConfig]
+                        ?.color
                     }`}
                   />
-                  {statusConfig[room.status as keyof typeof statusConfig]?.label}
+                  {
+                    statusConfig[room.status as keyof typeof statusConfig]
+                      ?.label
+                  }
                 </Badge>
                 <Button onClick={() => handleJoinRoom(room.id)}>Unirse</Button>
               </div>
