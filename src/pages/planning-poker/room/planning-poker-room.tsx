@@ -302,15 +302,33 @@ export function PlanningPokerRoom() {
     setIsDarkMode(!isDarkMode);
   };
 
-  const handleExitRoom = () => {
-    
+  const handleExitRoom = async () => {
     if (socketRef.current && room_id) {
       socketRef.current.emit("leave-room", room_id);
     }
 
-    navigate("/");
+    const id = notifications.show({
+      loading: true,
+      title: 'Leaving session in progress',
+      message: 'Please wait...',
+      autoClose: false,
+      withCloseButton: false,
+    });
 
-    setIsExitDialogOpen(false);
+    setTimeout(() => {
+      notifications.update({
+        id,
+        color: 'teal',
+        title: 'Session left successfully ✔',
+        message: 'You have left the planning poker session successfully. Redirecting...',
+        icon: <IconCheck size={18} />,
+        loading: false,
+        autoClose: 2000,
+      });
+      navigate("/");
+      setIsExitDialogOpen(false);
+    }, 2000);
+    
   };
 
   const handleCardSelect = (card: string) => {

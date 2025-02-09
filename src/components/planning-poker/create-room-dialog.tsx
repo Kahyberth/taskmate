@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { AuthContext } from "@/context/AuthProvider";
 import { VotingScale } from "@/enums/room-scale.enum";
 import axios from "axios";
+import { notifications } from "@mantine/notifications";
 
 // Interfaz para proyectos
 interface Project {
@@ -35,6 +36,7 @@ interface UserStory {
   description: string;
   priority: string;
 }
+
 
 export function CreateRoomDialog({
   open,
@@ -93,113 +95,118 @@ export function CreateRoomDialog({
         setUserStories([
           {
             id: "1",
-            title: 'Implement user authentication',
-            description: 'As a user, I want to be able to securely log in ...',
-            priority: 'High',
+            title: "Implement user authentication",
+            description: "As a user, I want to be able to securely log in ...",
+            priority: "High",
           },
           {
             id: "2",
-            title: 'Create dashboard layout',
-            description: 'As a user, I want to see a clear overview ...',
-            priority: 'Medium',
+            title: "Create dashboard layout",
+            description: "As a user, I want to see a clear overview ...",
+            priority: "Medium",
           },
           {
             id: "3",
-            title: 'Login page design',
-            description: 'As a user, I want to see a beautiful login page ...',
-            priority: 'Low',
+            title: "Login page design",
+            description: "As a user, I want to see a beautiful login page ...",
+            priority: "Low",
           },
           {
             id: "4",
-            title: 'Manage user roles',
-            description: 'As an admin, I want to be able to manage user roles ...',
-            priority: 'High',
+            title: "Manage user roles",
+            description:
+              "As an admin, I want to be able to manage user roles ...",
+            priority: "High",
           },
           {
             id: "5",
-            title: 'Create user profile page',
-            description: 'As a user',
-            priority: 'Medium',
+            title: "Create user profile page",
+            description: "As a user",
+            priority: "Medium",
           },
           {
             id: "6",
-            title: 'Add user settings',
-            description: 'As a user, I want to be able to change my settings ...',
-            priority: 'Low',
+            title: "Add user settings",
+            description:
+              "As a user, I want to be able to change my settings ...",
+            priority: "Low",
           },
           {
             id: "7",
-            title: 'Implement user authentication',
-            description: 'As a user, I want to be able to securely log in ...',
-            priority: 'High',
+            title: "Implement user authentication",
+            description: "As a user, I want to be able to securely log in ...",
+            priority: "High",
           },
           {
             id: "8",
-            title: 'Create dashboard layout',
-            description: 'As a user, I want to see a clear overview ...',
-            priority: 'Medium',
+            title: "Create dashboard layout",
+            description: "As a user, I want to see a clear overview ...",
+            priority: "Medium",
           },
           {
             id: "9",
-            title: 'Login page design',
-            description: 'As a user, I want to see a beautiful login page ...',
-            priority: 'Low',
+            title: "Login page design",
+            description: "As a user, I want to see a beautiful login page ...",
+            priority: "Low",
           },
           {
             id: "10",
-            title: 'Manage user roles',
-            description: 'As an admin, I want to be able to manage user roles ...',
-            priority: 'High',
+            title: "Manage user roles",
+            description:
+              "As an admin, I want to be able to manage user roles ...",
+            priority: "High",
           },
           {
             id: "11",
-            title: 'Create user profile page',
-            description: 'As a user, I want to see my profile page ...',
-            priority: 'Medium',
+            title: "Create user profile page",
+            description: "As a user, I want to see my profile page ...",
+            priority: "Medium",
           },
           {
             id: "12",
-            title: 'Add user settings',
-            description: 'As a user, I want to be able to change my settings ...',
-            priority: 'Low',
+            title: "Add user settings",
+            description:
+              "As a user, I want to be able to change my settings ...",
+            priority: "Low",
           },
           {
             id: "13",
-            title: 'Implement user authentication',
-            description: 'As a user, I want to be able to securely log in ...',
-            priority: 'High',
+            title: "Implement user authentication",
+            description: "As a user, I want to be able to securely log in ...",
+            priority: "High",
           },
           {
             id: "14",
-            title: 'Create dashboard layout',
-            description: 'As a user, I want to see a clear overview ...',
-            priority: 'Medium',
+            title: "Create dashboard layout",
+            description: "As a user, I want to see a clear overview ...",
+            priority: "Medium",
           },
           {
             id: "15",
-            title: 'Login page design',
-            description: 'As a user, I want to see a beautiful login page ...',
-            priority: 'Low',
+            title: "Login page design",
+            description: "As a user, I want to see a beautiful login page ...",
+            priority: "Low",
           },
           {
             id: "16",
-            title: 'Manage user roles',
-            description: 'As an admin, I want to be able to manage user roles ...',
-            priority: 'High',
+            title: "Manage user roles",
+            description:
+              "As an admin, I want to be able to manage user roles ...",
+            priority: "High",
           },
           {
             id: "17",
-            title: 'Create user profile page',
-            description: 'As a user, I want to see my profile page ...',
-            priority: 'Medium',
+            title: "Create user profile page",
+            description: "As a user, I want to see my profile page ...",
+            priority: "Medium",
           },
           {
             id: "18",
-            title: 'Add user settings',
-            description: 'As a user, I want to be able to change my settings ...',
-            priority: 'Low',
-          }
-
+            title: "Add user settings",
+            description:
+              "As a user, I want to be able to change my settings ...",
+            priority: "Low",
+          },
         ]);
       } catch (error) {
         console.error("Error al cargar historias de usuario:", error);
@@ -222,12 +229,12 @@ export function CreateRoomDialog({
 
   const [selectedStories, setSelectedStories] = useState<UserStory[]>([]);
   const handleStorySelection = (story: UserStory) => {
-      setSelectedStories((prev) =>
-        prev.some((s) => s.id === story.id)
-          ? prev.filter((s) => s.id !== story.id)
-          : [...prev, story]
-      );
-    };
+    setSelectedStories((prev) =>
+      prev.some((s) => s.id === story.id)
+        ? prev.filter((s) => s.id !== story.id)
+        : [...prev, story]
+    );
+  };
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -240,19 +247,43 @@ export function CreateRoomDialog({
     console.log("Creando sala con los siguientes datos:");
 
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/poker/create-session`, {
-        session_name: roomName,
-        description,
-        project_id: selectedProjectId,
-        voting_scale: votingScale,
-        created_by: user?.id,
-        session_code: requireCode ? accessCode : "",
-        deck: loadAllStories ? userStories : selectedStories,
-      });
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/poker/create-session`,
+        {
+          session_name: roomName,
+          description,
+          project_id: selectedProjectId,
+          voting_scale: votingScale,
+          created_by: user?.id,
+          session_code: requireCode ? accessCode : "",
+          deck: loadAllStories ? userStories : selectedStories,
+        },
+        {
+          timeout: 5000,
+        }
+      );
 
       onOpenChange(false);
-    } catch (error) {
-      console.error("Error creando la sala:", error);
+
+      notifications.show({
+        title: "Sala creada 🎉",
+        message: "Sala creada correctamente",
+        color: "green",
+      })
+
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      if (error.code === "ECONNABORTED") {
+       notifications.show({
+          title: "Error de conexión 🌐",
+          message: "No se pudo establecer conexión con el servidor. Inténtalo de nuevo más tarde.",
+          color: "red",
+       })
+      } else {
+        console.error("Error creando la sala:", error);
+        alert("Ocurrió un error al crear la sala.");
+      }
     } finally {
       setIsLoading(false);
     }
