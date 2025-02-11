@@ -18,6 +18,8 @@ import ChatPage from "@/pages/chat/chat-page";
 import ProjectsDashboardLayout from "@/layouts/projects/layout";
 import BacklogPage from "@/pages/projects/backlog/page";
 import BoardPage from "@/pages/projects/board/page";
+import PlanningPokerRoomGuard from "@/guard/PlanningPokerRoomGuard";
+import { SessionProvider } from "@/context/SessionProvider";
 
 function AppRoutes() {
   return (
@@ -27,7 +29,9 @@ function AppRoutes() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardLayout />
+              <SessionProvider>
+                <DashboardLayout />
+              </SessionProvider>
             </ProtectedRoute>
           }
         >
@@ -37,7 +41,11 @@ function AppRoutes() {
           <Route path="projects" element={<ProjectsPage />} />
           <Route
             path="planning-poker/room/:id"
-            element={<PlanningPokerRoom />}
+            element={
+              <PlanningPokerRoomGuard>
+                <PlanningPokerRoom />
+              </PlanningPokerRoomGuard>
+            }
           />
           <Route path="teams" element={<TeamsPage />} />
           <Route path="chat" element={<ChatPage />} />
@@ -55,7 +63,6 @@ function AppRoutes() {
           <Route path="backlog" element={<BacklogPage />} />
           <Route path="board" element={<BoardPage />} />
         </Route>
-
 
         <Route
           path="/"
