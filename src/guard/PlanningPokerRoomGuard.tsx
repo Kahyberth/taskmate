@@ -17,21 +17,18 @@ const PlanningPokerRoomGuard: React.FC<PlanningPokerRoomGuardProps> = ({
   useEffect(() => {
     const verify = async () => {
       if (roomId) {
-        await validateSession(roomId);
+        await validateSession();
         setVerified(true);
       }
     };
     verify();
   }, [roomId, validateSession]);
 
-  // Mientras se está verificando, mostramos un indicador de carga.
-
 
   if (loading || !verified) {
     return <div>Verificando sesión, por favor espere...</div>;
   }
 
-  // Si la sesión no es válida, redirigimos a la página de Planning Poker
   if (!isInSession) {
     notifications.show({
       title: "Sesión no válida",
@@ -41,7 +38,7 @@ const PlanningPokerRoomGuard: React.FC<PlanningPokerRoomGuardProps> = ({
     return <Navigate to="/dashboard/planning-poker" replace />;
   }
 
-  // Si la sesión es válida, renderizamos el contenido de la sala.
+
   return children;
 };
 

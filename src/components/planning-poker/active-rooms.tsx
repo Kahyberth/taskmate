@@ -1,5 +1,3 @@
-"use client"
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -12,10 +10,10 @@ import type { Datum } from "@/interfaces/active_rooms"
 import { useNavigate } from "react-router-dom"
 import "@mantine/notifications/styles.css"
 import { notifications } from "@mantine/notifications"
-import { AuthContext } from "@/context/AuthProvider"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { AuthContext } from "@/context/AuthContext"
 
 const statusConfig = {
   live: {
@@ -64,12 +62,11 @@ export function ActiveRooms() {
 
   useEffect(() => {
     const fetchData = async () => {
-      console.log(import.meta.env.VITE_API_URL)
-
       await axios
-        .get(`${import.meta.env.VITE_API_URL}/poker/all-sessions`)
+        .get(`${import.meta.env.VITE_API_URL}/poker/all-sessions`, {
+          timeout: 10000,
+        })
         .then((response) => {
-          console.log(response.data.data)
           const active_sessions = response.data.data.map((session: Datum) => {
             return {
               id: session.session_id,
@@ -86,8 +83,6 @@ export function ActiveRooms() {
               hasPassword: session.session_code ? session.session_code.length > 0 : false,
             }
           })
-
-          console.log(active_sessions)
           setData(active_sessions)
         })
         .catch((error) => {
@@ -109,6 +104,7 @@ export function ActiveRooms() {
         user_id: user_data?.id,
       })
       navigate(`room/${room_id}`)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       notifications.show({
         title: "Error",
@@ -133,6 +129,7 @@ export function ActiveRooms() {
       })
       setIsPasswordModalOpen(false)
       navigate(`room/${room_id}`)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       notifications.show({
         title: "Error",

@@ -8,9 +8,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AuthContext } from "@/context/AuthProvider";
 import { useContext } from "react";
 import { Link } from "react-router-dom";
+import { AuthContext } from "@/context/AuthContext";
 export function UserNav() {
   const { logout, user } = useContext(AuthContext);
 

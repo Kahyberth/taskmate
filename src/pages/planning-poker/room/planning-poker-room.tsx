@@ -47,8 +47,8 @@ import {
 // import { useFetch } from '@mantine/hooks'
 import { useNavigate, useParams } from "react-router-dom";
 import { Socket, io } from "socket.io-client";
-import { AuthContext } from "@/context/AuthProvider";
 import { useRef } from "react";
+import { AuthContext } from "@/context/AuthContext";
 
 const fibonacciSequence = ["0", "1", "2", "3", "5", "8", "13", "21", "34", "?"];
 // const fibonacciModified = ["0", "1", "2", "3", "5", "8", "13", "20", "40", "100", "?"];
@@ -73,11 +73,18 @@ interface message {
   value: string;
 }
 
+interface ChatHistory {
+  username: string;
+  message: string;
+  message_date: string
+}
+
 export function PlanningPokerRoom() {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [isVotingComplete, setIsVotingComplete] = useState(false);
   const [timer, setTimer] = useState<number | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  // const [sequence, setSequence] = useState(fibonacciSequence);
   const [chatMessage, setChatMessage] = useState("");
   const [chatMessages, setChatMessages] = useState<
     { user: string; message: string; timestamp: string }[]
@@ -263,6 +270,24 @@ export function PlanningPokerRoom() {
     };
   }, [user_data, room_id, navigate]);
 
+  
+
+  useEffect(() => {
+    if (socketRef.current) {
+      socketRef.current.on("chat-history", (history: ChatHistory[]) => {
+        setChatMessages(
+          history.map(chat => ({
+            user: chat.username,
+            message: chat.message,
+            timestamp: new Date(chat.message_date).toLocaleTimeString(),
+          }))
+        );
+      });
+    }
+  }, []);
+  
+
+
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (chatMessage.trim() && room_id && socketRef.current) {
@@ -270,16 +295,6 @@ export function PlanningPokerRoom() {
         message: chatMessage,
         room: room_id,
       });
-
-      setChatMessages([
-        ...chatMessages,
-        {
-          user: "You",
-          message: chatMessage,
-          timestamp: new Date().toLocaleTimeString(),
-        },
-      ]);
-
       setChatMessage("");
     }
   };

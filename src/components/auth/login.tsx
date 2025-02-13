@@ -6,9 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "react-router-dom";
-import { AuthContext } from "@/context/AuthProvider";
 import axios from "axios";
 import { notifications } from "@mantine/notifications";
+import { AuthContext } from "@/context/AuthContext";
 
 interface LoginModalProps {
   isOpen: boolean;

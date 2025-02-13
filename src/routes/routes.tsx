@@ -10,7 +10,6 @@ import RegisterPage from "@/pages/register/page";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import PublicRoute from "@/components/auth/PublicRoute";
 import ProfilePage from "@/pages/profile/profile";
-import PlanningPokerPage from "@/pages/planning-poker/planning-poker";
 import ProjectsPage from "@/pages/projects/page";
 import { PlanningPokerRoom } from "@/pages/planning-poker/room/planning-poker-room";
 import TeamsPage from "@/pages/teams/team-page";
@@ -20,6 +19,7 @@ import BacklogPage from "@/pages/projects/backlog/page";
 import BoardPage from "@/pages/projects/board/page";
 import PlanningPokerRoomGuard from "@/guard/PlanningPokerRoomGuard";
 import { SessionProvider } from "@/context/SessionProvider";
+import PlanningPokerPageGuard from "@/guard/PlanningPokerPageGuard";
 
 function AppRoutes() {
   return (
@@ -37,7 +37,7 @@ function AppRoutes() {
         >
           <Route index element={<DashboardPage />} />
           <Route path="profile" element={<ProfilePage />} />
-          <Route path="planning-poker" element={<PlanningPokerPage />} />
+          <Route path="planning-poker" element={<PlanningPokerPageGuard />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route
             path="planning-poker/room/:id"
@@ -71,7 +71,7 @@ function AppRoutes() {
               <LandingLayout children={<Home />} />
             </PublicRoute>
           }
-        ></Route>
+        />
         <Route
           path="/docs/*"
           element={
@@ -79,7 +79,7 @@ function AppRoutes() {
               <DocsLayout children={<DocsPage />} />
             </PublicRoute>
           }
-        ></Route>
+        />
         <Route
           path="/auth/*"
           element={
@@ -87,8 +87,8 @@ function AppRoutes() {
               <LandingLayout children={<RegisterPage />} />
             </PublicRoute>
           }
-        ></Route>
-        <Route path="*" element={<NotFound />}></Route>
+        />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

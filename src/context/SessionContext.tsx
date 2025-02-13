@@ -5,7 +5,7 @@ interface SessionContextProps {
   loading: boolean;
   session_id: string | null;
   leaveSession: () => void;
-  validateSession: (session_id: string) => Promise<void>;
+  validateSession: () => Promise<void>;
 }
 
 export const SessionContext = createContext<SessionContextProps>({

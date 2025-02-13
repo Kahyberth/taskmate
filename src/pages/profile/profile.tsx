@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { CalendarDays, Mail, MapPin, Phone, Plus, Users } from 'lucide-react'
 import { useContext } from "react"
-import { AuthContext } from "@/context/AuthProvider"
+import { AuthContext } from "@/context/AuthContext"
 
 
 

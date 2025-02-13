@@ -18,10 +18,11 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { AuthContext } from "@/context/AuthProvider";
 import { VotingScale } from "@/enums/room-scale.enum";
 import axios from "axios";
 import { notifications } from "@mantine/notifications";
+import { Loader } from "@mantine/core";
+import { AuthContext } from "@/context/AuthContext";
 
 // Interfaz para proyectos
 interface Project {
@@ -37,7 +38,6 @@ interface UserStory {
   priority: string;
 }
 
-
 export function CreateRoomDialog({
   open,
   onOpenChange,
@@ -47,6 +47,20 @@ export function CreateRoomDialog({
 }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { user, loading } = useContext(AuthContext);
+  const [roomName, setRoomName] = useState("");
+  const [description, setDescription] = useState("");
+  const [votingScale, setVotingScale] = useState<VotingScale>(
+    VotingScale.FIBONACCI
+  );
+  const [requireCode, setRequireCode] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
+  const [loadAllStories, setLoadAllStories] = useState(true);
+  const [selectedStories, setSelectedStories] = useState<UserStory[]>([]);
+  console.log("ID: ", user?.id)
+
+ 
 
   // 2. Cargar proyectos al montar el componente
   useEffect(() => {
@@ -96,116 +110,142 @@ export function CreateRoomDialog({
           {
             id: "1",
             title: "Implement user authentication",
-            description: "As a user, I want to be able to securely log in ...",
+            description:
+              "As a user, I want to be able to securely log in so that my data remains protected.",
             priority: "High",
           },
           {
             id: "2",
             title: "Create dashboard layout",
-            description: "As a user, I want to see a clear overview ...",
+            description:
+              "As a user, I want to see a clear overview of my tasks and activities so that I can manage my work efficiently.",
             priority: "Medium",
           },
           {
             id: "3",
             title: "Login page design",
-            description: "As a user, I want to see a beautiful login page ...",
+            description:
+              "As a user, I want to see a beautiful login page so that I feel confident using the application.",
             priority: "Low",
           },
           {
             id: "4",
-            title: "Manage user roles",
+            title: "Enable two-factor authentication",
             description:
-              "As an admin, I want to be able to manage user roles ...",
+              "As a user, I want to enable two-factor authentication so that my account is more secure.",
             priority: "High",
           },
           {
             id: "5",
-            title: "Create user profile page",
-            description: "As a user",
+            title: "Add dark mode to the dashboard",
+            description:
+              "As a user, I want to use a dark mode option on the dashboard so that I can reduce eye strain.",
             priority: "Medium",
           },
           {
             id: "6",
-            title: "Add user settings",
+            title: "Customize login page with branding",
             description:
-              "As a user, I want to be able to change my settings ...",
+              "As a business owner, I want the login page to reflect my company's branding so that users recognize my brand.",
             priority: "Low",
           },
           {
             id: "7",
-            title: "Implement user authentication",
-            description: "As a user, I want to be able to securely log in ...",
+            title: "Implement password recovery system",
+            description:
+              "As a user, I want to recover my password easily if I forget it so that I don't lose access to my account.",
             priority: "High",
           },
           {
             id: "8",
-            title: "Create dashboard layout",
-            description: "As a user, I want to see a clear overview ...",
+            title: "Add real-time notifications to the dashboard",
+            description:
+              "As a user, I want to receive real-time notifications on the dashboard so that I stay updated on important events.",
             priority: "Medium",
           },
           {
             id: "9",
-            title: "Login page design",
-            description: "As a user, I want to see a beautiful login page ...",
+            title: "Optimize login page for mobile devices",
+            description:
+              "As a user, I want the login page to work seamlessly on my phone so that I can access the app from anywhere.",
             priority: "Low",
           },
           {
             id: "10",
-            title: "Manage user roles",
+            title: "Integrate social media login",
             description:
-              "As an admin, I want to be able to manage user roles ...",
+              "As a user, I want to log in using my social media accounts so that I don’t have to remember another username or password.",
             priority: "High",
           },
           {
             id: "11",
-            title: "Create user profile page",
-            description: "As a user, I want to see my profile page ...",
+            title: "Provide dashboard customization options",
+            description:
+              "As a user, I want to customize the layout of my dashboard so that I can prioritize the information most relevant to me.",
             priority: "Medium",
           },
           {
             id: "12",
-            title: "Add user settings",
+            title: "Add animations to the login page",
             description:
-              "As a user, I want to be able to change my settings ...",
+              "As a user, I want to see smooth animations on the login page so that the experience feels modern and engaging.",
             priority: "Low",
           },
           {
             id: "13",
-            title: "Implement user authentication",
-            description: "As a user, I want to be able to securely log in ...",
+            title: "Implement session timeout feature",
+            description:
+              "As a user, I want my session to automatically log out after a period of inactivity so that my account stays secure.",
             priority: "High",
           },
           {
             id: "14",
-            title: "Create dashboard layout",
-            description: "As a user, I want to see a clear overview ...",
+            title: "Display recent activity on the dashboard",
+            description:
+              "As a user, I want to see my recent activity on the dashboard so that I can quickly review my actions.",
             priority: "Medium",
           },
           {
             id: "15",
-            title: "Login page design",
-            description: "As a user, I want to see a beautiful login page ...",
+            title: "Ensure accessibility compliance for the login page",
+            description:
+              "As a user with disabilities, I want the login page to be accessible so that I can use the application without barriers.",
             priority: "Low",
           },
           {
             id: "16",
-            title: "Manage user roles",
+            title: "Allow multiple login attempts with warnings",
             description:
-              "As an admin, I want to be able to manage user roles ...",
+              "As a user, I want to be warned after multiple failed login attempts so that I know my account might be at risk.",
             priority: "High",
           },
           {
             id: "17",
-            title: "Create user profile page",
-            description: "As a user, I want to see my profile page ...",
+            title: "Show weather updates on the dashboard",
+            description:
+              "As a user, I want to see weather updates on my dashboard so that I can plan my day accordingly.",
             priority: "Medium",
           },
           {
             id: "18",
-            title: "Add user settings",
+            title: "Include a 'Remember Me' option on the login page",
             description:
-              "As a user, I want to be able to change my settings ...",
+              "As a user, I want the option to be remembered on the login page so that I don’t have to log in every time.",
             priority: "Low",
+          },
+          {
+            id: "19",
+            title: "Log failed login attempts for security audits",
+            description:
+              "As an admin, I want to track failed login attempts so that I can identify potential security threats.",
+            priority: "High",
+          },
+          {
+            id: "20",
+            title: "Highlight urgent tasks on the dashboard",
+            description:
+              "As a user, I want urgent tasks to be highlighted on the dashboard so that I can prioritize them effectively.",
+            priority: "Medium",
           },
         ]);
       } catch (error) {
@@ -216,18 +256,14 @@ export function CreateRoomDialog({
     fetchUserStories();
   }, [selectedProjectId]);
 
-  const [roomName, setRoomName] = useState("");
-  const [description, setDescription] = useState("");
-  const [votingScale, setVotingScale] = useState<VotingScale>(
-    VotingScale.FIBONACCI
-  );
-
-  const [requireCode, setRequireCode] = useState(false);
-  const [accessCode, setAccessCode] = useState("");
-
-  const [loadAllStories, setLoadAllStories] = useState(true);
-
-  const [selectedStories, setSelectedStories] = useState<UserStory[]>([]);
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Loader color="grape" type="dots" />
+      </div>
+    );
+  }
+  
   const handleStorySelection = (story: UserStory) => {
     setSelectedStories((prev) =>
       prev.some((s) => s.id === story.id)
@@ -236,9 +272,7 @@ export function CreateRoomDialog({
     );
   };
 
-  const [isLoading, setIsLoading] = useState(false);
-
-  const { user } = useContext(AuthContext);
+  
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -269,20 +303,24 @@ export function CreateRoomDialog({
         title: "Sala creada 🎉",
         message: "Sala creada correctamente",
         color: "green",
-      })
+      });
 
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (error.code === "ECONNABORTED") {
-       notifications.show({
+        notifications.show({
           title: "Error de conexión 🌐",
-          message: "No se pudo establecer conexión con el servidor. Inténtalo de nuevo más tarde.",
+          message:
+            "No se pudo establecer conexión con el servidor. Inténtalo de nuevo más tarde.",
           color: "red",
-       })
+        });
       } else {
         console.error("Error creando la sala:", error);
-        alert("Ocurrió un error al crear la sala.");
+        notifications.show({
+          title: "Error al crear la sala",
+          message: error.response?.data?.message || error.message,
+          color: "red",
+        })
       }
     } finally {
       setIsLoading(false);
