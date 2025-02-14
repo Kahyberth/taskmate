@@ -38,7 +38,7 @@ export function RegistrationForm() {
 
   const navigate = useNavigate();
 
-  const location = useLocation<{ email?: string }>();
+  const location = useLocation();
 
 
   useEffect(() => {

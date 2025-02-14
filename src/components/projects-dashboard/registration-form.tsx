@@ -34,7 +34,7 @@ export function RegistrationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const location = useLocation<{ email?: string }>();
+  const location = useLocation();
 
 
   useEffect(() => {

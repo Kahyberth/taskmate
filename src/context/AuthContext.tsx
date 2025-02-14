@@ -1,3 +1,4 @@
+import { UserProfile } from "@/interfaces/profile.interface";
 import { createContext } from "react";
 
 
@@ -10,18 +11,24 @@ export interface UserInterface {
   }
 
 
-interface AuthContextProps {
-  isAuthenticated: boolean;
-  user: UserInterface | null;
-  login: (userData: UserInterface) => void;
-  logout: () => void;
-  loading: boolean;
-}
+  interface AuthContextProps {
+    isAuthenticated: boolean;
+    user: UserInterface | null;
+    login: (userData: UserInterface) => void;
+    logout: () => void;
+    loading: boolean;
+    profileLoading?: boolean;
+    userProfile: UserProfile | null;
+    fetchUserProfile: (user_id: string) => Promise<void>;
+  }
 
-export const AuthContext = createContext<AuthContextProps>({
-  isAuthenticated: false,
-  user: null,
-  login: () => {},
-  logout: () => {},
-  loading: true,
-});
+  export const AuthContext = createContext<AuthContextProps>({
+    isAuthenticated: false,
+    user: null,
+    login: () => {},
+    logout: () => {},
+    loading: true,
+    profileLoading: true,
+    userProfile: null,
+    fetchUserProfile: async () => {},
+  });

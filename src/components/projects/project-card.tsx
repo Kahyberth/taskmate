@@ -8,14 +8,24 @@ import { ProjectActivity } from "@/components/projects/project-activity"
 import { ProjectStatus } from "./project-status"
 import { ProjectPriority } from "./project-priority"
 
-const statusMap = {
-  planning: "Planificación",
-  in_progress: "En Progreso",
-  completed: "Completado",
-  archived: "Archivado",
+interface Project {
+  id: string;
+  name: string;
+  description: string;
+  status: "planning" | "in_progress" | "completed" | "archived";
+  progress: number;
+  priority: "completed" | "high" | "low" | "medium";
+  dueDate: string;
+  members: { image: string; name: string }[];
+  activity: { type: string; description: string; date: string }[];
+  metrics: {
+    tasks: { completed: number; total: number };
+    pullRequests: number;
+    issues: number;
+  };
 }
 
-export function ProjectCard({ project }: { project: any }) {
+export function ProjectCard({ project }: { project: Project }) {
   return (
     <Card className="group relative overflow-hidden transition-all hover:border-blue-600">
       <Link to={`/projects/${project.id}`} className="absolute inset-0 z-10" />
@@ -46,7 +56,7 @@ export function ProjectCard({ project }: { project: any }) {
         </div>
 
         <div className="flex -space-x-2">
-          {project.members.slice(0, 4).map((member: any, i: number) => (
+          {project.members.slice(0, 4).map((member: { image: string; name: string }, i: number) => (
             <Avatar key={i} className="border-2 border-background">
               <AvatarImage src={member.image} alt={member.name} />
               <AvatarFallback>{member.name[0]}</AvatarFallback>

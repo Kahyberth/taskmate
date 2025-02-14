@@ -12,7 +12,7 @@ import { useContext } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "@/context/AuthContext";
 export function UserNav() {
-  const { logout, user } = useContext(AuthContext);
+  const { logout, userProfile } = useContext(AuthContext);
 
   const handleLogout = () => {
     // clearUserSession();
@@ -25,17 +25,22 @@ export function UserNav() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Avatar className="h-8 w-8 cursor-pointer">
-          <AvatarImage src="/placeholder.svg" />
-          <AvatarFallback>{`${user?.email
-            .slice(0, 2)
-            .toLocaleUpperCase()}`}</AvatarFallback>
+          <AvatarImage
+            src={userProfile?.profile.profile_picture || "/placeholder.svg"}
+            alt="Profile picture"
+          />
+          <AvatarFallback>
+            {userProfile?.name
+              ? userProfile.name.slice(0, 2).toUpperCase()
+              : "NA"}
+          </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium">{user?.name}</p>
-            <p className="text-xs text-gray-500">{user?.email}</p>
+            <p className="text-sm font-medium">{userProfile?.name}</p>
+            <p className="text-xs text-gray-500">{userProfile?.email}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

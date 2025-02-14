@@ -5,7 +5,8 @@ import { notifications } from '@mantine/notifications';
 
 
 import { useContext } from 'react';
-import { AuthContext } from '@/context/AuthProvider';
+import { AuthContext } from '@/context/AuthContext';
+
 //TODO: Recordar en un futuro agregar el import de la notificación y enviarlo por correo
 export function MagicLinkJoiner() {
   const location = useLocation();

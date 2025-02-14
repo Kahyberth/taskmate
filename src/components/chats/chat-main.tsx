@@ -1,28 +1,49 @@
-import { useState } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Phone, Video, Info, ImageIcon, File, Smile, Send, Users, MoreVertical, Search } from 'lucide-react'
-import { Badge } from "@/components/ui/badge"
+import { useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Phone,
+  Video,
+  Info,
+  ImageIcon,
+  File,
+  Smile,
+  Send,
+  Users,
+  MoreVertical,
+  Search,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { ChatMessage } from "./chat-message"
-import { FileUploadButton } from "./file-upload-button"
+} from "@/components/ui/dropdown-menu";
+import { ChatMessage } from "./chat-message";
+import { FileUploadButton } from "./file-upload-button";
 
-interface ChatMainProps {
-  chatId: string
-}
 
-const messages = [
+const messages: {
+  id: string;
+  type: "text" | "file" | "image";
+  content: string;
+  sender: {
+    name: string;
+    image: string;
+  };
+  timestamp: string;
+  status: "sent" | "delivered" | "seen";
+  fileType?: string;
+  fileSize?: string;
+  showAvatar?: boolean;
+}[] = [
   {
     id: "1",
-    type: "text" as "text",
+    type: "text" as const,
     content: "Hola equipo, ¿cómo va el desarrollo del nuevo feature?",
     sender: {
       name: "María García",
@@ -33,7 +54,7 @@ const messages = [
   },
   {
     id: "2",
-    type: "text",
+    type: "text" as const,
     content: "Vamos bien, ya terminamos la parte del frontend",
     sender: {
       name: "Carlos Ruiz",
@@ -55,16 +76,16 @@ const messages = [
     timestamp: "10:32",
     status: "sent",
   },
-]
+];
 
-export function ChatMain({ chatId }: ChatMainProps) {
-  const [message, setMessage] = useState("")
+export function ChatMain() {
+  const [message, setMessage] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     // Handle message submission
-    setMessage("")
-  }
+    setMessage("");
+  };
 
   return (
     <div className="flex flex-1 flex-col bg-background">
@@ -78,8 +99,7 @@ export function ChatMain({ chatId }: ChatMainProps) {
             <div className="flex items-center gap-2">
               <h2 className="font-semibold">Equipo Frontend</h2>
               <Badge variant="secondary" className="rounded-full">
-                <Users className="mr-1 h-3 w-3" />
-                5
+                <Users className="mr-1 h-3 w-3" />5
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -124,11 +144,11 @@ export function ChatMain({ chatId }: ChatMainProps) {
       <ScrollArea className="flex-1 px-6 py-4">
         <div className="space-y-6">
           {messages.map((message, index) => (
-            <ChatMessage 
-              key={message.id} 
+            <ChatMessage
+              key={message.id}
               message={message}
               showAvatar={
-                index === 0 || 
+                index === 0 ||
                 messages[index - 1].sender.name !== message.sender.name
               }
             />
@@ -139,12 +159,12 @@ export function ChatMain({ chatId }: ChatMainProps) {
       <div className="border-t px-6 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <div className="flex gap-1">
-            <FileUploadButton 
+            <FileUploadButton
               icon={ImageIcon}
               accept="image/*"
               tooltip="Enviar imagen"
             />
-            <FileUploadButton 
+            <FileUploadButton
               icon={File}
               accept=".doc,.docx,.pdf"
               tooltip="Enviar archivo"
@@ -172,6 +192,5 @@ export function ChatMain({ chatId }: ChatMainProps) {
         </form>
       </div>
     </div>
-  )
+  );
 }
-

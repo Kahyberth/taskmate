@@ -15,7 +15,7 @@ const statusConfig = {
   completed: {
     label: "Completado",
     icon: CheckCircle2,
-    variant: "success" as const,
+    variant: "default" as const,
   },
   archived: {
     label: "Archivado",

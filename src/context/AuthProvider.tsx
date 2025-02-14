@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Loader } from "@mantine/core";
 import { AuthContext, UserInterface } from "./AuthContext";
 import { notifications } from "@mantine/notifications";
+import axios from "axios";
+import { UserProfile } from "@/interfaces/profile.interface";
 
 
 
@@ -13,6 +15,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<UserInterface | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [profileLoading, setProfileLoading] = useState<boolean>(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
 
   const persistUser = useCallback((userData: UserInterface | null) => {
     if (userData) {
@@ -21,6 +26,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       sessionStorage.removeItem("user");
     }
   }, []);
+
 
   const verifyAuth = useCallback(
     async (signal: AbortSignal) => {
@@ -52,11 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         if (error.name !== "AbortError") {
-          notifications.show({
-            title: "Error de autenticación",
-            message: "Ocurrió un error al verificar la autenticación.",
-            color: "red",
-          })
+          console.error("Error verificando autenticación:", error);
           setUser(null);
           setIsAuthenticated(false);
           persistUser(null);
@@ -76,11 +78,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(parsedUser);
         setIsAuthenticated(true);
       } catch (e) {
-        notifications.show({
-          title: "Error de autenticación",
-          message: `Ocurrió un error al cargar la sesión: ${e}`,
-          color: "red",
-        });
+        console.error("Error al parsear el usuario almacenado:", e);
         sessionStorage.removeItem("user");
       }
       setLoading(false);
@@ -99,6 +97,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     persistUser(userData);
   }, [persistUser]);
 
+
   const logout = useCallback(async () => {
     try {
       await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
@@ -106,17 +105,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         credentials: "include",
       });
     } catch (error) {
-      notifications.show({
-        title: "Error de autenticación",
-        message: `Ocurrió un error al cerrar la sesión: ${error}`,
-        color: "red",
-      });
+      console.error("Error durante el logout:", error);
     } finally {
       setUser(null);
       setIsAuthenticated(false);
       persistUser(null);
     }
   }, [persistUser]);
+
+
+  const fetchUserProfile = useCallback(async (user_id: string) => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/auth/profile/${user_id}`,
+        { withCredentials: true }
+      );
+      setUserProfile(response.data);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      notifications.show({
+        title: "Error de autenticación",
+        message: `Ocurrió un error al cargar el perfil: ${error}`,
+        color: "red",
+      });
+    } finally {
+      setProfileLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user && user.id) {
+      fetchUserProfile(user.id);
+    }
+  }, [user, fetchUserProfile]);
 
   const contextValue = useMemo(
     () => ({
@@ -125,8 +146,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       login,
       logout,
       loading,
+      profileLoading,
+      userProfile,
+      fetchUserProfile,
     }),
-    [isAuthenticated, user, login, logout, loading]
+    [isAuthenticated, user, login, logout, loading, userProfile, fetchUserProfile, profileLoading]
   );
 
   if (loading) {
