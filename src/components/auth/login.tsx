@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "react-router-dom";
-import axios from "axios";
 import { notifications } from "@mantine/notifications";
 import { AuthContext } from "@/context/AuthContext";
 
@@ -22,25 +21,11 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    await axios.post(
-      `${import.meta.env.VITE_API_URL}/auth/login`,
-      { email, password },
-      { withCredentials: true }
-    ).then((res) => {
-      login(res.data.data)
-      notifications.show({ title: "Bienvenido a TaskMate 🎉", 
-        message: "Has iniciado sesión correctamente", 
-        color: "blue" 
-      })
-    }
-    ).catch((err) => {
-      notifications.show(
-        { title: "Error", 
-          message: `Ocurrió un error al iniciar sesión: ${err.response.data.message}`, 
-          color: "red" 
-        }
-      )
+    login({ email, password });
+    notifications.show({
+      title: "Bienvenido a TaskMate 🎉",
+      message: "Has iniciado sesión correctamente",
+      color: "blue",
     });
   };
 

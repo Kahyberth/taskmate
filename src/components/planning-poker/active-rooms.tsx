@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Users, Clock, Lock } from "lucide-react"
 import { useContext, useEffect, useState } from "react"
-import axios from "axios"
 import { Skeleton } from "@mantine/core"
 import type { Datum } from "@/interfaces/active_rooms"
 import { useNavigate } from "react-router-dom"
@@ -14,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AuthContext } from "@/context/AuthContext"
+import { apiClient } from "@/api/client-gateway"
 
 const statusConfig = {
   live: {
@@ -62,7 +62,7 @@ export function ActiveRooms() {
 
   useEffect(() => {
     const fetchData = async () => {
-      await axios
+      await apiClient
         .get(`${import.meta.env.VITE_API_URL}/poker/all-sessions`, {
           timeout: 10000,
         })
@@ -99,7 +99,7 @@ export function ActiveRooms() {
   const handleJoinRoom = async (room_id: string) => {
     setIsJoining(true)
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/poker/join-session`, {
+      await apiClient.post(`${import.meta.env.VITE_API_URL}/poker/join-session`, {
         session_id: room_id,
         user_id: user_data?.id,
       })
@@ -122,7 +122,7 @@ export function ActiveRooms() {
   const handleJoinRoomByCode = async (room_id: string, password: string) => {
     setIsJoining(true)
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/poker/join-session-code`, {
+      await apiClient.post(`${import.meta.env.VITE_API_URL}/poker/join-session-code`, {
         session_id: room_id,
         user_id: user_data?.id,
         session_code: password,

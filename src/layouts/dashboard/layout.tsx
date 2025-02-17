@@ -2,8 +2,29 @@ import { DashboardNav } from "@/components/dashboard/dashboard-nav"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Outlet } from "react-router-dom"
+import { useContext } from "react";
+import { AuthContext } from "@/context/AuthContext";
+import { Loader } from "@mantine/core";
 
 export default function DashboardLayout() {
+
+  const { profileLoading } = useContext(AuthContext);
+  
+    if (profileLoading) {
+      return (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "100vh",
+          }}
+        >
+          <Loader color="grape" type="dots" />
+        </div>
+      );
+    }
+
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex w-full min-h-screen">

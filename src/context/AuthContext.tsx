@@ -10,22 +10,22 @@ export interface UserInterface {
     company: string;
   }
 
-
-  interface AuthContextProps {
+  export interface AuthContextProps {
     isAuthenticated: boolean;
     user: UserInterface | null;
-    login: (userData: UserInterface) => void;
+    login: (credentials: { email: string; password: string }) => Promise<{ success: boolean; error?: string | null }>;
     logout: () => void;
     loading: boolean;
-    profileLoading?: boolean;
+    profileLoading: boolean;
     userProfile: UserProfile | null;
     fetchUserProfile: (user_id: string) => Promise<void>;
   }
 
+
   export const AuthContext = createContext<AuthContextProps>({
     isAuthenticated: false,
     user: null,
-    login: () => {},
+    login: async () => ({ success: false }),
     logout: () => {},
     loading: true,
     profileLoading: true,
