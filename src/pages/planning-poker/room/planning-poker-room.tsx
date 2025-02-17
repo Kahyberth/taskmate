@@ -114,7 +114,7 @@ export function PlanningPokerRoom() {
   // const { data, loading, error } = useFetch<User[]>('/api/users');
 
   const { id: room_id } = useParams();
-  const { user: user_data } = useContext(AuthContext);
+  const { userProfile } = useContext(AuthContext);
 
   useEffect(() => {
     if (lastMessageRef.current) {
@@ -125,7 +125,7 @@ export function PlanningPokerRoom() {
   useEffect(() => {
     const socket = io("http://localhost:8081", {
       auth: {
-        user_data,
+        userProfile,
       },
     });
 
@@ -268,7 +268,7 @@ export function PlanningPokerRoom() {
     return () => {
       socket.disconnect();
     };
-  }, [user_data, room_id, navigate]);
+  }, [userProfile, room_id, navigate]);
 
   
 

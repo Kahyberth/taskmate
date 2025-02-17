@@ -1,7 +1,7 @@
-import axios from "axios";
 import { useContext, useState } from "react";
 import { SessionContext } from "./SessionContext";
 import { AuthContext } from "./AuthContext";
+import { apiClient } from "@/api/client-gateway";
 
 interface SessionProps {
   children: React.ReactNode;
@@ -16,7 +16,7 @@ export const SessionProvider: React.FC<SessionProps> = ({ children }) => {
   const validateSession = async () => {
     try {
 
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/poker/validate-session`, {
+      const response = await apiClient.post(`/poker/validate-session`, {
         user_id: user_data?.id
       }
     )

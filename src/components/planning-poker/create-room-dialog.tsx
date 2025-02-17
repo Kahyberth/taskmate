@@ -23,6 +23,7 @@ import axios from "axios";
 import { notifications } from "@mantine/notifications";
 import { Loader } from "@mantine/core";
 import { AuthContext } from "@/context/AuthContext";
+import { apiClient } from "@/api/client-gateway";
 
 // Interfaz para proyectos
 interface Project {
@@ -281,14 +282,13 @@ export function CreateRoomDialog({
     console.log("Creando sala con los siguientes datos:");
 
     try {
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/poker/create-session`,
+      await apiClient.post('/poker/create-session',
         {
           session_name: roomName,
           description,
           project_id: selectedProjectId,
           voting_scale: votingScale,
-          created_by: user?.id,
+          created_by: user?.name,
           session_code: requireCode ? accessCode : "",
           deck: loadAllStories ? userStories : selectedStories,
         },
@@ -305,22 +305,31 @@ export function CreateRoomDialog({
         color: "green",
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      if (error.code === "ECONNABORTED") {
+
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.code === "ECONNABORTED") {
+          notifications.show({
+            title: "Error de conexión 🌐",
+            message:
+              "No se pudo establecer conexión con el servidor. Inténtalo de nuevo más tarde.",
+            color: "red",
+          });
+        } else {
+          console.error("Error creando la sala:", error);
+          notifications.show({
+            title: "Error al crear la sala",
+            message: error.response?.data?.message || error.message,
+            color: "red",
+          });
+        }
+      } else {
+        console.error("Error desconocido:", error);
         notifications.show({
-          title: "Error de conexión 🌐",
-          message:
-            "No se pudo establecer conexión con el servidor. Inténtalo de nuevo más tarde.",
+          title: "Error desconocido",
+          message: "Ocurrió un error inesperado. Inténtalo de nuevo más tarde.",
           color: "red",
         });
-      } else {
-        console.error("Error creando la sala:", error);
-        notifications.show({
-          title: "Error al crear la sala",
-          message: error.response?.data?.message || error.message,
-          color: "red",
-        })
       }
     } finally {
       setIsLoading(false);
@@ -358,12 +367,10 @@ export function CreateRoomDialog({
               <div>
                 <Label className="font-medium">Proyecto</Label>
                 <Select
-                  // El value es el ID del proyecto seleccionado
                   value={selectedProjectId}
-                  // Actualiza el ID cuando el usuario selecciona otro proyecto
                   onValueChange={(val) => {
                     setSelectedProjectId(val);
-                    setSelectedStories([]); // limpiar historias seleccionadas
+                    setSelectedStories([]); 
                   }}
                   required
                 >
