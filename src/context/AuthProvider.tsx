@@ -105,13 +105,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error: unknown) {
       console.error("Error verificando autenticación:", error);
-      notifications.show({
-        title: "Autenticación fallida",
-        message:
-          (axios.isAxiosError(error) && error.response?.data?.message) ||
-          "No se pudo verificar la sesión. Por favor, inicia sesión de nuevo.",
-        color: "red",
-      });
       setUser(null);
       setIsAuthenticated(false);
       persistUser(null);
@@ -153,6 +146,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setIsAuthenticated(true);
           persistUser(response.data.data);
           sessionStorage.removeItem("loggedOut");
+          notifications.show({
+            title: "Bienvenido a TaskMate 🎉",
+            message: "Has iniciado sesión correctamente",
+            color: "blue",
+          });
           return { success: true };
         } else {
           throw new Error("Datos de usuario no válidos");

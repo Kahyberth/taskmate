@@ -20,6 +20,7 @@ import BoardPage from "@/pages/projects/board/page";
 import PlanningPokerRoomGuard from "@/guard/PlanningPokerRoomGuard";
 import { SessionProvider } from "@/context/SessionProvider";
 import PlanningPokerPageGuard from "@/guard/PlanningPokerPageGuard";
+import InvitationVerify from "../pages/Invitation";
 
 function AppRoutes() {
   return (
@@ -50,6 +51,15 @@ function AppRoutes() {
           <Route path="teams" element={<TeamsPage />} />
           <Route path="chat" element={<ChatPage />} />
         </Route>
+
+        <Route
+          path="/invitation"
+          element={
+            <PublicRoute>
+              <InvitationVerify />
+            </PublicRoute>
+          }
+        />
 
         <Route
           path="/projects/:project_name"

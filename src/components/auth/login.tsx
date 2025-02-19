@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "react-router-dom";
-import { notifications } from "@mantine/notifications";
 import { AuthContext } from "@/context/AuthContext";
 
 interface LoginModalProps {
@@ -22,11 +21,6 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     login({ email, password });
-    notifications.show({
-      title: "Bienvenido a TaskMate 🎉",
-      message: "Has iniciado sesión correctamente",
-      color: "blue",
-    });
   };
 
   return (
