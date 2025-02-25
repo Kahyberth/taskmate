@@ -8,7 +8,6 @@ import { apiClient } from "@/api/client-gateway";
 
 
 interface TokenPayload {
-  inviterId: string;
   inviteeEmail: string;
   teamId: string;
   roleInTeam: string;
@@ -19,7 +18,7 @@ interface TokenPayload {
 export default function InvitationVerify() {
   const [searchParams] = useSearchParams();
   const [verificationState, setVerificationState] = useState<"loading" | "verified" | "invalid">("loading");
-  const [tokenData, setTokenData] = useState<TokenPayload | null>(null);
+  const [tokenData, setTokenData] = useState<TokenPayload>();
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   // Estados para el proceso de aceptación de la invitación
@@ -46,6 +45,7 @@ export default function InvitationVerify() {
         }
         const payload = parts[1];
         const decodedData = JSON.parse(atob(payload)) as TokenPayload;
+        console.log(decodedData);
         setTokenData(decodedData);
         setVerificationState("verified");
       } catch (error) {
@@ -63,10 +63,12 @@ export default function InvitationVerify() {
     setAcceptState("loading");
     try {
       const token = searchParams.get("token");
+
       if (!token) {
         throw new Error("No se encontró el token de invitación");
       }
-      await apiClient.post(`/teams/accept-invite`, { token, userId: tokenData?.inviterId });
+      
+      await apiClient.post(`/teams/accept-invite`, { token, inviteeEmail: tokenData?.inviteeEmail });
       setAcceptState("accepted");
     } catch (error) {
       setAcceptState("error");
