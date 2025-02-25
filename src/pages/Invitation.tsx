@@ -68,7 +68,7 @@ export default function InvitationVerify() {
         throw new Error("No se encontró el token de invitación");
       }
       
-      await apiClient.post(`/teams/accept-invite`, { token, inviteeEmail: tokenData?.inviteeEmail });
+      await apiClient.post(`/teams/accept-invite`, { token, inviteeEmail: tokenData?.inviteeEmail, roleInTeam: tokenData?.roleInTeam });
       setAcceptState("accepted");
     } catch (error) {
       setAcceptState("error");
