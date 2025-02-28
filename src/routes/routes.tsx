@@ -21,6 +21,7 @@ import PlanningPokerRoomGuard from "@/guard/PlanningPokerRoomGuard";
 import { SessionProvider } from "@/context/SessionProvider";
 import PlanningPokerPageGuard from "@/guard/PlanningPokerPageGuard";
 import InvitationVerify from "../pages/Invitation";
+import { TeamsProvider } from "@/context/TeamsContext";
 
 function AppRoutes() {
   return (
@@ -48,7 +49,14 @@ function AppRoutes() {
               </PlanningPokerRoomGuard>
             }
           />
-          <Route path="teams" element={<TeamsPage />} />
+          <Route 
+            path="teams" 
+            element={
+              <TeamsProvider>
+                <TeamsPage />
+              </TeamsProvider>
+            } 
+          />
           <Route path="chat" element={<ChatPage />} />
         </Route>
 

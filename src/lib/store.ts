@@ -9,11 +9,51 @@ interface UserSession {
 
 type ViewMode = 'grid' | 'list'
 
+export type CreateTeamDTO = {
+  name: string;
+  description: string;
+  leaderId: string;
+  image?: string | null;
+};
+
+
+export type TeamMember = {
+  member: {
+    id: string
+    name: string;
+    lastName: string;
+    email: string
+    image: string
+    isActive: boolean
+    joinedAt: string
+  },
+  role: string 
+}
+
+export type Team = {
+  id: string
+  name: string
+  description: string
+  image: string | null
+  members: TeamMember[]
+  tasks: number
+  createdAt: string
+  updatedAt: string
+  role: string
+}
+
+export type UpdateTeamDto = {
+  teamId: string;
+  name?: string;
+  description?: string;
+  image?: string | null;
+};
+
+
 interface ProjectsStore {
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
 }
-
 
 
 interface UserStore {
@@ -22,39 +62,20 @@ interface UserStore {
   clearUserSession: () => void;
 }
 
-export type TeamMember = {
-  id: string
-  name: string
-  email: string
-  role: 'owner' | 'admin' | 'member'
-  image: string
-  status: 'active' | 'inactive'
-  joinedAt: string
-}
-
-export type Team = {
-  id: string
-  name: string
-  description: string
-  image: string
-  members: TeamMember[]
-  projects: number
-  tasks: number
-  progress: number
-  createdAt: string
-  updatedAt: string
-}
-
 interface TeamsStore {
-  viewMode: 'grid' | 'list'
-  setViewMode: (mode: 'grid' | 'list') => void
+  teams: Team[];
+  viewMode: 'grid' | 'list';
+  setViewMode: (mode: 'grid' | 'list') => void;
+  addTeam: (team: Team) => void;
 }
 
 
 export const useTeamsStore = create<TeamsStore>((set) => ({
-  viewMode: 'grid',
+  teams: [],
+  viewMode: "grid",
   setViewMode: (mode) => set({ viewMode: mode }),
-}))
+  addTeam: (team: Team) => set((state) => ({ teams: [...state.teams, team] })),
+}));
 
 
 
