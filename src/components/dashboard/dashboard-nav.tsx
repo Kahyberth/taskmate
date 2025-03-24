@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom"
 import { useLocation } from "react-router-dom"
-import { BarChart2, Calendar, GitBranch, Home, LayoutGrid, MessageSquare, Settings, Users2, PlaySquare } from 'lucide-react'
+import { BarChart2, Calendar, Home, LayoutGrid, Settings, Users2, PlaySquare } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -27,11 +27,6 @@ const mainNavItems = [
     icon: LayoutGrid,
   },
   {
-    title: "Chat",
-    href: "/dashboard/chat",
-    icon: MessageSquare,
-  },
-  {
     title: "Planning Poker",
     href: "/dashboard/planning-poker",
     icon: PlaySquare,
@@ -40,11 +35,6 @@ const mainNavItems = [
     title: "Reuniones",
     href: "/dashboard/meetings",
     icon: Calendar,
-  },
-  {
-    title: "Repositorio",
-    href: "/dashboard/repository",
-    icon: GitBranch,
   },
   {
     title: "Equipos",

@@ -13,7 +13,6 @@ import ProfilePage from "@/pages/profile/profile";
 import ProjectsPage from "@/pages/projects/page";
 import { PlanningPokerRoom } from "@/pages/planning-poker/room/planning-poker-room";
 import TeamsPage from "@/pages/teams/team-page";
-import ChatPage from "@/pages/chat/chat-page";
 import ProjectsDashboardLayout from "@/layouts/projects/layout";
 import BacklogPage from "@/pages/projects/backlog/page";
 import BoardPage from "@/pages/projects/board/page";
@@ -22,6 +21,7 @@ import { SessionProvider } from "@/context/SessionProvider";
 import PlanningPokerPageGuard from "@/guard/PlanningPokerPageGuard";
 import InvitationVerify from "../pages/Invitation";
 import { TeamsProvider } from "@/context/TeamsContext";
+import TeamDashboard from "@/pages/teams/dashboard/page";
 
 function AppRoutes() {
   return (
@@ -49,15 +49,16 @@ function AppRoutes() {
               </PlanningPokerRoomGuard>
             }
           />
-          <Route 
-            path="teams" 
+          <Route
+            path="teams"
             element={
               <TeamsProvider>
                 <TeamsPage />
               </TeamsProvider>
-            } 
+            }
           />
-          <Route path="chat" element={<ChatPage />} />
+
+          <Route path="teams/:team_id" element={<TeamDashboard />} />
         </Route>
 
         <Route

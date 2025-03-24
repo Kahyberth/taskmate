@@ -111,7 +111,6 @@ export function PlanningPokerRoom() {
     votes: { value: string; participant: User }[];
   } | null>(null);
 
-  // const { data, loading, error } = useFetch<User[]>('/api/users');
 
   const { id: room_id } = useParams();
   const { userProfile } = useContext(AuthContext);
