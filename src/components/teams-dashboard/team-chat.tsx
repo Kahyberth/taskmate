@@ -1,16 +1,9 @@
-import type React from "react";
-import { useState, useRef, useEffect, useContext } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import type React from "react"
+import { useState, useRef, useEffect, useContext } from "react"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   SendIcon,
   PaperclipIcon,
@@ -29,12 +22,11 @@ import {
   FileTextIcon,
   FileImageIcon,
   FileIcon as FilePdfIcon,
-  UserPlus,
   Settings,
   LogOut,
   ChevronRight,
   ArrowLeft,
-} from "lucide-react";
+} from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,7 +34,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogContent,
@@ -50,185 +42,186 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { io, Socket } from "socket.io-client";
-import { AuthContext } from "@/context/AuthContext";
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
+import { io, type Socket } from "socket.io-client"
+import { AuthContext } from "@/context/AuthContext"
+import { apiClient } from "@/api/client-gateway"
+import type { Members } from "@/interfaces/members.interface"
 
 type ChatGroup = {
-  id: number;
-  name: string;
-  description?: string;
-  avatar?: string;
-  initials: string;
-  isDirectMessage: boolean;
-  members: ChatMember[];
-  unreadCount: number;
+  id: string
+  name: string
+  description?: string
+  avatar?: string
+  initials: string
+  members: ChatMember[]
+  unreadCount: number
   lastMessage?: {
-    content: string;
-    timestamp: string;
-  };
-};
+    content: string
+    timestamp: string
+  }
+}
 
 type ChatMember = {
-  id: number;
-  name: string;
-  avatar: string;
-  initials: string;
-  status: "online" | "offline" | "away";
-};
+  id: string
+  name: string
+  avatar: string
+  initials: string
+  status: "online" | "offline" | "away"
+}
 
 type FileAttachment = {
-  id: number;
-  name: string;
-  size: string;
-  type: "image" | "pdf" | "document" | "other";
-  url: string;
-  thumbnailUrl?: string;
-};
+  id: number
+  name: string
+  size: string
+  type: "image" | "pdf" | "document" | "other"
+  url: string
+  thumbnailUrl?: string
+}
 
 type Message = {
-  id: string;
-  sender: ChatMember;
-  content: string;
-  timestamp: string;
-  isCurrentUser: boolean;
-  attachments?: FileAttachment[];
-};
+  id: string
+  sender: ChatMember
+  content: string
+  timestamp: string
+  isCurrentUser: boolean
+  attachments?: FileAttachment[]
+}
 
-const chatMembers: ChatMember[] = [
-  { id: 1, name: "Alex Johnson", avatar: "/placeholder.svg?height=32&width=32", initials: "AJ", status: "online" },
-  { id: 2, name: "Sarah Chen", avatar: "/placeholder.svg?height=32&width=32", initials: "SC", status: "online" },
-  { id: 3, name: "Michael Rodriguez", avatar: "/placeholder.svg?height=32&width=32", initials: "MR", status: "away" },
-  { id: 4, name: "Emily Taylor", avatar: "/placeholder.svg?height=32&width=32", initials: "ET", status: "offline" },
-  { id: 5, name: "David Kim", avatar: "/placeholder.svg?height=32&width=32", initials: "DK", status: "online" },
-  { id: 6, name: "Jessica Patel", avatar: "/placeholder.svg?height=32&width=32", initials: "JP", status: "offline" },
-  { id: 7, name: "You", avatar: "/placeholder.svg?height=32&width=32", initials: "YO", status: "online" },
-];
+const isMobile = () => window.innerWidth < 768
 
+export default function TeamChat({ channels, teamMembers }: { channels: any[]; teamMembers: Members[] }) {
+  const [isExpanded, setIsExpanded] = useState(true)
+  const [showSidebar, setShowSidebar] = useState(true)
+  const [newMessage, setNewMessage] = useState("")
+  const [isSending, setIsSending] = useState(false)
+  const [chatGroups, setChatGroups] = useState<ChatGroup[]>(channels)
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(channels[0]?.id || "")
+  const [messages, setMessages] = useState<Record<string, Message[]>>({})
+  const [searchQuery, setSearchQuery] = useState("")
+  const [showNewGroupDialog, setShowNewGroupDialog] = useState(false)
+  const [newGroupName, setNewGroupName] = useState("")
+  const [newGroupDescription, setNewGroupDescription] = useState("")
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([])
+  const [fileUploads, setFileUploads] = useState<File[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [isMobileView, setIsMobileView] = useState(false)
 
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const socketRef = useRef<Socket>()
+  const { userProfile } = useContext(AuthContext)
 
-const isMobile = () => window.innerWidth < 768;
-
-export default function TeamChat({ channels }: { channels: any[] }) {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [showSidebar, setShowSidebar] = useState(true);
-  const [newMessage, setNewMessage] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [chatGroups, setChatGroups] = useState<ChatGroup[]>(channels);
-  const [selectedGroupId, setSelectedGroupId] = useState<number>(1);
-  const [messages, setMessages] = useState<Record<number, Message[]>>({});
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showNewGroupDialog, setShowNewGroupDialog] = useState(false);
-  const [newGroupName, setNewGroupName] = useState("");
-  const [newGroupDescription, setNewGroupDescription] = useState("");
-  const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
-  const [fileUploads, setFileUploads] = useState<File[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [showMembersDialog, setShowMembersDialog] = useState(false);
-  const [isMobileView, setIsMobileView] = useState(false);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const socketRef = useRef<Socket>();
-  const { userProfile } = useContext(AuthContext);
-
-  const selectedGroup =
-    chatGroups.find((group) => group.id === selectedGroupId) || chatGroups[0];
+  const selectedGroup = chatGroups.find((group) => group.id === selectedGroupId) || chatGroups[0]
 
   useEffect(() => {
-    setChatGroups(channels);
-  }, [channels]);
+    setChatGroups(channels)
+  }, [channels])
 
   useEffect(() => {
     if (chatGroups.length > 0) {
-      setSelectedGroupId(chatGroups[0].id);
-    }
-  }, [chatGroups]);
-
-  useEffect(() => {
-    if (!userProfile || !selectedGroup) return;
-    const socket = io("http://localhost:4005", { auth: { userProfile } });
-    socket.emit("join", selectedGroup.id);
-  
-    socket.on(
-      "messages",
-      (data: Array<{ id: string; user_id: string; value: string; timestamp: string }>) => {
-        setMessages((prev) => {
-          const currentMessages = prev[selectedGroup.id] || [];
-          const newMessages = data
-            .filter((msg) =>
-              !currentMessages.some((m) => m.id.toString() === msg.id.toString())
-            )
-            .map((msg) => ({
-              id: msg.id,
-              sender:
-                chatMembers.find((m) => m.id.toString() === msg.user_id.toString()) ||
-                chatMembers[6],
-              content: msg.value,
-              timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-              // Si el id del mensaje coincide con el id del usuario actual, se marca como mensaje propio
-              isCurrentUser: msg.user_id.toString() === userProfile?.id.toString(),
-            }));
-          return {
-            ...prev,
-            [selectedGroup.id]: [...currentMessages, ...newMessages],
-          };
-        });
+      const exists = chatGroups.some((group) => group.id === selectedGroupId)
+      if (!exists) {
+        setSelectedGroupId(chatGroups[0].id)
       }
-    );
-    
-    
-    socketRef.current = socket;
-    return () => {
-      socket.disconnect();
-    };
-  }, [userProfile, selectedGroup]);
-  
-  
-  
+    }
+  }, [chatGroups, selectedGroupId])
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, selectedGroupId]);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobileView(isMobile());
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
 
   const getCurrentTime = () => {
-    const now = new Date();
-    return now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  };
+  const now = new Date()
+  return now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })
+}
+
+
+
+  const transformMessage = (data: any): Message => {
+    const uid = data.user_id || data.userId;
+    return {
+      id: data.id,
+      sender: {
+        id: uid,
+        name: data.userName,
+        avatar: data.avatar,
+        initials: data.userName ? data.userName.slice(0, 2).toUpperCase() : "",
+        status: "online",
+      },
+      content: data.value,
+      timestamp: data.timestamp
+        ? new Date(data.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })
+        : getCurrentTime(),
+      isCurrentUser: userProfile ? String(uid) === String(userProfile.id) : false,
+    }
+  }
+  
+  
+  
+  
+
+  useEffect(() => {
+    if (!userProfile || !selectedGroup) return
+
+  
+    const socket = io("http://localhost:4005", { auth: { userProfile } })
+
+    socket.emit("join", selectedGroup.id)
+
+    socket.on("messages", (data: any) => {
+      if (Array.isArray(data)) {
+        const transformed = data.map((msg: any) => transformMessage(msg))
+        setMessages((prev) => ({
+          ...prev,
+          [selectedGroup.id]: transformed,
+        }))
+      } else {
+        const transformed = transformMessage(data)
+        setMessages((prev) => ({
+          ...prev,
+          [selectedGroup.id]: [...(prev[selectedGroup.id] || []), transformed],
+        }))
+      }
+    })
+
+    socketRef.current = socket
+
+    return () => {
+      socket.disconnect()
+    }
+  }, [userProfile, selectedGroup])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages, selectedGroupId])
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobileView(isMobile())
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
 
   const toggleExpanded = () => {
-    setIsExpanded(!isExpanded);
-  };
+    setIsExpanded(!isExpanded)
+  }
 
   const handleSendMessage = () => {
-
-    if (!socketRef.current) return;
+    if (!socketRef.current) return
 
     if (newMessage.trim() || fileUploads.length > 0) {
-      setIsSending(true);
+      setIsSending(true)
       setTimeout(() => {
         const fileAttachments: FileAttachment[] = fileUploads.map((file, index) => {
-          let type: "image" | "pdf" | "document" | "other" = "other";
+          let type: "image" | "pdf" | "document" | "other" = "other"
           if (file.type.startsWith("image/")) {
-            type = "image";
+            type = "image"
           } else if (file.type === "application/pdf") {
-            type = "pdf";
+            type = "pdf"
           } else if (file.type.includes("document") || file.type.includes("sheet") || file.type.includes("text")) {
-            type = "document";
+            type = "document"
           }
           return {
             id: Date.now() + index,
@@ -237,26 +230,33 @@ export default function TeamChat({ channels }: { channels: any[] }) {
             type,
             url: URL.createObjectURL(file),
             thumbnailUrl: type === "image" ? URL.createObjectURL(file) : undefined,
-          };
-        });
+          }
+        })
+
         const newMsg: Message = {
           id: Date.now().toString(),
-          sender: chatMembers[6],
+          sender: {
+            id: userProfile?.id || "",
+            name: userProfile?.name || "",
+            avatar: userProfile?.profile.profile_picture || "",
+            initials: userProfile?.name.slice(0, 2).toUpperCase() || "",
+            status: "online",
+          },
           content: newMessage.trim(),
           timestamp: getCurrentTime(),
           isCurrentUser: true,
           attachments: fileAttachments.length > 0 ? fileAttachments : undefined,
-        };
+        }
         setMessages((prev) => ({
           ...prev,
           [selectedGroupId]: [...(prev[selectedGroupId] || []), newMsg],
-        }));
+        }))
 
+      
         socketRef.current?.emit("message", {
           channel: selectedGroup.id,
           value: newMsg.content,
-        });
-
+        })
 
         setChatGroups((prev) =>
           prev.map((group) =>
@@ -270,115 +270,109 @@ export default function TeamChat({ channels }: { channels: any[] }) {
                     timestamp: getCurrentTime(),
                   },
                 }
-              : group
-          )
-        );
-        setNewMessage("");
-        setFileUploads([]);
-        setIsSending(false);
-      }, 500);
+              : group,
+          ),
+        )
+        setNewMessage("")
+        setFileUploads([])
+        setIsSending(false)
+      }, 500)
     }
-  };
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+      e.preventDefault()
+      handleSendMessage()
     }
-  };
+  }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
-      setFileUploads((prev) => [...prev, ...newFiles]);
-      e.target.value = "";
+      const newFiles = Array.from(e.target.files)
+      setFileUploads((prev) => [...prev, ...newFiles])
+      e.target.value = ""
     }
-  };
+  }
 
   const removeFile = (index: number) => {
-    setFileUploads((prev) => prev.filter((_, i) => i !== index));
-  };
+    setFileUploads((prev) => prev.filter((_, i) => i !== index))
+  }
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + " B";
-    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-    else return (bytes / 1048576).toFixed(1) + " MB";
-  };
+    if (bytes < 1024) return bytes + " B"
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB"
+    else return (bytes / 1048576).toFixed(1) + " MB"
+  }
 
   const getFileIcon = (file: File) => {
     if (file.type.startsWith("image/")) {
-      return <FileImageIcon className="h-4 w-4" />;
+      return <FileImageIcon className="h-4 w-4" />
     } else if (file.type === "application/pdf") {
-      return <FilePdfIcon className="h-4 w-4" />;
+      return <FilePdfIcon className="h-4 w-4" />
     } else if (file.type.includes("document") || file.type.includes("sheet") || file.type.includes("text")) {
-      return <FileTextIcon className="h-4 w-4" />;
+      return <FileTextIcon className="h-4 w-4" />
     } else {
-      return <FileIcon className="h-4 w-4" />;
+      return <FileIcon className="h-4 w-4" />
     }
-  };
+  }
 
-  const handleCreateGroup = () => {
+  const handleCreateGroup = async () => {
     if (newGroupName.trim() && selectedMembers.length > 0) {
-      const currentUserIncluded = selectedMembers.includes(7);
-      const finalMembers = currentUserIncluded ? selectedMembers : [...selectedMembers, 7];
-      const newGroup: ChatGroup = {
-        id: Date.now(),
-        name: newGroupName.trim(),
-        description: newGroupDescription.trim() || undefined,
-        initials: newGroupName
-          .trim()
-          .split(" ")
-          .map((word) => word[0])
-          .join("")
-          .toUpperCase()
-          .substring(0, 2),
-        isDirectMessage: false,
-        members: finalMembers.map((id) => chatMembers.find((member) => member.id === id)!),
-        unreadCount: 0,
-      };
-      setChatGroups((prev) => [newGroup, ...prev]);
-      setMessages((prev) => ({
-        ...prev,
-        [newGroup.id]: [],
-      }));
-      setSelectedGroupId(newGroup.id);
-      setNewGroupName("");
-      setNewGroupDescription("");
-      setSelectedMembers([]);
-      setShowNewGroupDialog(false);
-    }
-  };
+      try {
+        const payload = {
+          name: newGroupName.trim(),
+          description: newGroupDescription.trim() || "",
+          team_id: "43b31791-43e2-4985-85ce-5eb920082b33",
+          user_id: userProfile?.id || "",
+          channel_name: newGroupName.trim() + " grupo",
+          parentChannelId: selectedGroup.id,
+        }
 
-  const handleStartDirectMessage = (memberId: number) => {
-    const existingDM = chatGroups.find(
-      (group) =>
-        group.isDirectMessage &&
-        group.members.length === 2 &&
-        group.members.some((m) => m.id === memberId) &&
-        group.members.some((m) => m.id === 7)
-    );
-    if (existingDM) {
-      setSelectedGroupId(existingDM.id);
-    } else {
-      const member = chatMembers.find((m) => m.id === memberId)!;
-      const newDM: ChatGroup = {
-        id: Date.now(),
-        name: member.name,
-        avatar: member.avatar,
-        initials: member.initials,
-        isDirectMessage: true,
-        members: [member, chatMembers[6]],
-        unreadCount: 0,
-      };
-      setChatGroups((prev) => [newDM, ...prev]);
-      setMessages((prev) => ({
-        ...prev,
-        [newDM.id]: [],
-      }));
-      setSelectedGroupId(newDM.id);
+        const response = await apiClient.post("channels/create-channel", payload)
+        const createdChannel = response.data
+
+        const finalMembers = [...selectedMembers]
+        const newGroup: ChatGroup = {
+          id: createdChannel.id,
+          name: createdChannel.name,
+          description: createdChannel.description,
+          initials: createdChannel.name
+            .trim()
+            .split(" ")
+            .map((word: string) => word[0])
+            .join("")
+            .toUpperCase()
+            .substring(0, 2),
+          members: finalMembers.map((id) => {
+            const member = teamMembers.find((m) => m.member.id === id)?.member
+            return {
+              id: member?.id || "",
+              name: member?.name || "",
+              avatar: member?.name.slice(0, 2).toUpperCase() || "",
+              initials: member?.name.slice(0, 2).toUpperCase() || "",
+              status: "online",
+            }
+          }),
+          unreadCount: 0,
+          lastMessage: undefined,
+        }
+
+        setChatGroups((prev) => [newGroup, ...prev])
+        setMessages((prev) => ({
+          ...prev,
+          [newGroup.id]: [],
+        }))
+        setSelectedGroupId(newGroup.id)
+        setNewGroupName("")
+        setNewGroupDescription("")
+        setSelectedMembers([])
+        setShowNewGroupDialog(false)
+      } catch (error) {
+        console.error("Error al crear el canal", error)
+      }
     }
-    setShowMembersDialog(false);
-  };
+  }
 
   const renderFileAttachment = (attachment: FileAttachment) => {
     switch (attachment.type) {
@@ -394,7 +388,7 @@ export default function TeamChat({ channels }: { channels: any[] }) {
               {attachment.name}
             </div>
           </div>
-        );
+        )
       case "pdf":
         return (
           <div className="flex items-center p-2 rounded-md border border-border/50 bg-background/50">
@@ -404,7 +398,7 @@ export default function TeamChat({ channels }: { channels: any[] }) {
               <p className="text-xs text-muted-foreground">{attachment.size}</p>
             </div>
           </div>
-        );
+        )
       case "document":
         return (
           <div className="flex items-center p-2 rounded-md border border-border/50 bg-background/50">
@@ -414,7 +408,7 @@ export default function TeamChat({ channels }: { channels: any[] }) {
               <p className="text-xs text-muted-foreground">{attachment.size}</p>
             </div>
           </div>
-        );
+        )
       default:
         return (
           <div className="flex items-center p-2 rounded-md border border-border/50 bg-background/50">
@@ -424,9 +418,9 @@ export default function TeamChat({ channels }: { channels: any[] }) {
               <p className="text-xs text-muted-foreground">{attachment.size}</p>
             </div>
           </div>
-        );
+        )
     }
-  };
+  }
 
   return (
     <Card className="border bg-gradient-to-br from-card to-card/80 backdrop-blur-sm relative overflow-hidden">
@@ -443,7 +437,9 @@ export default function TeamChat({ channels }: { channels: any[] }) {
                 </div>
                 <div>
                   <CardTitle className="text-xl">Team Chat</CardTitle>
-                  <CardDescription>{isExpanded ? "Comunicación en tiempo real" : "5 mensajes sin leer"}</CardDescription>
+                  <CardDescription>
+                    {isExpanded ? "Comunicación en tiempo real" : "5 mensajes sin leer"}
+                  </CardDescription>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -499,14 +495,6 @@ export default function TeamChat({ channels }: { channels: any[] }) {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 rounded-full"
-                        onClick={() => setShowMembersDialog(true)}
-                      >
-                        <UserPlus className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-full"
                         onClick={() => setShowNewGroupDialog(true)}
                       >
                         <Plus className="h-4 w-4 text-muted-foreground" />
@@ -520,35 +508,30 @@ export default function TeamChat({ channels }: { channels: any[] }) {
                           .filter(
                             (group) =>
                               group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              (group.description && group.description.toLowerCase().includes(searchQuery.toLowerCase()))
+                              (group.description &&
+                                group.description.toLowerCase().includes(searchQuery.toLowerCase())),
                           )
                           .map((group) => (
                             <button
                               key={group.id}
                               className={cn(
                                 "w-full flex items-center p-2 rounded-md text-left transition-colors",
-                                selectedGroupId === group.id ? "bg-primary/10 text-primary" : "hover:bg-muted/50"
+                                selectedGroupId === group.id ? "bg-primary/10 text-primary" : "hover:bg-muted/50",
                               )}
                               onClick={() => {
-                                setSelectedGroupId(group.id);
+                                setSelectedGroupId(group.id)
                                 setChatGroups((prev) =>
-                                  prev.map((g) => (g.id === group.id ? { ...g, unreadCount: 0 } : g))
-                                );
+                                  prev.map((g) => (g.id === group.id ? { ...g, unreadCount: 0 } : g)),
+                                )
                               }}
                             >
                               <div className="relative">
                                 <Avatar className="h-9 w-9 mr-2">
                                   {group.avatar ? <AvatarImage src={group.avatar} /> : null}
-                                  <AvatarFallback
-                                    className={cn("text-xs font-medium", group.isDirectMessage ? "bg-primary/10" : "bg-primary/20")}
-                                  >
+                                  <AvatarFallback className="text-xs font-medium bg-primary/20">
                                     {group.initials}
                                   </AvatarFallback>
                                 </Avatar>
-                                {group.isDirectMessage &&
-                                  group.members.some((m) => m.id !== 7 && m.status === "online") && (
-                                    <span className="absolute bottom-0 right-1.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background"></span>
-                                  )}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between">
@@ -575,11 +558,15 @@ export default function TeamChat({ channels }: { channels: any[] }) {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <Avatar className="h-8 w-8 mr-2">
-                          <AvatarImage src="/placeholder.svg?height=32&width=32" />
-                          <AvatarFallback className="bg-primary/10 text-xs font-medium">YO</AvatarFallback>
+                          <AvatarImage
+                            src={userProfile?.profile?.profile_picture || "/placeholder.svg?height=32&width=32"}
+                          />
+                          <AvatarFallback className="bg-primary/10 text-xs font-medium">
+                            {userProfile?.name?.slice(0, 2).toUpperCase() || "YO"}
+                          </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-sm font-medium">You</p>
+                          <p className="text-sm font-medium">{userProfile?.name || "You"}</p>
                           <p className="text-xs text-muted-foreground">Online</p>
                         </div>
                       </div>
@@ -631,15 +618,7 @@ export default function TeamChat({ channels }: { channels: any[] }) {
                       </Avatar>
                       <div>
                         <p className="font-medium text-sm">{selectedGroup.name}</p>
-                        {selectedGroup.isDirectMessage ? (
-                          <p className="text-xs text-muted-foreground">
-                            {selectedGroup.members.find((m) => m.id !== 7)?.status === "online"
-                              ? "En línea"
-                              : "Desconectado"}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">{selectedGroup.members.length} miembros</p>
-                        )}
+                        <p className="text-xs text-muted-foreground">{selectedGroup.members.length} miembros</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -735,7 +714,10 @@ export default function TeamChat({ channels }: { channels: any[] }) {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {fileUploads.map((file, index) => (
-                          <div key={index} className="relative bg-background rounded-md border border-border/50 p-1.5 pr-7 flex items-center text-xs">
+                          <div
+                            key={index}
+                            className="relative bg-background rounded-md border border-border/50 p-1.5 pr-7 flex items-center text-xs"
+                          >
                             {getFileIcon(file)}
                             <span className="ml-1.5 max-w-[120px] truncate">{file.name}</span>
                             <Button
@@ -761,7 +743,13 @@ export default function TeamChat({ channels }: { channels: any[] }) {
                           onClick={() => fileInputRef.current?.click()}
                         >
                           <PaperclipIcon className="h-4 w-4 text-muted-foreground" />
-                          <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} multiple />
+                          <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
+                            onChange={handleFileUpload}
+                            multiple
+                          />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
                           <ImageIcon className="h-4 w-4 text-muted-foreground" />
@@ -830,42 +818,40 @@ export default function TeamChat({ channels }: { channels: any[] }) {
                       <Label>Miembros</Label>
                       <div className="max-h-[200px] overflow-y-auto scrollbar-thin">
                         <div className="space-y-1">
-                          {chatMembers
-                            .filter((member) => member.id !== 7)
-                            .map((member) => (
-                              <div key={member.id} className="flex items-center py-1.5 px-2 hover:bg-muted/50 rounded-md">
+                          {teamMembers
+                            .filter((m) => m.member.id !== userProfile?.id)
+                            .map((m) => (
+                              <div
+                                key={m.member.id}
+                                className="flex items-center py-1.5 px-2 hover:bg-muted/50 rounded-md"
+                              >
                                 <input
                                   type="checkbox"
-                                  id={`member-${member.id}`}
-                                  checked={selectedMembers.includes(member.id)}
+                                  id={`member-${m.member.id}`}
+                                  checked={selectedMembers.includes(m.member.id)}
                                   onChange={(e) => {
                                     if (e.target.checked) {
-                                      setSelectedMembers((prev) => [...prev, member.id]);
+                                      setSelectedMembers((prev) => [...prev, m.member.id])
                                     } else {
-                                      setSelectedMembers((prev) => prev.filter((id) => id !== member.id));
+                                      setSelectedMembers((prev) => prev.filter((id) => id !== m.member.id))
                                     }
                                   }}
                                   className="mr-2"
                                 />
-                                <label htmlFor={`member-${member.id}`} className="flex items-center flex-1 cursor-pointer">
-                                  <Avatar className="h-6 w-6 mr-2">
-                                    <AvatarImage src={member.avatar} />
-                                    <AvatarFallback className="text-[10px]">{member.initials}</AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-sm">{member.name}</span>
-                                </label>
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    "ml-auto",
-                                    member.status === "online"
-                                      ? "bg-green-100 text-green-700"
-                                      : member.status === "away"
-                                      ? "bg-amber-100 text-amber-700"
-                                      : "bg-slate-100 text-slate-700"
-                                  )}
+                                <label
+                                  htmlFor={`member-${m.member.id}`}
+                                  className="flex items-center flex-1 cursor-pointer"
                                 >
-                                  {member.status === "online" ? "En línea" : member.status === "away" ? "Ausente" : "Desconectado"}
+                                  <Avatar className="h-6 w-6 mr-2">
+                                    <AvatarImage src={m.member.name.slice(0, 2).toUpperCase()} />
+                                    <AvatarFallback className="text-[10px]">
+                                      {m.member.name.slice(0, 2).toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-sm">{m.member.name}</span>
+                                </label>
+                                <Badge variant="outline" className="ml-auto bg-green-100 text-green-700">
+                                  En línea
                                 </Badge>
                               </div>
                             ))}
@@ -884,65 +870,10 @@ export default function TeamChat({ channels }: { channels: any[] }) {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-              <Dialog open={showMembersDialog} onOpenChange={setShowMembersDialog}>
-                <DialogContent className="sm:max-w-[400px]">
-                  <DialogHeader>
-                    <DialogTitle>Nuevo mensaje directo</DialogTitle>
-                    <DialogDescription>Selecciona un miembro para iniciar una conversación.</DialogDescription>
-                  </DialogHeader>
-                  <div className="py-4">
-                    <div className="relative mb-4">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input type="search" placeholder="Buscar miembros..." className="pl-8 w-full" />
-                    </div>
-                    <div className="max-h-[200px] overflow-y-auto scrollbar-thin">
-                      <div className="space-y-1 px-1">
-                        {chatMembers
-                          .filter((member) => member.id !== 7)
-                          .map((member) => (
-                            <button
-                              key={member.id}
-                              className="w-full flex items-center p-2 hover:bg-muted/50 rounded-md text-left"
-                              onClick={() => handleStartDirectMessage(member.id)}
-                            >
-                              <div className="relative">
-                                <Avatar className="h-8 w-8 mr-2">
-                                  <AvatarImage src={member.avatar} />
-                                  <AvatarFallback className="bg-primary/10 text-xs">{member.initials}</AvatarFallback>
-                                </Avatar>
-                                <span
-                                  className={cn(
-                                    "absolute bottom-0 right-1.5 h-2.5 w-2.5 rounded-full border-2 border-background",
-                                    member.status === "online"
-                                      ? "bg-green-500"
-                                      : member.status === "away"
-                                      ? "bg-amber-500"
-                                      : "bg-slate-300"
-                                  )}
-                                ></span>
-                              </div>
-                              <div>
-                                <p className="font-medium text-sm">{member.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {member.status === "online" ? "En línea" : member.status === "away" ? "Ausente" : "Desconectado"}
-                                </p>
-                              </div>
-                            </button>
-                          ))}
-                      </div>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowMembersDialog(false)}>
-                      Cancelar
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
             </>
           )}
         </>
       )}
     </Card>
-  );
+  )
 }

@@ -13,11 +13,15 @@ import { MountainIcon, Upload, Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/api/client-gateway";
+import { Members } from "@/interfaces/members.interface";
 
 export default function TeamDashboard() {
   const [bannerImage, setBannerImage] = useState<string | null>(null);
   const [isEditingBanner, setIsEditingBanner] = useState(false);
+  const [members, setMembers] = useState<Members[]>([]);
   const [data, setData] = useState([]);
+
+  
 
   useEffect(() => {
     startTransition(() => {
@@ -27,6 +31,12 @@ export default function TeamDashboard() {
         )
         .then((response) => {
           setData(response.data);
+        });
+
+      apiClient
+        .get("teams/get-members-by-team/43b31791-43e2-4985-85ce-5eb920082b33")
+        .then((response) => {
+          setMembers(response.data);
         });
     });
   }, []);
@@ -211,7 +221,7 @@ export default function TeamDashboard() {
         </Tabs>
 
         <Suspense fallback={<div>Loading...</div>}>
-          <TeamChat channels={data} />
+          <TeamChat channels={data} teamMembers={members} />
         </Suspense>
       </div>
     </div>
