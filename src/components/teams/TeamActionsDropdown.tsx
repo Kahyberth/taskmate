@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -6,19 +6,19 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import { MoreVertical, LinkIcon, Settings } from "lucide-react"
-import { Team } from "@/lib/store"
-import { CustomDialog } from "./CustomDialog"
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { MoreVertical, LinkIcon, Settings } from "lucide-react";
+import { Team } from "@/lib/store";
+import { CustomDialog } from "./CustomDialog";
 
 interface TeamActionsDropdownProps {
-  team: Team
-  handleCopyInviteLink: (teamId: string) => void
-  handleDeleteTeam: (teamId: string) => void
-  handleLeaveTeam: (teamId: string) => void
-  setTeamToEdit: (team: Team | null) => void
-  loading: boolean
+  team: Team;
+  handleCopyInviteLink: (teamId: string) => void;
+  handleDeleteTeam: (teamId: string) => void;
+  handleLeaveTeam: (teamId: string) => void;
+  setTeamToEdit: (team: Team | null) => void;
+  loading: boolean;
 }
 
 export const TeamActionsDropdown = ({
@@ -29,9 +29,8 @@ export const TeamActionsDropdown = ({
   setTeamToEdit,
   loading,
 }: TeamActionsDropdownProps) => {
-  const [actionType, setActionType] = useState<"delete" | "leave" | null>(null)
-  const [isOpen, setIsOpen] = useState<boolean>(false)
-
+  const [actionType, setActionType] = useState<"delete" | "leave" | null>(null);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
 
   const handleActionConfirm = () => {
     if (actionType === "delete") {
@@ -42,24 +41,35 @@ export const TeamActionsDropdown = ({
     setIsOpen(false); // Cerrar el diálogo después de la acción
   };
 
-
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={(e) => e.stopPropagation()} // ← Detener propagación aquí
+          >
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
+
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Team Actions</DropdownMenuLabel>
           {team.role === "LEADER" ? (
             <>
-              <DropdownMenuItem className="cursor-pointer" onClick={() => handleCopyInviteLink(team.id)}>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => handleCopyInviteLink(team.id)}
+              >
                 <LinkIcon className="mr-2 h-4 w-4" />
                 Copy Invite Link
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer" onClick={() => setTeamToEdit(team)}>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => setTeamToEdit(team)}
+              >
                 <Settings className="mr-2 h-4 w-4" />
                 Edit Team
               </DropdownMenuItem>
@@ -110,5 +120,5 @@ export const TeamActionsDropdown = ({
         disabled={loading}
       />
     </>
-  )
-}
+  );
+};

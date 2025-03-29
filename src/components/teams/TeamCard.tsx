@@ -14,11 +14,15 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import { useTeams } from "@/context/TeamsContext";
 
 
+
+
 interface TeamCardProps {
   team: Team;
   setTeamToEdit: (team: Team | null) => void;
+  onClick?: (team: Team) => void | undefined;
 }
-export const TeamCard = ({ team, setTeamToEdit }: TeamCardProps) => {
+
+export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
   const nameRef = useRef<HTMLDivElement>(null);
   const descRef = useRef<HTMLParagraphElement>(null);
   const [showInviteDialog, setShowInviteDialog] = useState<boolean>(false);
@@ -27,6 +31,7 @@ export const TeamCard = ({ team, setTeamToEdit }: TeamCardProps) => {
   const [isNameTruncated, setIsNameTruncated] = useState<boolean>(false);
   const [isDescTruncated, setIsDescTruncated] = useState<boolean>(false);
   const { removeTeam  } = useTeams();
+
 
   
 
@@ -105,7 +110,9 @@ export const TeamCard = ({ team, setTeamToEdit }: TeamCardProps) => {
 
   return (
     <>
-      <Card className="group relative overflow-hidden transition-all hover:shadow-lg flex flex-col h-full">
+      <Card className="group relative overflow-hidden transition-all hover:shadow-lg flex flex-col h-full cursor-pointer"
+        onClick={() => onClick && onClick(team)}
+      >
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-transparent h-24" />
         <img src={team.image || "/placeholder.svg"} alt="" className="absolute inset-0 h-24 w-full object-cover" />
         <CardHeader className="relative pt-28">

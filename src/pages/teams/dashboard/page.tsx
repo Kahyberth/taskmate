@@ -14,27 +14,29 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/api/client-gateway";
 import { Members } from "@/interfaces/members.interface";
+import { useParams } from 'react-router-dom'
+
 
 export default function TeamDashboard() {
   const [bannerImage, setBannerImage] = useState<string | null>(null);
   const [isEditingBanner, setIsEditingBanner] = useState(false);
   const [members, setMembers] = useState<Members[]>([]);
   const [data, setData] = useState([]);
-
+  const { team_id } = useParams<{ team_id: string }>()
   
 
   useEffect(() => {
     startTransition(() => {
       apiClient
         .get(
-          "channels/load-channels?team_id=43b31791-43e2-4985-85ce-5eb920082b33"
+          `channels/load-channels?team_id=${team_id}`
         )
         .then((response) => {
           setData(response.data);
         });
 
       apiClient
-        .get("teams/get-members-by-team/43b31791-43e2-4985-85ce-5eb920082b33")
+        .get(`teams/get-members-by-team/${team_id}`)
         .then((response) => {
           setMembers(response.data);
         });

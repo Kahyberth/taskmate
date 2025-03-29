@@ -11,6 +11,7 @@ import { EditTeamComponent } from "@/components/teams/EditTeam"
 import { LoadingSkeleton } from "@/components/teams/TeamSkeleton"
 import useTeamService from "@/hooks/useTeamService"
 import { useTeams } from "@/context/TeamsContext"
+import { useNavigate } from "react-router-dom";
 
 
 export default function TeamsPage() {
@@ -22,6 +23,7 @@ export default function TeamsPage() {
   const { user: user_data } = useContext(AuthContext)
   const { fetchTeamsByUser, loading, error } = useTeamService()
   const { teams } = useTeams()
+  const navigate = useNavigate()
 
   useEffect(() => {
     loadTeams();
@@ -105,6 +107,7 @@ export default function TeamsPage() {
               key={team.id} 
               team={team} 
               setTeamToEdit={setTeamToEdit}
+              onClick={(team) => { navigate(`${team.id}`); }}
             />
           ))}
         </div>
