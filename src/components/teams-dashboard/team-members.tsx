@@ -21,62 +21,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { TeamMember } from "@/interfaces/team_members.interface"
 
-const teamMembers = [
-  {
-    id: 1,
-    name: "Sarah Chen",
-    role: "Frontend Developer",
-    avatar: "/placeholder.svg?height=40&width=40",
-    initials: "SC",
-    status: "online",
-    projects: ["Dashboard Redesign", "Mobile App"],
-    email: "sarah.chen@company.com",
-  },
-  {
-    id: 2,
-    name: "Michael Rodriguez",
-    role: "Backend Developer",
-    avatar: "/placeholder.svg?height=40&width=40",
-    initials: "MR",
-    status: "offline",
-    projects: ["API Integration", "Database Migration"],
-    email: "michael.r@company.com",
-  },
-  {
-    id: 3,
-    name: "Emily Taylor",
-    role: "UX Designer",
-    avatar: "/placeholder.svg?height=40&width=40",
-    initials: "ET",
-    status: "online",
-    projects: ["User Research", "Dashboard Redesign"],
-    email: "emily.t@company.com",
-  },
-  {
-    id: 4,
-    name: "David Kim",
-    role: "DevOps Engineer",
-    avatar: "/placeholder.svg?height=40&width=40",
-    initials: "DK",
-    status: "online",
-    projects: ["CI/CD Pipeline", "Cloud Migration"],
-    email: "david.kim@company.com",
-  },
-  {
-    id: 5,
-    name: "Jessica Patel",
-    role: "Product Manager",
-    avatar: "/placeholder.svg?height=40&width=40",
-    initials: "JP",
-    status: "offline",
-    projects: ["Product Roadmap", "Feature Planning"],
-    email: "jessica.p@company.com",
-  },
-]
 
-export default function TeamMembers() {
+
+export default function TeamMembers({ teamMembers }: { teamMembers: TeamMember[] }) {
   const [hoveredMember, setHoveredMember] = useState<number | null>(null)
+
+  console.log("Team Members:", teamMembers)
+  
+
 
   return (
     <Card className="border bg-gradient-to-br from-card to-card/80 backdrop-blur-sm">

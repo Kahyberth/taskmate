@@ -15,12 +15,15 @@ import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/api/client-gateway";
 import { Members } from "@/interfaces/members.interface";
 import { useParams } from 'react-router-dom'
+import { Loader } from "@mantine/core";
+import { TeamMember } from "@/interfaces/team_members.interface";
 
 
 export default function TeamDashboard() {
   const [bannerImage, setBannerImage] = useState<string | null>(null);
   const [isEditingBanner, setIsEditingBanner] = useState(false);
   const [members, setMembers] = useState<Members[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [data, setData] = useState([]);
   const { team_id } = useParams<{ team_id: string }>()
   
@@ -39,6 +42,20 @@ export default function TeamDashboard() {
         .get(`teams/get-members-by-team/${team_id}`)
         .then((response) => {
           setMembers(response.data);
+        
+          const users = response.data.map((member: any) => ({
+            id: member.member.id,
+            name: member.member.name,
+            role: member.role,
+            avatar: member.member.avatar,
+            initials: member.member.name.slice(0, 2).toUpperCase(),
+            status: 'online',
+            projects: [],
+            email: member.member.email,
+          }))
+
+          setTeamMembers(users);
+
         });
     });
   }, []);
@@ -206,7 +223,7 @@ export default function TeamDashboard() {
             value="members"
             className="animate-in fade-in-50 duration-300"
           >
-            <TeamMembers />
+            <TeamMembers teamMembers={teamMembers} />
           </TabsContent>
           <TabsContent
             value="projects"
@@ -222,7 +239,7 @@ export default function TeamDashboard() {
           </TabsContent>
         </Tabs>
 
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<Loader size="lg" color="blue" />}>
           <TeamChat channels={data} teamMembers={members} />
         </Suspense>
       </div>
