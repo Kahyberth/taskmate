@@ -223,11 +223,11 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
         </CardContent>
         <CardFooter className="mt-auto">
           {team.role === "LEADER" ? (
-            <div className="flex-grow">
+            <div className="flex-grow" onClick={(e) => e.stopPropagation()}>
               <InviteMembersDialog open={showInviteDialog} team={team} onOpenChange={setShowInviteDialog} />
             </div>
           ) : (
-            <Button variant="outline" className="ml-auto" onClick={handleCopyInviteLink}>
+            <Button variant="outline" className="ml-auto" onClick={(e) => {e.stopPropagation(), handleCopyInviteLink()}}>
               <LinkIcon className="mr-2 h-4 w-4" />
               Copy Invite Link
             </Button>
