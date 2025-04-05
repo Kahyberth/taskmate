@@ -32,19 +32,9 @@ const mainNavItems = [
     icon: PlaySquare,
   },
   {
-    title: "Reuniones",
-    href: "/dashboard/meetings",
-    icon: Calendar,
-  },
-  {
     title: "Equipos",
     href: "/dashboard/teams",
     icon: Users2,
-  },
-  {
-    title: "Analíticas",
-    href: "/dashboard/analytics",
-    icon: BarChart2,
   },
 ]
 

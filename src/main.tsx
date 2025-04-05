@@ -6,12 +6,15 @@ import { AuthProvider } from "./context/AuthProvider";
 import "@mantine/core/styles.css";
 import { Notifications } from "@mantine/notifications";
 import { MantineProvider } from "@mantine/core";
+import { SocketProvider } from "./context/SocketContext";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <MantineProvider>
       <AuthProvider>
-        <Notifications />
+        {/* <SocketProvider> */}
+          <Notifications />
+        {/* </SocketProvider> */}
         <AppRoutes />
       </AuthProvider>
     </MantineProvider>
