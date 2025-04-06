@@ -30,6 +30,24 @@ const recentSessions = [
     averageTime: "4min",
     project: "Mobile App",
   },
+  {
+    id: "4",
+    name: "Sprint 21 Retrospective",
+    date: "7 Ene 2024",
+    duration: "1h 15min",
+    issues: 10,
+    averageTime: "6min",
+    project: "E-commerce Platform",
+  },
+  {
+    id: "5",
+    name: "Sprint 21 Planning",
+    date: "3 Ene 2024",
+    duration: "1h 30min",
+    issues: 12,
+    averageTime: "7min",
+    project: "E-commerce Platform",
+  }
 ]
 
 export function RecentSessions() {
@@ -39,11 +57,11 @@ export function RecentSessions() {
         <CardTitle>Sesiones Recientes</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
+        <div className="max-h-60 overflow-y-auto space-y-6 p-2">
           {recentSessions.map((session) => (
             <div
               key={session.id}
-              className="group flex items-center justify-between space-x-4"
+              className="group flex items-center justify-between space-x-4 mr-2"
             >
               <div className="space-y-1">
                 <div className="flex items-center gap-2">

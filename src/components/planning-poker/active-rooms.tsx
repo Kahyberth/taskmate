@@ -166,7 +166,7 @@ export function ActiveRooms() {
         <CardHeader>
           <CardTitle>Salas Activas</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 overflow-y-auto max-h-[700px]">
           {loading && (
             <>
               <Skeleton height={50} circle mb="xl" />
@@ -188,50 +188,67 @@ export function ActiveRooms() {
             data.map((room) => (
               <div
                 key={room.id}
-                className="flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-4 rounded-lg border p-4"
               >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold">{room.name}</h3>
-                    {room.hasPassword && <Lock className="h-4 w-4 text-muted-foreground" />}
-                    <Badge variant="secondary" className="text-xs">
-                      {room.project}
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 w-full">
+                  {/* Parte izquierda: Información de la sala */}
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold">{room.name}</h3>
+                      {room.hasPassword && (
+                        <Lock className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <Badge variant="secondary" className="text-xs">
+                        {room.project}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4" />
+                        <span>{room.participants} participantes</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{room.duration}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={room.host.image} />
+                        <AvatarFallback>{room.host.name[0]}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm">
+                        Organizado por{" "}
+                        <span className="font-medium">{room.host.name}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Parte derecha: Estado y botón */}
+                  <div className="flex flex-col justify-between items-end sm:h-32 h-auto gap-4 w-full sm:w-auto sm:mt-0 mt-3">
+                    <Badge variant="secondary" className="gap-1 w-fit">
+                      <div
+                        className={`h-1.5 w-1.5 rounded-full ${statusConfig[room.status as keyof typeof statusConfig]?.color
+                          }`}
+                      />
+                      {
+                        statusConfig[room.status as keyof typeof statusConfig]
+                          ?.label
+                      }
                     </Badge>
+                    <Button
+                      onClick={() => handleJoinAttempt(room)}
+                      disabled={isJoining}
+                      className="w-full sm:w-auto"
+                    >
+                      {isJoining ? "Uniéndose..." : "Unirse"}
+                    </Button>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      <span>{room.participants} participantes</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{room.duration}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={room.host.image} />
-                      <AvatarFallback>{room.host.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm">
-                      Organizado por <span className="font-medium">{room.host.name}</span>
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Badge variant="secondary" className="gap-1">
-                    <div
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        statusConfig[room.status as keyof typeof statusConfig]?.color
-                      }`}
-                    />
-                    {statusConfig[room.status as keyof typeof statusConfig]?.label}
-                  </Badge>
-                  <Button onClick={() => handleJoinAttempt(room)} disabled={isJoining}>
-                    {isJoining ? "Uniéndose..." : "Unirse"}
-                  </Button>
                 </div>
               </div>
+            
             ))}
         </CardContent>
       </Card>
