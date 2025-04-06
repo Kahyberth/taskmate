@@ -43,9 +43,15 @@ export function DashboardNav() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b px-2 py-4">
-        <Link to="/" className="flex items-center gap-2 px-4">
+      <SidebarHeader className="border-b p-2">
+        {/* <Link to="/" className="flex items-center gap-2 px-4">
           <div className="h-8 w-8 rounded bg-blue-600" />
+          <span className="text-xl font-bold">TaskMate</span>
+        </Link> */}
+        <Link to="/" className="flex items-center gap-2 px-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold text-xl">
+            <img src="/image/taskmate-x.png" alt="TaskMate Logo" width={32} height={32} />
+          </div>
           <span className="text-xl font-bold">TaskMate</span>
         </Link>
       </SidebarHeader>
