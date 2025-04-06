@@ -967,7 +967,7 @@ export function PlanningPokerRoom() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="flex-1">
-                    <ScrollArea className="h-full pr-4">
+                    <ScrollArea className="max-h-[550px] overflow-y-auto pr-4">
                       {votingHistory.map((vote, index) => (
                         <div
                           key={index}
@@ -983,28 +983,31 @@ export function PlanningPokerRoom() {
                             >
                               {vote.story_title}
                             </span>
+                          </div>
+                          <div className="flex justify-between items-end">
+                            <div>
+                              <span
+                                className={`text-sm ${
+                                  isDarkMode ? "text-gray-300" : "text-gray-600"
+                                } mr-2`}
+                              >
+                                Average:
+                              </span>
+                              <span
+                                className={`font-medium ${
+                                  isDarkMode ? "text-gray-100" : "text-gray-800"
+                                }`}
+                              >
+                                {vote.card_value}
+                              </span>
+                            </div>
+                          
                             <span
                               className={`text-sm ${
                                 isDarkMode ? "text-gray-400" : "text-gray-500"
                               }`}
                             >
-                              {vote.history_date}
-                            </span>
-                          </div>
-                          <div className="flex items-center">
-                            <span
-                              className={`text-sm ${
-                                isDarkMode ? "text-gray-300" : "text-gray-600"
-                              } mr-2`}
-                            >
-                              Average:
-                            </span>
-                            <span
-                              className={`font-medium ${
-                                isDarkMode ? "text-gray-100" : "text-gray-800"
-                              }`}
-                            >
-                              {vote.card_value}
+                              {new Date(vote.history_date).toLocaleString("es-ES")}
                             </span>
                           </div>
                         </div>
