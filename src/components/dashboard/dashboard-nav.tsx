@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom"
 import { useLocation } from "react-router-dom"
-import { BarChart2, Calendar, Home, LayoutGrid, Settings, Users2, PlaySquare } from 'lucide-react'
+import { Settings } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -15,39 +15,20 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-const mainNavItems = [
-  {
-    title: "Dashboard",
-    href: "/dashboard",
-    icon: Home,
-  },
-  {
-    title: "Proyectos",
-    href: "/dashboard/projects",
-    icon: LayoutGrid,
-  },
-  {
-    title: "Planning Poker",
-    href: "/dashboard/planning-poker",
-    icon: PlaySquare,
-  },
-  {
-    title: "Equipos",
-    href: "/dashboard/teams",
-    icon: Users2,
-  },
-]
+interface MenuItemProps {
+  menuItems: {
+    title: string
+    href: string
+    icon: React.ElementType
+  }[]
+}
 
-export function DashboardNav() {
+export function DashboardNav({ menuItems }: MenuItemProps ) {
   const pathname = useLocation()
 
   return (
     <Sidebar>
       <SidebarHeader className="border-b p-2">
-        {/* <Link to="/" className="flex items-center gap-2 px-4">
-          <div className="h-8 w-8 rounded bg-blue-600" />
-          <span className="text-xl font-bold">TaskMate</span>
-        </Link> */}
         <Link to="/" className="flex items-center gap-2 px-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold text-xl">
             <img src="/image/taskmate-x.png" alt="TaskMate Logo" width={32} height={32} />
@@ -60,7 +41,7 @@ export function DashboardNav() {
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNavItems.map((item) => (
+              {menuItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild

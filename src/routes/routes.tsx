@@ -13,7 +13,6 @@ import ProfilePage from "@/pages/profile/profile";
 import ProjectsPage from "@/pages/projects/page";
 import { PlanningPokerRoom } from "@/pages/planning-poker/room/planning-poker-room";
 import TeamsPage from "@/pages/teams/team-page";
-import ProjectsDashboardLayout from "@/layouts/projects/layout";
 import BacklogPage from "@/pages/projects/backlog/page";
 import BoardPage from "@/pages/projects/board/page";
 import PlanningPokerRoomGuard from "@/guard/PlanningPokerRoomGuard";
@@ -74,7 +73,7 @@ function AppRoutes() {
           path="/projects/:project_name"
           element={
             <ProtectedRoute>
-              <ProjectsDashboardLayout />
+              <DashboardLayout />
             </ProtectedRoute>
           }
         >
