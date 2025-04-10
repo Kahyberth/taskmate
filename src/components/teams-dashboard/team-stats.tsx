@@ -80,7 +80,8 @@ export default function TeamStats() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+
           <StatsCard
             title="Projects Completed"
             value="24"
@@ -115,7 +116,7 @@ export default function TeamStats() {
             value="hours"
             className="animate-in fade-in-50 duration-300"
           >
-            <div className="h-[250px]">
+            <div className="h-[200px] sm:h-[250px] md:h-[300px]">
               <div className="text-sm font-medium mb-2 flex items-center">
                 <Award className="h-4 w-4 mr-1 text-primary" />
                 <span>Monthly Team Hours</span>

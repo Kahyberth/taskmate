@@ -107,10 +107,10 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
   return (
     <>
       <Card
-        className="group relative overflow-hidden transition-all hover:shadow-lg flex flex-col h-full cursor-pointer bg-white/5 backdrop-blur-md border-white/10"
+        className="group relative overflow-hidden transition-all hover:shadow-lg flex flex-col h-full cursor-pointer bg-white/10 backdrop-blur-md border-white/20 shadow-xl"
         onClick={() => onClick && onClick(team)}
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-violet-900/50 to-transparent h-32" />
+        <div className="absolute inset-0 bg-gradient-to-b from-violet-600/40 to-transparent h-32" />
         <img
           src={team.image || "/placeholder.svg?height=400&width=600"}
           alt=""
@@ -192,11 +192,11 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
             </div>
             <div>
               <h4 className="text-sm font-medium mb-2 text-white">Key Members</h4>
-              <div className="space-y-2 max-h-32 overflow-y-auto bg-white/5 rounded-lg p-2">
+              <div className="space-y-2 max-h-32 overflow-y-auto bg-white/15 rounded-lg p-2">
                 {team.members.map((member, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 p-2 rounded-md hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-2 p-2 rounded-md hover:bg-white/20 transition-colors"
                   >
                     <div className="relative">
                       <Avatar className="h-8 w-8 border border-white/20">
@@ -215,7 +215,7 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
                       <p className="text-sm font-medium truncate text-white">{member.member.name}</p>
                       <p className="text-xs text-white/60 truncate">{member.member.email}</p>
                     </div>
-                    <Badge variant="outline" className="ml-auto border-white/20 text-white/80">
+                    <Badge variant="outline" className="ml-auto border-white/30 text-white bg-white/10">
                       {member.role}
                     </Badge>
                   </div>
@@ -232,7 +232,7 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
           ) : (
             <Button
               variant="outline"
-              className="ml-auto border-white/10 bg-white/5 text-white hover:bg-white/10"
+              className="ml-auto border-white/20 bg-white/15 text-white hover:bg-white/25"
               onClick={(e) => {
                 e.stopPropagation(), handleCopyInviteLink()
               }}

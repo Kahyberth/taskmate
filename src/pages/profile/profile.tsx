@@ -1,319 +1,402 @@
-import { useContext, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { Building2, Mail, MapPin, Phone, CheckCircle2, Github, Linkedin, Twitter, Globe, Pencil } from "lucide-react";
-import { AuthContext } from "@/context/AuthContext";
-import { Loader } from "@mantine/core";
+"use client";
 
+import { useContext } from "react";
+import {
+  Mail,
+  Phone,
+  Building,
+  MapPin,
+  Calendar,
+  GraduationCap,
+  Twitter,
+  Linkedin,
+  Github,
+  CheckCircle,
+  Edit,
+  AlertCircle,
+  Instagram,
+} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AuthContext } from "@/context/AuthContext";
 
 export default function ProfilePage() {
-  const [isEditing, setIsEditing] = useState(false);
   const { userProfile, profileLoading } = useContext(AuthContext);
 
+  // Loading placeholder
   if (profileLoading) {
-        return (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "100vh",
-            }}
-          >
-            <Loader color="grape" type="dots" />
-          </div>
-        );
-      }
-
-  if (!userProfile) {
     return (
-      <div className="min-h-screen flex justify-center items-center">
-        No hay información disponible.
-      </div>
-    );
-  }
-
-  const skills = userProfile.profile.skills.split(",").filter(Boolean);
-
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="relative h-[280px] w-full overflow-hidden bg-gradient-to-br from-primary/5 to-background">
-        <div className="absolute inset-0 bg-grid-white/10" />
-        <div className="container max-w-6xl mx-auto h-full px-4 relative">
-          <div className="absolute bottom-8 flex items-end gap-6">
-            <div className="relative">
-              <Avatar className="w-[120px] h-[120px] border-4 border-background shadow-xl rounded-2xl">
-                <AvatarImage
-                  src={userProfile.profile.profile_picture}
-                  alt={`${userProfile.name} ${userProfile.lastName}`}
-                  className="object-cover"
-                />
-                <AvatarFallback className="text-4xl">
-                  {userProfile.name[0]}
-                  {userProfile.lastName[0]}
-                </AvatarFallback>
-              </Avatar>
-              <span className="absolute bottom-3 right-3 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-background" />
-            </div>
-            <div className="mb-2 space-y-1">
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-semibold tracking-tight">
-                  {userProfile.name} {userProfile.lastName}
-                </h1>
-                {userProfile.profile.isVerified && <CheckCircle2 className="w-5 h-5 text-primary" />}
-              </div>
-              <p className="text-muted-foreground">
-                Senior Software Engineer at {userProfile.company}
-              </p>
+      <div className="min-h-screen bg-slate-900 text-white">
+        <div className="container mx-auto py-6 space-y-8 animate-pulse">
+          <div className="h-64 bg-slate-700 rounded-lg"></div>
+          <div className="flex items-center space-x-4">
+            <div className="h-24 w-24 rounded-full bg-slate-700"></div>
+            <div className="space-y-2">
+              <div className="h-6 w-48 bg-slate-700 rounded"></div>
+              <div className="h-4 w-32 bg-slate-700 rounded"></div>
             </div>
           </div>
         </div>
       </div>
+    );
+  }
 
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container max-w-6xl mx-auto px-4">
-          <div className="flex h-14 items-center gap-4 justify-between">
-            <Tabs defaultValue="about" className="h-full w-full">
-              <div className="flex justify-between items-center">
-                <TabsList className="h-full bg-transparent p-0 gap-4">
-                  <TabsTrigger
-                    value="about"
-                    className="h-full px-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none relative"
-                  >
-                    About
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="experience"
-                    className="h-full px-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none relative"
-                  >
-                    Experience
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="education"
-                    className="h-full px-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none relative"
-                  >
-                    Education
-                  </TabsTrigger>
-                </TabsList>
-                <Dialog open={isEditing} onOpenChange={setIsEditing}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 gap-2">
-                      <Pencil className="w-3 h-3" />
-                      Edit
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl w-full">
-                    <DialogHeader className="pb-4">
-                      <DialogTitle>Edit Profile</DialogTitle>
-                    </DialogHeader>
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        // Aquí puedes agregar la lógica para actualizar los datos
-                        setIsEditing(false);
-                      }}
-                      className="space-y-4"
-                    >
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="name">First Name</Label>
-                          <Input id="name" defaultValue={userProfile.name} className="h-8" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="lastName">Last Name</Label>
-                          <Input id="lastName" defaultValue={userProfile.lastName} className="h-8" />
-                        </div>
-                      </div>
+  // Sin datos de usuario
+  if (!userProfile) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+        <p>User not found.</p>
+      </div>
+    );
+  }
 
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" defaultValue={userProfile.email} className="h-8" />
-                      </div>
+  // Datos del perfil
+  const profile = userProfile.profile || {};
 
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input id="phone" type="tel" defaultValue={userProfile.phone} className="h-8" />
-                      </div>
+  // Funciones auxiliares
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "Present";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      year: "numeric",
+    });
+  };
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="company">Company</Label>
-                          <Input id="company" defaultValue={userProfile.company} className="h-8" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="location">Location</Label>
-                          <Input id="location" defaultValue={userProfile.profile.location} className="h-8" />
-                        </div>
-                      </div>
+  const getInitials = (name: string, lastName: string) => {
+    return `${name?.charAt(0) || ""}${lastName?.charAt(0) || ""}`;
+  };
 
-                      <div className="space-y-2">
-                        <Label htmlFor="bio">Bio</Label>
-                        <Textarea id="bio" defaultValue={userProfile.profile.bio} className="h-20" />
-                      </div>
+  return (
+    <div className="min-h-screen bg-slate-900 text-white">
+      <div className="container mx-auto py-6 space-y-8">
+        {/* Banner y Foto de Perfil */}
+        <div className="relative">
+          <div className="relative h-64 w-full rounded-lg overflow-hidden bg-gradient-to-r from-slate-800 to-indigo-900">
+            {profile.profile_banner && profile.profile_banner.trim() !== "" ? (
+              <img
+                src={profile.profile_banner}
+                alt="Profile Banner"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <img
+                src="https://cdn.pixabay.com/photo/2025/01/09/13/56/cat-9321685_1280.jpg"
+                alt="Default Banner"
+                className="w-full h-full object-cover"
+              />
+            )}
+            <div className="absolute inset-0 bg-black/40"></div>
+          </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="skills">Skills (comma separated)</Label>
-                        <Textarea id="skills" defaultValue={userProfile.profile.skills} className="h-20" />
-                      </div>
+          {/* Foto de Perfil */}
+          <div className="absolute -bottom-12 left-8 flex items-end">
+            <div className="relative">
+              <Avatar className="h-24 w-24 border-4 border-slate-900">
+                <AvatarImage
+                  src={profile.profile_picture}
+                  alt={`${userProfile.name} ${userProfile.lastName}`}
+                />
+                <AvatarFallback className="text-xl bg-indigo-700 text-white">
+                  {getInitials(userProfile.name, userProfile.lastName)}
+                </AvatarFallback>
+              </Avatar>
+              {userProfile.isActive && (
+                <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-slate-900"></span>
+              )}
+            </div>
+          </div>
 
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Switch id="available" defaultChecked={userProfile.isAvailable} />
-                          <Label htmlFor="available">Available for hire</Label>
-                        </div>
-                      </div>
+          {/* Botón Editar */}
+          <div className="absolute -bottom-12 right-8">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 border-slate-700 text-white hover:bg-slate-800"
+            >
+              <Edit className="h-4 w-4" />
+              Edit Profile
+            </Button>
+          </div>
+        </div>
 
-                      <Separator />
-
-                      <div className="space-y-3">
-                        <Label>Social Links</Label>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-2">
-                            <Input id="github" type="url" placeholder="GitHub" className="h-8" />
-                          </div>
-                          <div className="space-y-2">
-                            <Input id="linkedin" type="url" placeholder="LinkedIn" className="h-8" />
-                          </div>
-                          <div className="space-y-2">
-                            <Input id="twitter" type="url" placeholder="Twitter" className="h-8" />
-                          </div>
-                          <div className="space-y-2">
-                            <Input id="website" type="url" placeholder="Website" className="h-8" />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end">
-                        <Button type="submit" size="sm">
-                          Save Changes
-                        </Button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-
-              <main className="container max-w-6xl mx-auto px-4 py-8">
-                <div className="grid md:grid-cols-3 gap-6">
-                  <div className="md:col-span-2 space-y-6">
-                    <TabsContent value="about" className="mt-0 space-y-6">
-                      <div className="prose prose-zinc dark:prose-invert max-w-none">
-                        <p className="text-muted-foreground leading-relaxed">
-                          {userProfile.profile.bio}
-                        </p>
-                      </div>
-                      <div className="space-y-4">
-                        <h2 className="text-lg font-medium">Skills & Expertise</h2>
-                        <div className="flex flex-wrap gap-2">
-                          {skills.map((skill) => (
-                            <Badge key={skill} variant="secondary" className="rounded-md px-2 py-0.5 font-normal">
-                              {skill.trim()}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="experience" className="mt-0 space-y-6">
-                      <div className="space-y-8">
-                        <div className="flex gap-4">
-                          <Avatar className="w-10 h-10 rounded-md mt-1 border">
-                            <AvatarFallback>ZC</AvatarFallback>
-                          </Avatar>
-                          <div className="space-y-1 flex-1">
-                            <div className="flex items-start justify-between gap-4">
-                              <div>
-                                <h3 className="font-medium">Senior Software Engineer</h3>
-                                <p className="text-sm text-muted-foreground">Zypnapcore</p>
-                              </div>
-                              <div className="text-sm text-muted-foreground">2023 - Present</div>
-                            </div>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              Led the development of multiple key features and mentored junior developers. Improved application performance by 40%.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="education" className="mt-0 space-y-6">
-                      <div className="space-y-8">
-                        <div className="flex gap-4">
-                          <Avatar className="w-10 h-10 rounded-md mt-1 border">
-                            <AvatarFallback>UN</AvatarFallback>
-                          </Avatar>
-                          <div className="space-y-1">
-                            <div className="flex items-start justify-between gap-4">
-                              <div>
-                                <h3 className="font-medium">Bachelor of Science in Computer Science</h3>
-                                <p className="text-sm text-muted-foreground">University of Technology</p>
-                              </div>
-                              <div className="text-sm text-muted-foreground">2015 - 2019</div>
-                            </div>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              Graduated with honors. Specialized in Software Engineering.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </TabsContent>
+        {/* Contenido del Perfil */}
+        <div className="pt-16 grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Columna Izquierda - Información Básica */}
+          <div className="space-y-6">
+            {/* Tarjeta de Información Básica */}
+            <Card className="bg-slate-800 border-slate-700">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>
+                    {userProfile.name} {userProfile.lastName}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {profile.isVerified && (
+                      <Badge className="bg-gradient-to-r from-green-600 to-green-700 text-white flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" />
+                        Verified
+                      </Badge>
+                    )}
+                    {profile.isBlocked && (
+                      <Badge className="bg-red-600 text-white flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        Blocked
+                      </Badge>
+                    )}
                   </div>
+                </CardTitle>
+                <CardDescription className="flex items-center gap-2 text-slate-400">
+                  <Building className="h-4 w-4" />
+                  {userProfile.company}
+                </CardDescription>
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <MapPin className="h-4 w-4" />
+                  {profile.location || "Location not provided"}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Badge
+                    className={
+                      userProfile.isAvailable
+                        ? "bg-green-700 hover:bg-green-800"
+                        : "bg-slate-600"
+                    }
+                  >
+                    {profile.availabilityStatus || "Status not provided"}
+                  </Badge>
+                </div>
 
-                  <div className="space-y-6">
-                    <div className="space-y-4">
-                      <h2 className="text-lg font-medium">Contact & Info</h2>
-                      <div className="grid gap-4 text-sm">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Mail className="w-4 h-4" />
-                          {userProfile.email}
-                        </div>
-                        {userProfile.phone && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Phone className="w-4 h-4" />
-                            {userProfile.phone}
-                          </div>
-                        )}
-                        {userProfile.profile.location && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <MapPin className="w-4 h-4" />
-                            {userProfile.profile.location}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Building2 className="w-4 h-4" />
-                          {userProfile.company}
-                        </div>
-                      </div>
-                    </div>
+                <Separator className="bg-slate-700" />
 
-                    <div className="space-y-4">
-                      <h2 className="text-lg font-medium">Social Links</h2>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="icon" className="rounded-md">
-                          <Github className="w-4 h-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="rounded-md">
-                          <Linkedin className="w-4 h-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="rounded-md">
-                          <Twitter className="w-4 h-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="rounded-md">
-                          <Globe className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
+                <div className="space-y-3 text-slate-300">
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4" />
+                    <span>{userProfile.email}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-4 w-4" />
+                    <span>{userProfile.phone || "Phone not provided"}</span>
                   </div>
                 </div>
-              </main>
+
+                <Separator className="bg-slate-700" />
+
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-3">
+                    {profile.social_links &&
+                      (() => {
+                        try {
+                          const links = JSON.parse(profile.social_links);
+                          return (
+                            <>
+                              {links.github && (
+                                <a
+                                  href={links.github}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-slate-400 hover:text-white transition-colors"
+                                >
+                                  <Github className="h-5 w-5" />
+                                </a>
+                              )}
+                              {links.twitter && (
+                                <a
+                                  href={links.twitter}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-slate-400 hover:text-white transition-colors"
+                                >
+                                  <Twitter className="h-5 w-5" />
+                                </a>
+                              )}
+                              {links.linkedin && (
+                                <a
+                                  href={links.linkedin}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-slate-400 hover:text-white transition-colors"
+                                >
+                                  <Linkedin className="h-5 w-5" />
+                                </a>
+                              )}
+                              {links.instagram && (
+                                <a
+                                  href={links.instagram}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-slate-400 hover:text-white transition-colors"
+                                >
+                                  <Instagram className="h-5 w-5" />
+                                </a>
+                              )}
+                            </>
+                          );
+                        } catch (error) {
+                          return null;
+                        }
+                      })()}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tarjeta de Skills */}
+            <Card className="bg-slate-800 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-lg">Skills</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {profile.skills && profile.skills.trim() !== "" ? (
+                    profile.skills.split(",").map((skill, index) => (
+                      <Badge key={index} className="bg-indigo-700 text-white">
+                        {skill.trim()}
+                      </Badge>
+                    ))
+                  ) : (
+                    <>
+                      <Badge className="bg-indigo-700 text-white">
+                        Product Management
+                      </Badge>
+                      <Badge className="bg-indigo-700 text-white">
+                        User Research
+                      </Badge>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Columna Derecha - Tabs para Bio, Experiencia, Educación */}
+          <div className="lg:col-span-2">
+            <Tabs defaultValue="about" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 bg-slate-800 rounded-lg p-1">
+                <TabsTrigger
+                  value="about"
+                  className="bg-transparent text-slate-300 hover:bg-slate-700 hover:text-white"
+                >
+                  About
+                </TabsTrigger>
+                <TabsTrigger
+                  value="experience"
+                  className="bg-transparent text-slate-300 hover:bg-slate-700 hover:text-white"
+                >
+                  Experience
+                </TabsTrigger>
+                <TabsTrigger
+                  value="education"
+                  className="bg-transparent text-slate-300 hover:bg-slate-700 hover:text-white"
+                >
+                  Education
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="about" className="mt-4">
+                <Card className="bg-slate-800 border-slate-700">
+                  <CardHeader>
+                    <CardTitle>Bio</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-slate-300">
+                      {profile.bio || "No bio provided"}
+                    </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="experience" className="mt-4">
+                <Card className="bg-slate-800 border-slate-700">
+                  <CardHeader>
+                    <CardTitle>Work Experience</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[400px] pr-4">
+                      <div className="space-y-6">
+                        {profile.experience
+                          ? JSON.parse(profile.experience).map((exp: any) => (
+                              <div
+                                key={exp.id}
+                                className="relative pl-6 pb-6 border-l border-slate-600"
+                              >
+                                <div className="absolute -left-1.5 top-1.5 h-3 w-3 rounded-full border-2 border-indigo-600 bg-slate-900"></div>
+                                <div className="space-y-1">
+                                  <h4 className="font-medium">{exp.title}</h4>
+                                  <div className="flex items-center gap-2 text-sm text-slate-400">
+                                    <Building className="h-3.5 w-3.5" />
+                                    {exp.company}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm text-slate-400">
+                                    <MapPin className="h-3.5 w-3.5" />
+                                    {exp.location}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm text-slate-400">
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    {formatDate(exp.startDate)} -{" "}
+                                    {formatDate(exp.endDate)}
+                                  </div>
+                                  <p className="mt-2 text-sm text-slate-400">
+                                    {exp.description}
+                                  </p>
+                                </div>
+                              </div>
+                            ))
+                          : "No experience provided"}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="education" className="mt-4">
+                <Card className="bg-slate-800 border-slate-700">
+                  <CardHeader>
+                    <CardTitle>Education</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {profile.education
+                        ? JSON.parse(profile.education).map((edu: any) => (
+                            <div
+                              key={edu.id}
+                              className="relative pl-6 pb-6 border-l border-slate-600"
+                            >
+                              <div className="absolute -left-1.5 top-1.5 h-3 w-3 rounded-full border-2 border-indigo-600 bg-slate-900"></div>
+                              <div className="space-y-1">
+                                <h4 className="font-medium">{edu.degree}</h4>
+                                <div className="flex items-center gap-2 text-sm text-slate-400">
+                                  <GraduationCap className="h-3.5 w-3.5" />
+                                  {edu.institution}
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-slate-400">
+                                  <MapPin className="h-3.5 w-3.5" />
+                                  {edu.location}
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-slate-400">
+                                  <Calendar className="h-3.5 w-3.5" />
+                                  {edu.startDate} - {edu.endDate}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        : "No education provided"}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
         </div>

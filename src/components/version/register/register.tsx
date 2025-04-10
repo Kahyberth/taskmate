@@ -1,24 +1,18 @@
-import { useEffect, useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { Eye, EyeOff, ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import * as z from "zod"
+import { Eye, EyeOff, ArrowLeft, CheckCircle, Loader2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { GeometricShapes } from "@/components/version/geometric-shapes";
-import { ScrollReveal } from "@/components/version/scroll-reveal";
-import { PasswordStrengthIndicator } from "@/components/version/password-strength-indicator";
-// Define the form validation schema
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { GeometricShapes } from "@/components/version/geometric-shapes"
+import { ScrollReveal } from "@/components/version/scroll-reveal"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { PasswordStrengthIndicator } from "@/components/version/password-strength-indicator"
+import { useNavigate } from "react-router-dom"
+import { useLocation } from "react-router-dom"
+
 const formSchema = z
   .object({
     firstName: z.string().min(2, {
@@ -41,33 +35,28 @@ const formSchema = z
       .refine(
         (password) => {
           return (
-            /[A-Z]/.test(password) &&
-            /[a-z]/.test(password) &&
-            /[0-9]/.test(password) &&
-            /[^A-Za-z0-9]/.test(password)
-          );
+            /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)
+          )
         },
         {
-          message:
-            "La contraseña debe incluir mayúsculas, minúsculas, números y símbolos.",
-        }
+          message: "La contraseña debe incluir mayúsculas, minúsculas, números y símbolos.",
+        },
       ),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Las contraseñas no coinciden.",
     path: ["confirmPassword"],
-  });
+  })
 
 export default function RegisterPage() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const router = useNavigate();
-  const location = useLocation();
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
+  const router = useNavigate()
+  const location = useLocation()
 
-  // Initialize form with react-hook-form
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -78,39 +67,41 @@ export default function RegisterPage() {
       password: "",
       confirmPassword: "",
     },
-  });
+  })
 
   useEffect(() => {
-    location.state as { email: string; name: string };
-    form.setValue("email", location.state?.email || "");
-    form.setValue("firstName", location.state?.name || "");
-  }, [location.state]);
+    
+    location.state as { email: string, name: string }
+    form.setValue("email", location.state.email);
+    form.setValue("firstName", location.state.name);
+  }, [location.state])
 
-  // Form submission handler
+
+ 
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
+    setIsSubmitting(true)
 
     try {
-      // Simulate API call with a delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+  
+      await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      console.log(values);
-      setIsSuccess(true);
+      console.log(values)
+      setIsSuccess(true)
 
-      // Redirect after successful registration (after showing success message)
       setTimeout(() => {
-        router("/");
-      }, 2000);
+        router("/")
+      }, 2000)
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error("Registration error:", error)
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0e0a29] via-[#170f3e] to-[#1e1248] relative overflow-hidden">
-      {/* Grain texture overlay */}
+ 
       <div
         className="fixed inset-0 z-10 pointer-events-none opacity-20"
         style={{
@@ -119,30 +110,26 @@ export default function RegisterPage() {
         }}
       ></div>
 
-      {/* Enhanced geometric shapes */}
+
       <GeometricShapes />
 
       <div className="container mx-auto px-4 py-16 relative z-20">
         <div className="max-w-md mx-auto">
           <ScrollReveal>
-            <Link
-              to="/"
+            <a
+              href="/"
               className="inline-flex items-center text-white/70 hover:text-white transition-colors mb-8 group"
             >
               <ArrowLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />
               Volver a inicio
-            </Link>
+            </a>
 
             <div className="flex items-center space-x-3 mb-8">
               <div className="w-10 h-10 bg-gradient-to-br from-violet-400 to-purple-600 rounded-lg shadow-lg shadow-purple-500/20 flex items-center justify-center relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.3),rgba(255,255,255,0))]"></div>
-                <span className="text-white text-lg font-bold relative z-10">
-                  TM
-                </span>
+                <span className="text-white text-lg font-bold relative z-10">TM</span>
               </div>
-              <span className="text-white text-2xl font-bold tracking-tight">
-                TaskMate
-              </span>
+              <span className="text-white text-2xl font-bold tracking-tight">TaskMate</span>
             </div>
 
             <div className="bg-white/5 backdrop-blur-md p-8 rounded-2xl border border-white/10 shadow-xl shadow-purple-900/10 relative overflow-hidden">
@@ -160,38 +147,27 @@ export default function RegisterPage() {
                   <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mb-4 animate-bounce-slow">
                     <CheckCircle className="h-8 w-8 text-white" />
                   </div>
-                  <h2 className="text-2xl font-bold text-white mb-2">
-                    ¡Registro exitoso!
-                  </h2>
+                  <h2 className="text-2xl font-bold text-white mb-2">¡Registro exitoso!</h2>
                   <p className="text-white/70 text-center mb-4">
-                    Tu cuenta ha sido creada correctamente. Serás redirigido en
-                    unos momentos.
+                    Tu cuenta ha sido creada correctamente. Serás redirigido en unos momentos.
                   </p>
                 </div>
               ) : (
                 <>
-                  <h1 className="text-2xl font-bold text-white mb-2">
-                    Crear una cuenta
-                  </h1>
+                  <h1 className="text-2xl font-bold text-white mb-2">Crear una cuenta</h1>
                   <p className="text-white/70 mb-6">
-                    Completa el formulario para comenzar a usar TaskMate
-                    gratuitamente
+                    Completa el formulario para comenzar a usar TaskMate gratuitamente
                   </p>
 
                   <Form {...form}>
-                    <form
-                      onSubmit={form.handleSubmit(onSubmit)}
-                      className="space-y-5"
-                    >
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <FormField
                           control={form.control}
                           name="firstName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-white/80">
-                                Nombre
-                              </FormLabel>
+                              <FormLabel className="text-white/80">Nombre</FormLabel>
                               <FormControl>
                                 <Input
                                   placeholder="Tu nombre"
@@ -209,9 +185,7 @@ export default function RegisterPage() {
                           name="lastName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-white/80">
-                                Apellido
-                              </FormLabel>
+                              <FormLabel className="text-white/80">Apellido</FormLabel>
                               <FormControl>
                                 <Input
                                   placeholder="Tu apellido"
@@ -230,9 +204,7 @@ export default function RegisterPage() {
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white/80">
-                              Email
-                            </FormLabel>
+                            <FormLabel className="text-white/80">Email</FormLabel>
                             <FormControl>
                               <Input
                                 type="email"
@@ -251,9 +223,7 @@ export default function RegisterPage() {
                         name="companyName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white/80">
-                              Nombre de la empresa
-                            </FormLabel>
+                            <FormLabel className="text-white/80">Nombre de la empresa</FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="Tu empresa"
@@ -271,9 +241,7 @@ export default function RegisterPage() {
                         name="password"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white/80">
-                              Contraseña
-                            </FormLabel>
+                            <FormLabel className="text-white/80">Contraseña</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <Input
@@ -287,11 +255,7 @@ export default function RegisterPage() {
                                   className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors"
                                   onClick={() => setShowPassword(!showPassword)}
                                 >
-                                  {showPassword ? (
-                                    <EyeOff className="h-4 w-4" />
-                                  ) : (
-                                    <Eye className="h-4 w-4" />
-                                  )}
+                                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                               </div>
                             </FormControl>
@@ -306,15 +270,11 @@ export default function RegisterPage() {
                         name="confirmPassword"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white/80">
-                              Confirmar contraseña
-                            </FormLabel>
+                            <FormLabel className="text-white/80">Confirmar contraseña</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <Input
-                                  type={
-                                    showConfirmPassword ? "text" : "password"
-                                  }
+                                  type={showConfirmPassword ? "text" : "password"}
                                   placeholder="••••••••"
                                   {...field}
                                   className="bg-white/10 border-white/10 focus:border-violet-500 h-10 text-white placeholder:text-white/40 pr-10"
@@ -322,15 +282,9 @@ export default function RegisterPage() {
                                 <button
                                   type="button"
                                   className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors"
-                                  onClick={() =>
-                                    setShowConfirmPassword(!showConfirmPassword)
-                                  }
+                                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                 >
-                                  {showConfirmPassword ? (
-                                    <EyeOff className="h-4 w-4" />
-                                  ) : (
-                                    <Eye className="h-4 w-4" />
-                                  )}
+                                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                               </div>
                             </FormControl>
@@ -360,12 +314,9 @@ export default function RegisterPage() {
                   <div className="mt-6 text-center">
                     <p className="text-white/60 text-sm">
                       ¿Ya tienes una cuenta?{" "}
-                      <Link
-                        to="/"
-                        className="text-violet-400 hover:text-violet-300 transition-colors"
-                      >
+                      <a href="/" className="text-violet-400 hover:text-violet-300 transition-colors">
                         Iniciar sesión
-                      </Link>
+                      </a>
                     </p>
                   </div>
                 </>
@@ -374,17 +325,11 @@ export default function RegisterPage() {
 
             <p className="text-white/40 text-xs text-center mt-6">
               Al registrarte, aceptas nuestros{" "}
-              <a
-                href="#"
-                className="text-violet-400 hover:text-violet-300 transition-colors"
-              >
+              <a href="#" className="text-violet-400 hover:text-violet-300 transition-colors">
                 Términos de servicio
               </a>{" "}
               y{" "}
-              <a
-                href="#"
-                className="text-violet-400 hover:text-violet-300 transition-colors"
-              >
+              <a href="#" className="text-violet-400 hover:text-violet-300 transition-colors">
                 Política de privacidad
               </a>
             </p>
@@ -392,5 +337,6 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }
+

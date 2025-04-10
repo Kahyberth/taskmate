@@ -31,12 +31,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       setUser(null);
       setIsAuthenticated(false);
-      notifications.show({
-        title: "Session expired",
-        message: "Please log in again",
-        color: "red",
-        autoClose: 2000,
-      });
     } finally {
       setLoading(false);
     }

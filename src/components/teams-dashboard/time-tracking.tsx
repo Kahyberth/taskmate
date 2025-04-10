@@ -379,7 +379,7 @@ export default function TimeTracking() {
   }
 
   return (
-    <Card className="border bg-gradient-to-br from-card to-card/80 backdrop-blur-sm">
+    <Card className="relative overflow-hidden bg-card border border-border/40 rounded-xl min-h-[80vh] w-full max-w-none flex flex-col overscroll-contain">
       <CardHeader className="pb-2">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -656,31 +656,37 @@ export default function TimeTracking() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div className="bg-card/50 border rounded-xl p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-200">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-              <ClockIcon className="h-6 w-6 text-primary" />
-            </div>
-            <p className="text-2xl font-bold">{calculateTotalHours().toFixed(1)}</p>
-            <p className="text-xs text-muted-foreground">
-              Total Hours This {selectedPeriod === "day" ? "Day" : selectedPeriod === "week" ? "Week" : "Month"}
-            </p>
-          </div>
-          <div className="bg-card/50 border rounded-xl p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-200">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-              <BarChart3Icon className="h-6 w-6 text-primary" />
-            </div>
-            <p className="text-2xl font-bold">{calculateAvgHoursPerDay()}</p>
-            <p className="text-xs text-muted-foreground">Avg. Hours Per Day</p>
-          </div>
-          <div className="bg-card/50 border rounded-xl p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-200">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-              <CalendarIcon className="h-6 w-6 text-primary" />
-            </div>
-            <p className="text-2xl font-bold">{new Set(filteredEntries.map((entry) => entry.date)).size}</p>
-            <p className="text-xs text-muted-foreground">Days Tracked</p>
-          </div>
-        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-20">
+  {[
+    {
+      icon: <ClockIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-primary" />,
+      value: calculateTotalHours().toFixed(1),
+      label: `Total Hours This ${selectedPeriod === "day" ? "Day" : selectedPeriod === "week" ? "Week" : "Month"}`,
+    },
+    {
+      icon: <BarChart3Icon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-primary" />,
+      value: calculateAvgHoursPerDay(),
+      label: "Avg. Hours Per Day",
+    },
+    {
+      icon: <CalendarIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-primary" />,
+      value: new Set(filteredEntries.map((entry) => entry.date)).size,
+      label: "Days Tracked",
+    },
+  ].map((item, i) => (
+    <div
+      key={i}
+      className="bg-card/50 border rounded-2xl p-5 sm:p-6 md:p-8 flex flex-col items-center justify-center text-center hover:shadow-lg transition-all duration-200 min-h-[180px] sm:min-h-[200px]"
+    >
+      <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center mb-3 sm:mb-4">
+        {item.icon}
+      </div>
+      <p className="text-2xl sm:text-3xl md:text-4xl font-extrabold">{item.value}</p>
+      <p className="text-sm sm:text-base text-muted-foreground mt-1">{item.label}</p>
+    </div>
+  ))}
+</div>
+
 
         <div className="flex justify-between items-center">
           <Button variant="outline" size="sm" className="text-xs" onClick={() => setShowReportDialog(true)}>
@@ -783,4 +789,3 @@ export default function TimeTracking() {
     </Card>
   )
 }
-

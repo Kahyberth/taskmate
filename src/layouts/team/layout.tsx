@@ -3,7 +3,7 @@ import { DashboardHeader } from "@/components/dashboard/header";
 import { cn } from "@/lib/utils";
 import { AIAssistantDialog } from "@/components/dashboard/ai-assistant-dialog";
 import { Outlet } from "react-router-dom";
-import { DashboardSidebar } from "@/components/dashboard/navbar";
+import { TeamDashboardSidebar } from "@/components/teams-dashboard/dashboard-sidebar";
 
 export default function TeamDashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -30,15 +30,15 @@ export default function TeamDashboardLayout() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className="flex flex-col min-h-screen bg-slate-900 text-white">
       <DashboardHeader
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
         notificationCount={notificationCount}
       />
 
-      <div className="flex">
-        <DashboardSidebar
+      <div className="flex flex-1 overflow-hidden">
+        <TeamDashboardSidebar
           sidebarOpen={sidebarOpen}
           isMobile={isMobile}
           showAIAssistant={() => setShowAIAssistant(true)}
@@ -46,7 +46,7 @@ export default function TeamDashboardLayout() {
 
         <main
           className={cn(
-            "flex-1 p-4 transition-all duration-300 ease-in-out",
+            "flex-1 w-full overflow-x-hidden px-4 sm:px-6 md:px-8 transition-all duration-300 ease-in-out ",
             sidebarOpen ? "md:ml-64" : "ml-0"
           )}
         >

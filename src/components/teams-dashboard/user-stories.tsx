@@ -1,8 +1,14 @@
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   CheckCircle2,
   Clock,
@@ -16,11 +22,15 @@ import {
   ArrowUpCircle,
   Circle,
   CheckCircle,
-  MessageSquareIcon,
-  PaperclipIcon,
-} from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -30,37 +40,37 @@ import {
   DialogTrigger,
   DialogFooter,
   DialogClose,
-} from "@/components/ui/dialog"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+} from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Tipos para las historias de usuario
-type UserStoryStatus = "todo" | "in-progress" | "completed"
-type UserStoryPriority = "high" | "medium" | "low"
+type UserStoryStatus = "todo" | "in-progress" | "completed";
+type UserStoryPriority = "high" | "medium" | "low";
 
 interface UserStory {
-  id: number
-  title: string
-  description: string
-  status: UserStoryStatus
-  priority: UserStoryPriority
-  points: number
+  id: number;
+  title: string;
+  description: string;
+  status: UserStoryStatus;
+  priority: UserStoryPriority;
+  points: number;
   assignedTo: {
-    name: string
-    avatar: string
-    initials: string
-  }
+    name: string;
+    avatar: string;
+    initials: string;
+  };
   createdBy: {
-    name: string
-    avatar: string
-    initials: string
-  }
-  createdAt: string
-  dueDate: string
-  tags: string[]
-  acceptanceCriteria: string[]
-  comments: number
-  attachments: number
+    name: string;
+    avatar: string;
+    initials: string;
+  };
+  createdAt: string;
+  dueDate: string;
+  tags: string[];
+  acceptanceCriteria: string[];
+  comments: number;
+  attachments: number;
 }
 
 // Datos de ejemplo
@@ -216,26 +226,33 @@ const userStories: UserStory[] = [
     comments: 8,
     attachments: 3,
   },
-]
+];
 
 export default function UserStories() {
-  const [selectedStatus, setSelectedStatus] = useState<string>("all")
-  const [searchQuery, setSearchQuery] = useState<string>("")
-  const [selectedStory, setSelectedStory] = useState<UserStory | null>(null)
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedStory, setSelectedStory] = useState<UserStory | null>(null);
 
   // Filtrar historias por estado y búsqueda
   const filteredStories = userStories.filter((story) => {
-    const matchesStatus = selectedStatus === "all" || story.status === selectedStatus
+    const matchesStatus =
+      selectedStatus === "all" || story.status === selectedStatus;
     const matchesSearch =
       story.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      story.description.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesStatus && matchesSearch
-  })
+      story.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
 
   // Contar historias por estado
-  const todoCount = userStories.filter((story) => story.status === "todo").length
-  const inProgressCount = userStories.filter((story) => story.status === "in-progress").length
-  const completedCount = userStories.filter((story) => story.status === "completed").length
+  const todoCount = userStories.filter(
+    (story) => story.status === "todo"
+  ).length;
+  const inProgressCount = userStories.filter(
+    (story) => story.status === "in-progress"
+  ).length;
+  const completedCount = userStories.filter(
+    (story) => story.status === "completed"
+  ).length;
 
   // Función para obtener el color y el icono según el estado
   const getStatusDetails = (status: UserStoryStatus) => {
@@ -246,30 +263,30 @@ export default function UserStories() {
           bgColor: "bg-slate-100",
           icon: <Circle className="h-4 w-4 text-slate-500" />,
           label: "Por hacer",
-        }
+        };
       case "in-progress":
         return {
           color: "text-blue-500",
           bgColor: "bg-blue-100",
           icon: <Clock className="h-4 w-4 text-blue-500" />,
           label: "En progreso",
-        }
+        };
       case "completed":
         return {
           color: "text-green-500",
           bgColor: "bg-green-100",
           icon: <CheckCircle className="h-4 w-4 text-green-500" />,
           label: "Completada",
-        }
+        };
       default:
         return {
           color: "text-slate-500",
           bgColor: "bg-slate-100",
           icon: <Circle className="h-4 w-4" />,
           label: "Desconocido",
-        }
+        };
     }
-  }
+  };
 
   // Función para obtener detalles de prioridad
   const getPriorityDetails = (priority: UserStoryPriority) => {
@@ -280,37 +297,37 @@ export default function UserStories() {
           bgColor: "bg-red-100",
           icon: <ArrowUpCircle className="h-4 w-4 text-red-500" />,
           label: "Alta",
-        }
+        };
       case "medium":
         return {
           color: "text-amber-500",
           bgColor: "bg-amber-100",
           icon: <ArrowUpCircle className="h-4 w-4 text-amber-500" />,
           label: "Media",
-        }
+        };
       case "low":
         return {
           color: "text-green-500",
           bgColor: "bg-green-100",
           icon: <ArrowUpCircle className="h-4 w-4 text-green-500" />,
           label: "Baja",
-        }
+        };
       default:
         return {
           color: "text-slate-500",
           bgColor: "bg-slate-100",
           icon: <ArrowUpCircle className="h-4 w-4" />,
           label: "Desconocida",
-        }
+        };
     }
-  }
+  };
 
   // Calcular el progreso total
-  const totalPoints = userStories.reduce((sum, story) => sum + story.points, 0)
+  const totalPoints = userStories.reduce((sum, story) => sum + story.points, 0);
   const completedPoints = userStories
     .filter((story) => story.status === "completed")
-    .reduce((sum, story) => sum + story.points, 0)
-  const progressPercentage = Math.round((completedPoints / totalPoints) * 100)
+    .reduce((sum, story) => sum + story.points, 0);
+  const progressPercentage = Math.round((completedPoints / totalPoints) * 100);
 
   return (
     <Card className="border bg-gradient-to-br from-card to-card/80 backdrop-blur-sm">
@@ -321,7 +338,9 @@ export default function UserStories() {
               <CheckCircle2 className="h-5 w-5 mr-2 text-primary" />
               Historias de Usuario Asignadas
             </CardTitle>
-            <CardDescription>Gestiona y visualiza tus historias de usuario</CardDescription>
+            <CardDescription>
+              Gestiona y visualiza tus historias de usuario
+            </CardDescription>
           </div>
           <div className="flex items-center space-x-2">
             <div className="relative w-[200px]">
@@ -353,10 +372,12 @@ export default function UserStories() {
       </CardHeader>
 
       <CardContent className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <div className="bg-card/50 p-4 rounded-xl border backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-muted-foreground">Progreso Total</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Progreso Total
+              </p>
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                 <BarChart2 className="h-4 w-4 text-primary" />
               </div>
@@ -366,7 +387,9 @@ export default function UserStories() {
                 <span className="text-sm font-medium">
                   {completedPoints} de {totalPoints} puntos
                 </span>
-                <span className="text-sm font-medium">{progressPercentage}%</span>
+                <span className="text-sm font-medium">
+                  {progressPercentage}%
+                </span>
               </div>
               <Progress value={progressPercentage} className="h-2" />
             </div>
@@ -378,7 +401,9 @@ export default function UserStories() {
 
           <div className="bg-card/50 p-4 rounded-xl border backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-muted-foreground">Estado de Historias</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Estado de Historias
+              </p>
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                 <CheckCircle2 className="h-4 w-4 text-primary" />
               </div>
@@ -392,19 +417,25 @@ export default function UserStories() {
               <div className="flex flex-col items-center p-2 rounded-lg bg-blue-100">
                 <Clock className="h-5 w-5 text-blue-500 mb-1" />
                 <span className="text-lg font-bold">{inProgressCount}</span>
-                <span className="text-xs text-muted-foreground">En progreso</span>
+                <span className="text-xs text-muted-foreground">
+                  En progreso
+                </span>
               </div>
               <div className="flex flex-col items-center p-2 rounded-lg bg-green-100">
                 <CheckCircle className="h-5 w-5 text-green-500 mb-1" />
                 <span className="text-lg font-bold">{completedCount}</span>
-                <span className="text-xs text-muted-foreground">Completadas</span>
+                <span className="text-xs text-muted-foreground">
+                  Completadas
+                </span>
               </div>
             </div>
           </div>
 
           <div className="bg-card/50 p-4 rounded-xl border backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-muted-foreground">Próximas Fechas</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Próximas Fechas
+              </p>
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                 <Calendar className="h-4 w-4 text-primary" />
               </div>
@@ -412,7 +443,11 @@ export default function UserStories() {
             <div className="space-y-2">
               {userStories
                 .filter((story) => story.status !== "completed")
-                .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+                .sort(
+                  (a, b) =>
+                    new Date(a.dueDate).getTime() -
+                    new Date(b.dueDate).getTime()
+                )
                 .slice(0, 2)
                 .map((story) => (
                   <div
@@ -421,7 +456,9 @@ export default function UserStories() {
                   >
                     <div className="flex items-center">
                       {getStatusDetails(story.status).icon}
-                      <span className="text-sm ml-2 truncate max-w-[150px]">{story.title}</span>
+                      <span className="text-sm ml-2 truncate max-w-[60vw] sm:max-w-[150px]">
+                        {story.title}
+                      </span>
                     </div>
                     <span className="text-xs text-muted-foreground">
                       {new Date(story.dueDate).toLocaleDateString()}
@@ -438,7 +475,10 @@ export default function UserStories() {
             <TabsTrigger value="board">Tablero</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="list" className="animate-in fade-in-50 duration-300">
+          <TabsContent
+            value="list"
+            className="animate-in fade-in-50 duration-300"
+          >
             <div className="space-y-3">
               {filteredStories.length > 0 ? (
                 filteredStories.map((story) => (
@@ -450,29 +490,50 @@ export default function UserStories() {
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-start">
-                            <div className="mt-0.5 mr-3">{getStatusDetails(story.status).icon}</div>
+                            <div className="mt-0.5 mr-3">
+                              {getStatusDetails(story.status).icon}
+                            </div>
                             <div>
                               <h3 className="font-medium">{story.title}</h3>
-                              <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{story.description}</p>
+                              <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
+                                {story.description}
+                              </p>
                             </div>
                           </div>
                           <ChevronRight className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div className="flex flex-wrap gap-2 mt-3">
-                          <Badge variant="outline" className={`${getPriorityDetails(story.priority).bgColor} text-xs`}>
+                          <Badge
+                            variant="outline"
+                            className={`${
+                              getPriorityDetails(story.priority).bgColor
+                            } text-xs`}
+                          >
                             {getPriorityDetails(story.priority).icon}
-                            <span className="ml-1">{getPriorityDetails(story.priority).label}</span>
+                            <span className="ml-1">
+                              {getPriorityDetails(story.priority).label}
+                            </span>
                           </Badge>
-                          <Badge variant="outline" className="bg-primary/5 text-xs">
+                          <Badge
+                            variant="outline"
+                            className="bg-primary/5 text-xs"
+                          >
                             {story.points} puntos
                           </Badge>
                           {story.tags.slice(0, 2).map((tag, index) => (
-                            <Badge key={index} variant="outline" className="bg-background/50 text-xs">
+                            <Badge
+                              key={index}
+                              variant="outline"
+                              className="bg-background/50 text-xs"
+                            >
                               {tag}
                             </Badge>
                           ))}
                           {story.tags.length > 2 && (
-                            <Badge variant="outline" className="bg-background/50 text-xs">
+                            <Badge
+                              variant="outline"
+                              className="bg-background/50 text-xs"
+                            >
                               +{story.tags.length - 2}
                             </Badge>
                           )}
@@ -480,12 +541,17 @@ export default function UserStories() {
                         <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/40">
                           <div className="flex items-center text-xs text-muted-foreground">
                             <Calendar className="h-3.5 w-3.5 mr-1" />
-                            <span>Vence: {new Date(story.dueDate).toLocaleDateString()}</span>
+                            <span>
+                              Vence:{" "}
+                              {new Date(story.dueDate).toLocaleDateString()}
+                            </span>
                           </div>
                           <div className="flex items-center">
                             <Avatar className="h-6 w-6">
                               <AvatarImage src={story.assignedTo.avatar} />
-                              <AvatarFallback className="text-[10px]">{story.assignedTo.initials}</AvatarFallback>
+                              <AvatarFallback className="text-[10px]">
+                                {story.assignedTo.initials}
+                              </AvatarFallback>
                             </Avatar>
                           </div>
                         </div>
@@ -496,48 +562,68 @@ export default function UserStories() {
                       <DialogHeader>
                         <div className="flex items-center gap-2 mb-1">
                           <Badge
-                            className={`${getStatusDetails(story.status).bgColor} ${getStatusDetails(story.status).color}`}
+                            className={`${
+                              getStatusDetails(story.status).bgColor
+                            } ${getStatusDetails(story.status).color}`}
                           >
                             {getStatusDetails(story.status).label}
                           </Badge>
                           <Badge
-                            className={`${getPriorityDetails(story.priority).bgColor} ${getPriorityDetails(story.priority).color}`}
+                            className={`${
+                              getPriorityDetails(story.priority).bgColor
+                            } ${getPriorityDetails(story.priority).color}`}
                           >
-                            Prioridad: {getPriorityDetails(story.priority).label}
+                            Prioridad:{" "}
+                            {getPriorityDetails(story.priority).label}
                           </Badge>
                           <Badge variant="outline">{story.points} puntos</Badge>
                         </div>
                         <DialogTitle>{story.title}</DialogTitle>
                         <DialogDescription>
-                          ID: {story.id} • Creada el {new Date(story.createdAt).toLocaleDateString()}
+                          ID: {story.id} • Creada el{" "}
+                          {new Date(story.createdAt).toLocaleDateString()}
                         </DialogDescription>
                       </DialogHeader>
 
                       <div className="grid gap-4 py-4">
                         <div className="space-y-2">
                           <h4 className="text-sm font-medium">Descripción</h4>
-                          <p className="text-sm text-muted-foreground">{story.description}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {story.description}
+                          </p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <h4 className="text-sm font-medium mb-2">Asignada a</h4>
+                            <h4 className="text-sm font-medium mb-2">
+                              Asignada a
+                            </h4>
                             <div className="flex items-center">
                               <Avatar className="h-8 w-8 mr-2">
                                 <AvatarImage src={story.assignedTo.avatar} />
-                                <AvatarFallback>{story.assignedTo.initials}</AvatarFallback>
+                                <AvatarFallback>
+                                  {story.assignedTo.initials}
+                                </AvatarFallback>
                               </Avatar>
-                              <span className="text-sm">{story.assignedTo.name}</span>
+                              <span className="text-sm">
+                                {story.assignedTo.name}
+                              </span>
                             </div>
                           </div>
                           <div>
-                            <h4 className="text-sm font-medium mb-2">Creada por</h4>
+                            <h4 className="text-sm font-medium mb-2">
+                              Creada por
+                            </h4>
                             <div className="flex items-center">
                               <Avatar className="h-8 w-8 mr-2">
                                 <AvatarImage src={story.createdBy.avatar} />
-                                <AvatarFallback>{story.createdBy.initials}</AvatarFallback>
+                                <AvatarFallback>
+                                  {story.createdBy.initials}
+                                </AvatarFallback>
                               </Avatar>
-                              <span className="text-sm">{story.createdBy.name}</span>
+                              <span className="text-sm">
+                                {story.createdBy.name}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -546,7 +632,11 @@ export default function UserStories() {
                           <h4 className="text-sm font-medium">Etiquetas</h4>
                           <div className="flex flex-wrap gap-2">
                             {story.tags.map((tag, index) => (
-                              <Badge key={index} variant="outline" className="bg-primary/5">
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                className="bg-primary/5"
+                              >
                                 <Tag className="h-3 w-3 mr-1" />
                                 {tag}
                               </Badge>
@@ -555,10 +645,15 @@ export default function UserStories() {
                         </div>
 
                         <div className="space-y-2">
-                          <h4 className="text-sm font-medium">Criterios de aceptación</h4>
+                          <h4 className="text-sm font-medium">
+                            Criterios de aceptación
+                          </h4>
                           <ul className="space-y-1">
                             {story.acceptanceCriteria.map((criteria, index) => (
-                              <li key={index} className="text-sm flex items-start">
+                              <li
+                                key={index}
+                                className="text-sm flex items-start"
+                              >
                                 <CheckCircle2 className="h-4 w-4 text-primary mr-2 mt-0.5 flex-shrink-0" />
                                 <span>{criteria}</span>
                               </li>
@@ -568,13 +663,17 @@ export default function UserStories() {
 
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
-                            <h4 className="text-sm font-medium">Fecha de creación</h4>
+                            <h4 className="text-sm font-medium">
+                              Fecha de creación
+                            </h4>
                             <p className="text-sm text-muted-foreground">
                               {new Date(story.createdAt).toLocaleDateString()}
                             </p>
                           </div>
                           <div className="space-y-1">
-                            <h4 className="text-sm font-medium">Fecha de vencimiento</h4>
+                            <h4 className="text-sm font-medium">
+                              Fecha de vencimiento
+                            </h4>
                             <p className="text-sm text-muted-foreground">
                               {new Date(story.dueDate).toLocaleDateString()}
                             </p>
@@ -583,16 +682,6 @@ export default function UserStories() {
                       </div>
 
                       <DialogFooter className="flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center">
-                            <MessageSquareIcon className="h-4 w-4 text-muted-foreground mr-1" />
-                            <span className="text-sm text-muted-foreground">{story.comments} comentarios</span>
-                          </div>
-                          <div className="flex items-center">
-                            <PaperclipIcon className="h-4 w-4 text-muted-foreground mr-1" />
-                            <span className="text-sm text-muted-foreground">{story.attachments} adjuntos</span>
-                          </div>
-                        </div>
                         <DialogClose asChild>
                           <Button>Cerrar</Button>
                         </DialogClose>
@@ -603,15 +692,23 @@ export default function UserStories() {
               ) : (
                 <div className="text-center py-8">
                   <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <h3 className="text-lg font-medium">No se encontraron historias</h3>
-                  <p className="text-muted-foreground mt-1">Intenta cambiar los filtros o la búsqueda</p>
+                  <h3 className="text-lg font-medium">
+                    No se encontraron historias
+                  </h3>
+                  <p className="text-muted-foreground mt-1">
+                    Intenta cambiar los filtros o la búsqueda
+                  </p>
                 </div>
               )}
             </div>
           </TabsContent>
 
-          <TabsContent value="board" className="animate-in fade-in-50 duration-300">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <TabsContent
+            value="board"
+            className="animate-in fade-in-50 duration-300"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
               <div className="space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b">
                   <div className="flex items-center">
@@ -633,15 +730,22 @@ export default function UserStories() {
                           onClick={() => setSelectedStory(story)}
                         >
                           <h4 className="font-medium text-sm">{story.title}</h4>
-                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{story.description}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                            {story.description}
+                          </p>
                           <div className="flex items-center justify-between mt-3">
                             <Badge
                               variant="outline"
-                              className={`${getPriorityDetails(story.priority).bgColor} text-xs`}
+                              className={`${
+                                getPriorityDetails(story.priority).bgColor
+                              } text-xs`}
                             >
                               {getPriorityDetails(story.priority).label}
                             </Badge>
-                            <Badge variant="outline" className="bg-primary/5 text-xs">
+                            <Badge
+                              variant="outline"
+                              className="bg-primary/5 text-xs"
+                            >
                               {story.points} pts
                             </Badge>
                           </div>
@@ -651,7 +755,9 @@ export default function UserStories() {
                             </span>
                             <Avatar className="h-5 w-5">
                               <AvatarImage src={story.assignedTo.avatar} />
-                              <AvatarFallback className="text-[10px]">{story.assignedTo.initials}</AvatarFallback>
+                              <AvatarFallback className="text-[10px]">
+                                {story.assignedTo.initials}
+                              </AvatarFallback>
                             </Avatar>
                           </div>
                         </div>
@@ -681,15 +787,22 @@ export default function UserStories() {
                           onClick={() => setSelectedStory(story)}
                         >
                           <h4 className="font-medium text-sm">{story.title}</h4>
-                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{story.description}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                            {story.description}
+                          </p>
                           <div className="flex items-center justify-between mt-3">
                             <Badge
                               variant="outline"
-                              className={`${getPriorityDetails(story.priority).bgColor} text-xs`}
+                              className={`${
+                                getPriorityDetails(story.priority).bgColor
+                              } text-xs`}
                             >
                               {getPriorityDetails(story.priority).label}
                             </Badge>
-                            <Badge variant="outline" className="bg-primary/5 text-xs">
+                            <Badge
+                              variant="outline"
+                              className="bg-primary/5 text-xs"
+                            >
                               {story.points} pts
                             </Badge>
                           </div>
@@ -699,7 +812,9 @@ export default function UserStories() {
                             </span>
                             <Avatar className="h-5 w-5">
                               <AvatarImage src={story.assignedTo.avatar} />
-                              <AvatarFallback className="text-[10px]">{story.assignedTo.initials}</AvatarFallback>
+                              <AvatarFallback className="text-[10px]">
+                                {story.assignedTo.initials}
+                              </AvatarFallback>
                             </Avatar>
                           </div>
                         </div>
@@ -729,15 +844,22 @@ export default function UserStories() {
                           onClick={() => setSelectedStory(story)}
                         >
                           <h4 className="font-medium text-sm">{story.title}</h4>
-                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{story.description}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                            {story.description}
+                          </p>
                           <div className="flex items-center justify-between mt-3">
                             <Badge
                               variant="outline"
-                              className={`${getPriorityDetails(story.priority).bgColor} text-xs`}
+                              className={`${
+                                getPriorityDetails(story.priority).bgColor
+                              } text-xs`}
                             >
                               {getPriorityDetails(story.priority).label}
                             </Badge>
-                            <Badge variant="outline" className="bg-primary/5 text-xs">
+                            <Badge
+                              variant="outline"
+                              className="bg-primary/5 text-xs"
+                            >
                               {story.points} pts
                             </Badge>
                           </div>
@@ -747,7 +869,9 @@ export default function UserStories() {
                             </span>
                             <Avatar className="h-5 w-5">
                               <AvatarImage src={story.assignedTo.avatar} />
-                              <AvatarFallback className="text-[10px]">{story.assignedTo.initials}</AvatarFallback>
+                              <AvatarFallback className="text-[10px]">
+                                {story.assignedTo.initials}
+                              </AvatarFallback>
                             </Avatar>
                           </div>
                         </div>
@@ -760,6 +884,5 @@ export default function UserStories() {
         </Tabs>
       </CardContent>
     </Card>
-  )
+  );
 }
-

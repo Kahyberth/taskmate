@@ -1,64 +1,21 @@
 import type React from "react";
 
-import { startTransition, Suspense, useEffect, useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { startTransition, useEffect, useState } from "react";
 import TeamStats from "@/components/teams-dashboard/team-stats";
 import TeamLeader from "@/components/teams-dashboard/team-leader";
-import TeamMembers from "@/components/teams-dashboard/team-members";
-import Projects from "@/components/teams-dashboard/projects";
-import TimeTracking from "@/components/teams-dashboard/time-tracking";
-import TeamChat from "@/components/teams-dashboard/team-chat";
 import UserStories from "@/components/teams-dashboard/user-stories";
 import { MountainIcon, Upload, Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/api/client-gateway";
-import { Members } from "@/interfaces/members.interface";
-import { useParams } from 'react-router-dom'
-import { Loader } from "@mantine/core";
-import { TeamMember } from "@/interfaces/team_members.interface";
-
+import { useParams } from "react-router-dom";
 
 export default function TeamDashboard() {
   const [bannerImage, setBannerImage] = useState<string | null>(null);
   const [isEditingBanner, setIsEditingBanner] = useState(false);
-  const [members, setMembers] = useState<Members[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [data, setData] = useState([]);
-  const { team_id } = useParams<{ team_id: string }>()
-  
-
-  useEffect(() => {
-    startTransition(() => {
-      apiClient
-        .get(
-          `channels/load-channels?team_id=${team_id}`
-        )
-        .then((response) => {
-          setData(response.data);
-        });
-
-      apiClient
-        .get(`teams/get-members-by-team/${team_id}`)
-        .then((response) => {
-          setMembers(response.data);
-        
-          const users = response.data.map((member: any) => ({
-            id: member.member.id,
-            name: member.member.name,
-            role: member.role,
-            avatar: member.member.avatar,
-            initials: member.member.name.slice(0, 2).toUpperCase(),
-            status: 'online',
-            projects: [],
-            email: member.member.email,
-          }))
-
-          setTeamMembers(users);
-
-        });
-    });
-  }, []);
+  const [leaderData, setLeaderData] = useState<any>(null);
+  const [teamInfo, setTeamInfo] = useState<any>(null);
+  const { team_id } = useParams<{ team_id: string }>();
 
   // Función para manejar la carga de un nuevo banner
   const handleBannerUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,15 +35,29 @@ export default function TeamDashboard() {
     setBannerImage(null);
   };
 
+  useEffect(() => {
+    if (!team_id) return;
+    startTransition(() => {
+      apiClient.get(`teams/get-team-by-id/${team_id}`).then((r) => {
+        apiClient.get(`auth/profile/${r.data.leaderId}`).then((r) => {
+          setLeaderData(r.data);
+        });
+      });
+      apiClient.get(`teams/get-members-by-team/${team_id}`).then((r) => {
+        setTeamInfo(r.data);
+      });
+    });
+  }, [team_id]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90">
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] pointer-events-none" />
 
-      <div className="container mx-auto py-8 px-4">
+      <div className="container max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Banner personalizable */}
         <div className="relative mb-8 rounded-xl overflow-hidden shadow-lg">
           <div
-            className={`h-48 w-full bg-gradient-to-r from-primary/30 to-primary/10 flex items-center justify-center relative ${
+            className={`h-48 sm:h-56 md:h-64 w-full bg-gradient-to-r from-primary/30 to-primary/10 flex items-center justify-center relative ${
               bannerImage ? "bg-cover bg-center" : ""
             }`}
             style={
@@ -169,7 +140,7 @@ export default function TeamDashboard() {
           </div>
         </div>
 
-        <header className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-6 border-b border-border/40 pl-32 mt-6">
+        <header className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-6 border-b border-border/40 pl-0 md:pl-32 mt-6">
           <div>
             <div className="flex items-center">
               <Badge className="mr-2 bg-primary/20 text-primary hover:bg-primary/30 transition-colors">
@@ -186,62 +157,16 @@ export default function TeamDashboard() {
               Gestiona tu equipo, proyectos y colaboración efectiva
             </p>
           </div>
-          <div className="flex space-x-2">
-            <div className="flex -space-x-2">
-              <div className="h-8 w-8 rounded-full border-2 border-background bg-primary/20 flex items-center justify-center text-xs font-medium">
-                +3
-              </div>
-              <div className="h-8 w-8 rounded-full border-2 border-background bg-primary/10 flex items-center justify-center text-xs font-medium">
-                SC
-              </div>
-              <div className="h-8 w-8 rounded-full border-2 border-background bg-primary/10 flex items-center justify-center text-xs font-medium">
-                MR
-              </div>
-              <div className="h-8 w-8 rounded-full border-2 border-background bg-primary/10 flex items-center justify-center text-xs font-medium">
-                ET
-              </div>
-            </div>
-          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <TeamStats />
-          <TeamLeader />
+          <TeamLeader leaderData={leaderData} teamInfo={teamInfo} />
         </div>
 
         <div className="mb-8">
           <UserStories />
         </div>
-
-        <Tabs defaultValue="members" className="mb-8">
-          <TabsList className="grid w-full grid-cols-3 mb-6 p-1 bg-background/50 backdrop-blur-sm border">
-            <TabsTrigger value="members">Team Members</TabsTrigger>
-            <TabsTrigger value="projects">Projects</TabsTrigger>
-            <TabsTrigger value="time">Time Tracking</TabsTrigger>
-          </TabsList>
-          <TabsContent
-            value="members"
-            className="animate-in fade-in-50 duration-300"
-          >
-            <TeamMembers teamMembers={teamMembers} />
-          </TabsContent>
-          <TabsContent
-            value="projects"
-            className="animate-in fade-in-50 duration-300"
-          >
-            <Projects />
-          </TabsContent>
-          <TabsContent
-            value="time"
-            className="animate-in fade-in-50 duration-300"
-          >
-            <TimeTracking />
-          </TabsContent>
-        </Tabs>
-
-        <Suspense fallback={<Loader size="lg" color="blue" />}>
-          <TeamChat channels={data} teamMembers={members} />
-        </Suspense>
       </div>
     </div>
   );

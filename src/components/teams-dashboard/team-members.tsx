@@ -150,4 +150,3 @@ export default function TeamMembers({ teamMembers }: { teamMembers: TeamMember[]
     </Card>
   )
 }
-
