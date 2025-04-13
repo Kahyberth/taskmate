@@ -291,6 +291,7 @@ export function CreateRoomDialog({
           created_by: user?.name,
           session_code: requireCode ? accessCode : "",
           deck: loadAllStories ? userStories : selectedStories,
+          leader_id: user?.id,
         },
         {
           timeout: 5000,

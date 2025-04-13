@@ -1,3 +1,5 @@
+import type React from "react";
+
 import { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -44,9 +46,9 @@ import {
   Sun,
   LogOut,
 } from "lucide-react";
-// import { useFetch } from '@mantine/hooks'
+
 import { useNavigate, useParams } from "react-router-dom";
-import { Socket, io } from "socket.io-client";
+import { type Socket, io } from "socket.io-client";
 import { useRef } from "react";
 import { AuthContext } from "@/context/AuthContext";
 
@@ -76,7 +78,7 @@ interface message {
 interface ChatHistory {
   username: string;
   message: string;
-  message_date: string
+  message_date: string;
 }
 
 export function PlanningPokerRoom() {
@@ -111,9 +113,15 @@ export function PlanningPokerRoom() {
     votes: { value: string; participant: User }[];
   } | null>(null);
 
+  const [aiSuggestion, setAiSuggestion] = useState<{
+    points: number;
+    confidence: number;
+    reasoning: string;
+  } | null>(null);
 
   const { id: room_id } = useParams();
   const { userProfile } = useContext(AuthContext);
+  const [roomCreator, setRoomCreator] = useState<string | null>(null);
 
   useEffect(() => {
     if (lastMessageRef.current) {
@@ -165,6 +173,10 @@ export function PlanningPokerRoom() {
 
     socket.on("voting-history-updated", (updatedHistory) => {
       setVotingHistory(updatedHistory);
+    });
+
+    socket.on("room-creator", (creator_id: string) => {
+      setRoomCreator(creator_id);
     });
 
     socket.on("error", ({ value }: message) => {
@@ -264,18 +276,25 @@ export function PlanningPokerRoom() {
       setIsVotingComplete(true);
     });
 
+    socket.on("suggestion-accepted", ({ storyId, points }) => {
+      notifications.show({
+        title: "Story Points Set",
+        message: `Story ${storyId} has been assigned ${points} points`,
+        color: "green",
+        position: "top-right",
+      });
+    });
+
     return () => {
       socket.disconnect();
     };
   }, [userProfile, room_id, navigate]);
 
-  
-
   useEffect(() => {
     if (socketRef.current) {
       socketRef.current.on("chat-history", (history: ChatHistory[]) => {
         setChatMessages(
-          history.map(chat => ({
+          history.map((chat) => ({
             user: chat.username,
             message: chat.message,
             timestamp: new Date(chat.message_date).toLocaleTimeString(),
@@ -284,8 +303,6 @@ export function PlanningPokerRoom() {
       });
     }
   }, []);
-  
-
 
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -323,8 +340,8 @@ export function PlanningPokerRoom() {
 
     const id = notifications.show({
       loading: true,
-      title: 'Leaving session in progress',
-      message: 'Please wait...',
+      title: "Leaving session in progress",
+      message: "Please wait...",
       autoClose: false,
       withCloseButton: false,
     });
@@ -332,9 +349,10 @@ export function PlanningPokerRoom() {
     setTimeout(() => {
       notifications.update({
         id,
-        color: 'teal',
-        title: 'Session left successfully ✔',
-        message: 'You have left the planning poker session successfully. Redirecting...',
+        color: "teal",
+        title: "Session left successfully ✔",
+        message:
+          "You have left the planning poker session successfully. Redirecting...",
         icon: <IconCheck size={18} />,
         loading: false,
         autoClose: 2000,
@@ -342,7 +360,6 @@ export function PlanningPokerRoom() {
       navigate("/");
       setIsExitDialogOpen(false);
     }, 2000);
-    
   };
 
   const handleCardSelect = (card: string) => {
@@ -371,6 +388,84 @@ export function PlanningPokerRoom() {
     if (room_id && socketRef.current) {
       socketRef.current.emit("repeat-voting", room_id);
     }
+  };
+
+  const handleAiSuggestion = () => {
+    if (!currentStory || !votingResults) return;
+
+    // In a real implementation, this would call an API endpoint
+    // Here we're simulating the AI suggestion with a simple algorithm
+    const storyComplexity = currentStory.description.length / 50;
+    const votingSpread = Math.abs(votingResults.average - votingResults.median);
+
+    // Calculate a suggested point value based on voting results and story complexity
+    let suggestedPoints = votingResults.median;
+
+    // If there's high variance in votes, adjust toward the average
+    if (votingSpread > 2) {
+      suggestedPoints = Math.round(
+        (votingResults.median + votingResults.average) / 2
+      );
+    }
+
+    // Adjust based on story complexity
+    if (storyComplexity > 5 && suggestedPoints < 8) {
+      suggestedPoints += 1;
+    }
+
+    // Ensure it's a valid Fibonacci number
+    const fibNumbers = [0, 1, 2, 3, 5, 8, 13, 21, 34];
+    const closestFib = fibNumbers.reduce((prev, curr) =>
+      Math.abs(curr - suggestedPoints) < Math.abs(prev - suggestedPoints)
+        ? curr
+        : prev
+    );
+
+    // Calculate confidence based on voting consensus
+    const confidence = Math.max(0, Math.min(100, 100 - votingSpread * 10));
+
+    // Generate reasoning
+    let reasoning = `Based on the voting results (median: ${
+      votingResults.median
+    }, average: ${votingResults.average.toFixed(1)})`;
+
+    if (votingSpread > 2) {
+      reasoning += ` and the significant spread in team estimates`;
+    }
+
+    if (storyComplexity > 5) {
+      reasoning += `, considering the complexity of the story description`;
+    }
+
+    reasoning += `, I suggest ${closestFib} story points.`;
+
+    setAiSuggestion({
+      points: closestFib,
+      confidence,
+      reasoning,
+    });
+  };
+
+  const handleAcceptSuggestion = () => {
+    if (!aiSuggestion || !room_id || !socketRef.current) return;
+
+    // In a real implementation, this would emit an event to save the accepted suggestion
+    socketRef.current.emit("accept-suggestion", {
+      room: room_id,
+      points: aiSuggestion.points,
+      storyId: currentStory?.id,
+    });
+
+    notifications.show({
+      title: "Suggestion Accepted",
+      message: `Story points set to ${aiSuggestion.points}`,
+      color: "green",
+      position: "top-right",
+    });
+  };
+
+  const handleRejectSuggestion = () => {
+    setAiSuggestion(null);
   };
 
   return (
@@ -829,6 +924,92 @@ export function PlanningPokerRoom() {
                             ))}
                           </div>
                         </div>
+
+                        {/* AI Suggestion */}
+                        {roomCreator &&
+                          userProfile?.id === roomCreator &&
+                          votingResults &&
+                          !aiSuggestion && (
+                            <div className="mt-6">
+                              <Button
+                                onClick={handleAiSuggestion}
+                                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                              >
+                                Get AI Suggestion
+                              </Button>
+                            </div>
+                          )}
+
+                        {aiSuggestion && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={`mt-6 p-4 rounded-lg border ${
+                              isDarkMode
+                                ? "bg-gray-700 border-purple-700"
+                                : "bg-purple-50 border-purple-200"
+                            }`}
+                          >
+                            <div className="flex justify-between items-center mb-3">
+                              <h3
+                                className={`text-lg font-semibold ${
+                                  isDarkMode
+                                    ? "text-purple-300"
+                                    : "text-purple-700"
+                                }`}
+                              >
+                                AI Suggestion
+                              </h3>
+                              <Badge
+                                variant="outline"
+                                className={`${
+                                  isDarkMode
+                                    ? "border-purple-400 text-purple-300"
+                                    : "border-purple-500 text-purple-700"
+                                }`}
+                              >
+                                {aiSuggestion.confidence}% confidence
+                              </Badge>
+                            </div>
+
+                            <div className="flex items-center justify-center my-4">
+                              <div
+                                className={`text-4xl font-bold ${
+                                  isDarkMode
+                                    ? "text-purple-300"
+                                    : "text-purple-700"
+                                }`}
+                              >
+                                {aiSuggestion.points}
+                              </div>
+                              <div className="text-sm ml-2">story points</div>
+                            </div>
+
+                            <p
+                              className={`text-sm mb-4 ${
+                                isDarkMode ? "text-gray-300" : "text-gray-600"
+                              }`}
+                            >
+                              {aiSuggestion.reasoning}
+                            </p>
+
+                            <div className="flex space-x-2">
+                              <Button
+                                onClick={handleAcceptSuggestion}
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                Accept
+                              </Button>
+                              <Button
+                                onClick={handleRejectSuggestion}
+                                variant="outline"
+                                className="flex-1"
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          </motion.div>
+                        )}
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full space-y-4">
@@ -967,7 +1148,7 @@ export function PlanningPokerRoom() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="flex-1">
-                    <ScrollArea className="max-h-[550px] overflow-y-auto pr-4">
+                    <ScrollArea className="h-full pr-4">
                       {votingHistory.map((vote, index) => (
                         <div
                           key={index}
@@ -983,31 +1164,28 @@ export function PlanningPokerRoom() {
                             >
                               {vote.story_title}
                             </span>
-                          </div>
-                          <div className="flex justify-between items-end">
-                            <div>
-                              <span
-                                className={`text-sm ${
-                                  isDarkMode ? "text-gray-300" : "text-gray-600"
-                                } mr-2`}
-                              >
-                                Average:
-                              </span>
-                              <span
-                                className={`font-medium ${
-                                  isDarkMode ? "text-gray-100" : "text-gray-800"
-                                }`}
-                              >
-                                {vote.card_value}
-                              </span>
-                            </div>
-                          
                             <span
                               className={`text-sm ${
                                 isDarkMode ? "text-gray-400" : "text-gray-500"
                               }`}
                             >
-                              {new Date(vote.history_date).toLocaleString("es-ES")}
+                              {vote.history_date}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span
+                              className={`text-sm ${
+                                isDarkMode ? "text-gray-300" : "text-gray-600"
+                              } mr-2`}
+                            >
+                              Average:
+                            </span>
+                            <span
+                              className={`font-medium ${
+                                isDarkMode ? "text-gray-100" : "text-gray-800"
+                              }`}
+                            >
+                              {vote.card_value}
                             </span>
                           </div>
                         </div>
