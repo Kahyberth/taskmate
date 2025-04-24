@@ -7,16 +7,19 @@ import "@mantine/core/styles.css";
 import { Notifications } from "@mantine/notifications";
 import { MantineProvider } from "@mantine/core";
 import { SocketProvider } from "./context/SocketContext";
+import { ThemeProvider } from "./context/ThemeContext";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <MantineProvider>
-      <AuthProvider>
-        {/* <SocketProvider> */}
+    <ThemeProvider>
+      <MantineProvider>
+        <AuthProvider>
+          {/* <SocketProvider> */}
           <Notifications />
-        {/* </SocketProvider> */}
-        <AppRoutes />
-      </AuthProvider>
-    </MantineProvider>
+          {/* </SocketProvider> */}
+          <AppRoutes />
+        </AuthProvider>
+      </MantineProvider>
+    </ThemeProvider>
   </StrictMode>
 );

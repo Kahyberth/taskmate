@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
-
+import { useTheme } from "@/context/ThemeContext"
 const generateData = () => {
   const days = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
   return days.map((day, index) => {
@@ -18,6 +18,7 @@ const generateData = () => {
 }
 
 export function TaskCompletionChart() {
+  const { theme } = useTheme()
   const [data, setData] = useState<any[]>([])
   const [mounted, setMounted] = useState(false)
   const [hoveredData, setHoveredData] = useState<any>(null)
@@ -68,7 +69,7 @@ export function TaskCompletionChart() {
   }
 
   return (
-    <div className="w-full h-[350px] relative">
+    <div className={`w-full h-[350px] relative rounded-2xl overflow-hidden p-2 `}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data}
@@ -94,23 +95,29 @@ export function TaskCompletionChart() {
               <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke={theme === "dark" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}
+            vertical={false}
+          />
           <XAxis
             dataKey="name"
-            tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 12 }}
-            axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+            tick={{ fill: theme === "dark" ? "rgba(255,255,255,0.7)" : "#4b5563", fontSize: 12 }}
+            axisLine={{ stroke: theme === "dark" ? "rgba(255,255,255,0.1)" : "#e5e7eb" }}
             tickLine={false}
           />
           <YAxis
-            tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 12 }}
-            axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+            tick={{ fill: theme === "dark" ? "rgba(255,255,255,0.7)" : "#4b5563", fontSize: 12 }}
+            axisLine={{ stroke: theme === "dark" ? "rgba(255,255,255,0.1)" : "#e5e7eb" }}
             tickLine={false}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend
             verticalAlign="top"
             height={36}
-            formatter={(value) => <span className="text-white/80">{value}</span>}
+            formatter={(value) => (
+              <span className={theme === "dark" ? "text-white/80" : "text-gray-700"}>{value}</span>
+            )}
           />
           <Area
             type="monotone"
@@ -146,7 +153,7 @@ export function TaskCompletionChart() {
           />
         </AreaChart>
       </ResponsiveContainer>
-
+  
       {hoveredData && (
         <div className="absolute top-4 right-4 bg-[#170f3e]/80 backdrop-blur-md p-3 border border-white/10 rounded-lg shadow-lg">
           <div className="text-white/80 text-sm">
@@ -159,5 +166,6 @@ export function TaskCompletionChart() {
       )}
     </div>
   )
+  
 }
 

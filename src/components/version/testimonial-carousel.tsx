@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import { ChevronLeft, ChevronRight, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-
 const testimonials = [
   {
     id: 1,
@@ -76,11 +75,20 @@ export function TestimonialCarousel() {
 
   return (
     <div className="relative">
-      <div className="max-w-4xl mx-auto bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-8 md:p-12 shadow-lg shadow-purple-900/5 overflow-hidden">
+      <div className="
+        max-w-4xl mx-auto 
+        bg-white/30 dark:bg-white/5 
+        backdrop-blur-md 
+        rounded-2xl 
+        border border-gray-200 dark:border-white/10 
+        p-8 md:p-12 
+        shadow-lg shadow-purple-900/5 dark:shadow-purple-900/10 
+        overflow-hidden
+      ">
         {/* Decorative elements */}
-        <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-violet-500/10 to-transparent rounded-br-full"></div>
-        <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-fuchsia-500/10 to-transparent rounded-tl-full"></div>
-        <div className="absolute top-10 right-10 text-fuchsia-500/20 text-6xl font-serif">"</div>
+        <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-violet-500/10 dark:from-violet-500/20 to-transparent rounded-br-full"></div>
+        <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-fuchsia-500/10 dark:from-fuchsia-500/20 to-transparent rounded-tl-full"></div>
+        <div className="absolute top-10 right-10 text-fuchsia-500/20 dark:text-fuchsia-500/30 text-6xl font-serif">"</div>
 
         <div className="relative h-[300px] md:h-[220px]">
           <AnimatePresence custom={direction} initial={false} mode="wait">
@@ -98,10 +106,10 @@ export function TestimonialCarousel() {
             >
               <div className="flex flex-col md:flex-row gap-8 items-center">
                 <div className="flex-shrink-0">
-                  <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-2 border-white/10 shadow-lg">
+                  <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-2 border-gray-200 dark:border-white/10 shadow-lg">
                     <img
                       src={testimonials[current].image || "/placeholder.svg"}
-                      alt={testimonials[current].name}                    
+                      alt={testimonials[current].name}
                       className="object-cover"
                     />
                   </div>
@@ -111,14 +119,14 @@ export function TestimonialCarousel() {
                     {[...Array(5)].map((_, i) => (
                       <Star
                         key={i}
-                        className={`w-4 h-4 ${i < testimonials[current].rating ? "text-yellow-400 fill-yellow-400" : "text-white/20"}`}
+                        className={`w-4 h-4 ${i < testimonials[current].rating ? "text-yellow-400 fill-yellow-400" : "text-gray-400 dark:text-white/20"}`}
                       />
                     ))}
                   </div>
-                  <p className="text-white/80 italic mb-4">"{testimonials[current].content}"</p>
+                  <p className="text-gray-700 dark:text-white/80 italic mb-4">"{testimonials[current].content}"</p>
                   <div>
-                    <h4 className="text-white font-medium">{testimonials[current].name}</h4>
-                    <p className="text-white/60 text-sm">{testimonials[current].role}</p>
+                    <h4 className="text-gray-900 dark:text-white font-medium">{testimonials[current].name}</h4>
+                    <p className="text-gray-600 dark:text-white/60 text-sm">{testimonials[current].role}</p>
                   </div>
                 </div>
               </div>
@@ -136,7 +144,9 @@ export function TestimonialCarousel() {
                   setCurrent(index)
                 }}
                 className={`w-2 h-2 rounded-full transition-all ${
-                  index === current ? "bg-violet-500 w-6" : "bg-white/30 hover:bg-white/50"
+                  index === current 
+                    ? "bg-violet-500 w-6" 
+                    : "bg-gray-300 dark:bg-white/30 hover:bg-gray-400 dark:hover:bg-white/50"
                 }`}
                 aria-label={`Go to testimonial ${index + 1}`}
               />
@@ -147,7 +157,7 @@ export function TestimonialCarousel() {
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full border-white/10 bg-white/5 hover:bg-white/10 text-white"
+              className="rounded-full border-gray-300 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-900 dark:text-white"
               onClick={prev}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -156,7 +166,7 @@ export function TestimonialCarousel() {
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full border-white/10 bg-white/5 hover:bg-white/10 text-white"
+              className="rounded-full border-gray-300 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-900 dark:text-white"
               onClick={next}
             >
               <ChevronRight className="h-4 w-4" />
@@ -168,4 +178,3 @@ export function TestimonialCarousel() {
     </div>
   )
 }
-

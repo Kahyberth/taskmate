@@ -47,7 +47,7 @@ export function FaqAccordion() {
       {faqs.map((faq, index) => (
         <div
           key={index}
-          className={`bg-white/5 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden transition-all duration-300 ${
+          className={`bg-violet-200/20 dark:bg-white/5 backdrop-blur-md rounded-xl border border-black/10 dark:border-white/10 overflow-hidden transition-all duration-300 ${
             activeIndex === index ? "shadow-lg shadow-purple-900/10" : ""
           }`}
         >
@@ -56,10 +56,10 @@ export function FaqAccordion() {
             onClick={() => toggleItem(index)}
             aria-expanded={activeIndex === index}
           >
-            <h3 className="text-white font-medium text-lg">{faq.question}</h3>
+            <h3 className="text-black dark:text-white font-medium text-lg">{faq.question}</h3>
             <div
-              className={`ml-4 flex-shrink-0 h-6 w-6 rounded-full bg-white/10 flex items-center justify-center transition-transform duration-300 ${
-                activeIndex === index ? "rotate-180 bg-violet-500/20" : ""
+              className={`ml-4 flex-shrink-0 h-6 w-6 rounded-full bg-violet-500/20 flex items-center justify-center transition-transform duration-300 ${
+                activeIndex === index ? "rotate-180 " : ""
               }`}
             >
               <ChevronDown
@@ -76,8 +76,8 @@ export function FaqAccordion() {
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.3, ease: "easeInOut" }}
               >
-                <div className="px-6 pb-6 text-white/70">
-                  <div className="border-t border-white/10 pt-4">{faq.answer}</div>
+                <div className="px-6 pb-6 dark:text-white/70 text-black/70">
+                  <div className="border-t border-violet-300/40 dark:border-white/10 pt-4">{faq.answer}</div>
                 </div>
               </motion.div>
             )}

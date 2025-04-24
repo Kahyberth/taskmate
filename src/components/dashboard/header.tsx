@@ -17,8 +17,9 @@ import {
   Tooltip,
 } from "@/components/ui/tooltip";
 import { Link } from "react-router-dom";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { AuthContext } from "@/context/AuthContext";
+import { ThemeToggle } from "../ui/theme-toggle";
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -36,6 +37,10 @@ export function DashboardHeader({
   const handleLogout = () => {
     logout();
   };
+
+  useEffect(() => {
+    console.log("Se renderiza:");
+  }, []);
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between p-4 backdrop-blur-md bg-black/20 border-b border-white/10 ">
       <div className="flex items-center gap-2">
@@ -48,17 +53,16 @@ export function DashboardHeader({
           <Menu className="h-5 w-5" />
           <span className="sr-only">Toggle sidebar</span>
         </Button>
-        <h1 className="text-xl font-bold flex items-center">
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
-            TaskMate
-          </span>
-          <Badge
-            variant="outline"
-            className="ml-2 border-purple-500/50 text-purple-300"
-          >
-            2.0
-          </Badge>
-        </h1>
+        <Link to="/" className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 text-primary-foreground font-semibold text-xl">
+            <img src="/image/taskmate-x.png" alt="TaskMate Logo" width={32} height={32} />
+          </div>
+          <h1 className="text-xl font-bold flex items-center">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-600 to-purple-900">
+              TaskMate
+            </span>
+          </h1>
+        </Link>
       </div>
 
       <div className="flex items-center gap-2">
@@ -84,6 +88,8 @@ export function DashboardHeader({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+
+        <ThemeToggle />
 
         <Button
           variant="ghost"

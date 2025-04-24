@@ -421,13 +421,13 @@ export default function Dashboard() {
   return (
     <>
       {/* Dashboard header */}
-      <div>
+      <div className="text-gray-900 dark:text-gray-200">
         <h1 className="text-2xl font-bold">{getGreeting()}</h1>
-        <h2 className="text-lg font-semibold text-white/70">
+        <h2 className="text-lg font-semibold">
           Welcome back, {user?.name ?? "User"}
         </h2>
         <h3>
-          <span className="text-sm font-semibold text-white/70">
+          <span className="text-sm font-semibold ">
             Today is{" "}
             {new Date().toLocaleDateString("en-US", {
               weekday: "long",
@@ -436,22 +436,22 @@ export default function Dashboard() {
             })}
           </span>
         </h3>
-        <p className="text-white/70">
+        <p className=" pb-2">
           Here's what's happening with your projects today.
         </p>
       </div>
 
       {/* Dashboard summary cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <Card className="bg-white/5 border-white/10">
+        <Card className="bg-black/5 border-black/10 dark:bg-white/5 dark:border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-white/70">
+            <CardTitle className="text-sm font-medium ">
               Total Tasks
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline justify-between">
-              <div className="text-2xl font-bold text-white">134</div>
+              <div className="text-2xl font-bold tex-black dark:text-white">134</div>
               <div className="text-sm text-green-400 flex items-center">
                 <ChevronUp className="h-4 w-4 mr-1" />
                 12%
@@ -464,15 +464,15 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/5 border-white/10">
+        <Card className="bg-black/5 border-black/10 dark:bg-white/5 dark:border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-white/70">
+            <CardTitle className="text-sm font-medium ">
               Completed
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline justify-between">
-              <div className="text-2xl font-bold text-white">94</div>
+              <div className="text-2xl font-bold tex-black dark:text-white">94</div>
               <div className="text-sm text-green-400 flex items-center">
                 <ChevronUp className="h-4 w-4 mr-1" />
                 8%
@@ -485,39 +485,39 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/5 border-white/10">
+        <Card className="bg-black/5 border-black/10 dark:bg-white/5 dark:border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-white/70">
+            <CardTitle className="text-sm font-medium ">
               In Progress
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline justify-between">
-              <div className="text-2xl font-bold text-white">28</div>
+              <div className="text-2xl font-bold tex-black dark:text-white">28</div>
               <div className="text-sm text-yellow-400 flex items-center">
                 <ChevronDown className="h-4 w-4 mr-1" />
                 3%
               </div>
             </div>
-            <Progress value={21} className="mt-2 h-1 bg-white/10" />
+            <Progress value={21} className="mt-2 h-1 bg-black/10 dark:bg-white/10" />
           </CardContent>
         </Card>
 
-        <Card className="bg-white/5 border-white/10">
+        <Card className="bg-black/5 border-black/10 dark:bg-white/5 dark:border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-white/70">
+            <CardTitle className="text-sm font-medium ">
               Overdue
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline justify-between">
-              <div className="text-2xl font-bold text-white">12</div>
+              <div className="text-2xl font-bold tex-black dark:text-white">12</div>
               <div className="text-sm text-red-400 flex items-center">
                 <ChevronUp className="h-4 w-4 mr-1" />
                 15%
               </div>
             </div>
-            <Progress value={9} className="mt-2 h-1 bg-white/10" />
+            <Progress value={9} className="mt-2 h-1 bg-black/10 dark:bg-white/10" />
           </CardContent>
         </Card>
       </div>
@@ -529,7 +529,7 @@ export default function Dashboard() {
           <Card
             className={`${getWidgetSizeClass(
               "taskCompletion"
-            )} bg-white/5 border-white/10`}
+            )} bg-black/5 border-black/10 dark:bg-white/5 dark:border-white/10`}
           >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">
@@ -540,7 +540,7 @@ export default function Dashboard() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-white/70 hover:text-white"
+                    className="h-8 w-8  hover:text-white"
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
@@ -621,7 +621,7 @@ export default function Dashboard() {
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                      <XAxis dataKey="name" stroke="#ffffff50" />
+                      <XAxis dataKey="name" stroke="dark:#ffffff50" />
                       <YAxis stroke="#ffffff50" />
                       <RechartsTooltip
                         contentStyle={{
@@ -680,7 +680,7 @@ export default function Dashboard() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-white/70 hover:text-white"
+                    className="h-8 w-8  hover:text-white"
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
@@ -789,7 +789,7 @@ export default function Dashboard() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-white/70 hover:text-white"
+                    className="h-8 w-8  hover:text-white"
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
@@ -856,7 +856,7 @@ export default function Dashboard() {
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="mt-2 text-xs text-white/70">
+                  <div className="mt-2 text-xs ">
                     <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30">
                       AI Optimized
                     </Badge>
@@ -872,14 +872,14 @@ export default function Dashboard() {
           <Card
             className={`${getWidgetSizeClass(
               "aiInsights"
-            )} relative bg-gradient-to-br from-indigo-900/80 via-black/50 to-purple-900/80 border-white/20 overflow-hidden`}
+            )} relative bg-gradient-to-br from-indigo-600/80 via-black/20 to-purple-600/80 dark:from-indigo-900/80 dark:via-black/50 dark:to-purple-900/80 border-white/20 overflow-hidden`}
           >
             {/* Overlay animado: dos capas para un efecto más dinámico y pronunciado */}
             <div className="absolute inset-0 wave-overlay wave-overlay-1 pointer-events-none"></div>
             <div className="absolute inset-0 wave-overlay wave-overlay-2 pointer-events-none"></div>
 
             <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium flex items-center text-white/70">
+              <CardTitle className="text-sm font-medium flex items-center ">
                 <Sparkles className="mr-2 h-4 w-4 text-purple-300 " />
                 AI Insights
               </CardTitle>
@@ -888,7 +888,7 @@ export default function Dashboard() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-white/70 hover:text-white"
+                    className="h-8 w-8  hover:text-white"
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
@@ -1004,10 +1004,10 @@ export default function Dashboard() {
           <Card
             className={`${getWidgetSizeClass(
               "upcomingTasks"
-            )} bg-white/5 border-white/10`}
+            )} bg-black/10 text-black dark:text-white border-black/10 dark:bg-white/5 dark:border-white/10`}
           >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-white">
+              <CardTitle className="text-sm font-medium text-black dark:text-white">
                 Upcoming Tasks
               </CardTitle>
               <DropdownMenu>
@@ -1015,7 +1015,7 @@ export default function Dashboard() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-white/70 hover:text-white"
+                    className="h-8 w-8 hover:text-black hover:dark:text-white"
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
@@ -1060,7 +1060,7 @@ export default function Dashboard() {
                       className={cn(
                         "flex items-center justify-between p-2 rounded-md",
                         task.completed
-                          ? "bg-green-500/10 line-through text-white/50"
+                          ? "bg-green-500/10 line-through text-black/50 dark:text-white/50"
                           : "bg-white/5 hover:bg-white/10"
                       )}
                     >
@@ -1075,13 +1075,13 @@ export default function Dashboard() {
                             htmlFor={`task-${task.id}`}
                             className={cn(
                               task.completed
-                                ? "line-through text-white/50"
-                                : "text-white"
+                                ? "line-through text-black/50 dark:text-white/50"
+                                : "text-black dark:text-white"
                             )}
                           >
                             {task.title}
                           </Label>
-                          <p className="text-xs text-white/50">{task.due}</p>
+                          <p className="text-xs text-black/50 dark:text-white/50">{task.due}</p>
                         </div>
                       </div>
                       <Badge
@@ -1094,7 +1094,7 @@ export default function Dashboard() {
                       </Badge>
                     </div>
                   ))}
-                  <Button className="w-full mt-2 bg-white/10 hover:bg-white/20 text-white">
+                  <Button className="w-full mt-2 bg-black/10 dark:bg-white/10 hover:dark:bg-white/20 hover:bg-black/20 text-black dark:text-white">
                     <Plus className="mr-2 h-4 w-4" />
                     Add Task
                   </Button>

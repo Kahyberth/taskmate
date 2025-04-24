@@ -12,10 +12,10 @@ export function GeometricShapes() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {/* Original subtle background shapes */}
-      <div className="absolute top-20 right-20 w-32 h-32 bg-purple-700/10 rounded-full blur-xl animate-pulse-slow"></div>
-      <div className="absolute top-40 left-20 w-16 h-16 bg-purple-700/10 rounded-full blur-md animate-pulse-slower"></div>
-      <div className="absolute bottom-40 left-40 w-24 h-24 bg-purple-700/10 rounded-full blur-lg animate-float"></div>
-      <div className="absolute bottom-60 right-60 w-40 h-40 bg-blue-700/10 rounded-full blur-xl animate-pulse-slow"></div>
+      <div className="absolute top-20 right-20 w-32 h-32 bg-purple-700/30 dark:bg-purple-700/30 rounded-full blur-xl animate-pulse-slow"></div>
+      <div className="absolute top-40 left-20 w-16 h-16 bg-purple-700/30 dark:bg-purple-700/30 rounded-full blur-md animate-pulse-slower"></div>
+      <div className="absolute bottom-40 left-40 w-24 h-24 bg-purple-700/40 dark:bg-purple-700/20 rounded-full blur-lg animate-float"></div>
+      <div className="absolute bottom-60 right-60 w-40 h-40 bg-blue-700/40 dark:bg-blue-700/10 rounded-full blur-xl animate-pulse-slow"></div>
 
       {/* Original rotating triangles */}
       <div className="absolute top-1/3 right-1/4 w-0 h-0 border-l-[30px] border-l-transparent border-b-[50px] border-b-purple-700/40 border-r-[30px] border-r-transparent rotate-45 animate-spin-slow origin-center"></div>

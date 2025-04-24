@@ -30,7 +30,7 @@ export default function TeamDashboardLayout() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className="min-h-screen dark:bg-slate-900 dark:text-white bg-slate-200 text-gray-900">
       <DashboardHeader
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}

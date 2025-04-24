@@ -62,7 +62,7 @@ export function DashboardSidebar({
               <Link key={item.href} to={item.href} className="block">
                 <Button
                   variant="ghost"
-                  className="w-full justify-start text-white hover:bg-white/10 hover:text-white"
+                  className="w-full justify-start text-gray-900 dark:text-white hover:bg-white/10 hover:dark:text-white"
                 >
                   <Icon className="mr-2 h-4 w-4" />
                   {item.title}
@@ -74,7 +74,7 @@ export function DashboardSidebar({
 
         {/* Sección de Proyectos */}
         <div className="mt-8">
-          <h3 className="mb-2 px-4 text-xs font-semibold text-white/50">
+          <h3 className="mb-2 px-4 text-xs font-semibold dark:text-white/50 text-black/50">
             PROJECTS
           </h3>
           <div className="space-y-1">
@@ -82,7 +82,7 @@ export function DashboardSidebar({
               <Link key={project.href} to={project.href} className="block">
                 <Button
                   variant="ghost"
-                  className="w-full justify-start text-white/70 hover:bg-white/10 hover:text-white"
+                  className="w-full justify-start text-black/70 hover:text-black dark:text-white/70 hover:bg-white/10 hover:dark:text-white"
                 >
                   <span
                     className={`mr-2 h-2 w-2 rounded-full ${project.color}`}
