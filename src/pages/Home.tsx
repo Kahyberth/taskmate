@@ -82,7 +82,7 @@ export default function Home() {
             <div className="hidden md:flex items-center space-x-10 dark:text-white/80">
               <a
                 href="#features"
-                className={` transition-colors duration-200 font-medium relative group ${activeTab === "features" ? "text-white" : ""}`}
+                className={` transition-colors duration-200 font-medium relative group`}
                 onClick={() => setActiveTab("features")}
               >
                 Features
@@ -92,7 +92,7 @@ export default function Home() {
               </a>
               <a
                 href="#testimonials"
-                className={` transition-colors duration-200 font-medium relative group ${activeTab === "testimonials" ? "text-white" : ""}`}
+                className={` transition-colors duration-200 font-medium relative group`}
                 onClick={() => setActiveTab("testimonials")}
               >
                 Testimonials

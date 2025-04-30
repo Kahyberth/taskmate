@@ -46,22 +46,22 @@ export const InviteMembersDialog = ({ open, team, onOpenChange }: InviteMembersD
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white">
+        <Button className="w-full bg-gradient-to-r from-indigo-400 to-purple-600 hover:from-indigo-500 hover:to-purple-700 dark:from-indigo-600 dark:to-purple-900 dark:hover:from-indigo-600 dark:hover:to-purple-600">
           <UserPlus className="mr-2 h-4 w-4" />
           Invitar miembros
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md bg-[#170f3e] border-white/10 text-white">
+      <DialogContent className="sm:max-w-md bg-white text-black border-gray-200 dark:bg-[#170f3e] dark:text-white dark:border-white/10">
         <DialogHeader>
           <DialogTitle>Invitar miembros</DialogTitle>
-          <DialogDescription className="text-white/70">
+          <DialogDescription className="text-gray-600 dark:text-white/70">
             Invita a nuevos miembros a unirse a tu equipo {team?.name || ""}.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleInvite}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="email" className="text-white">
+              <Label htmlFor="email" className="text-black dark:text-white">
                 Correo electrónico
               </Label>
               <Input
@@ -70,7 +70,7 @@ export const InviteMembersDialog = ({ open, team, onOpenChange }: InviteMembersD
                 placeholder="nombre@ejemplo.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-white/5 border-white/10 text-white"
+                className="bg-white border border-gray-300 text-black dark:bg-white/5 dark:border-white/10 dark:text-white"
                 required
               />
             </div>
@@ -80,13 +80,13 @@ export const InviteMembersDialog = ({ open, team, onOpenChange }: InviteMembersD
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-white/10 bg-white/5 text-white hover:bg-white/10"
+              className="border border-gray-300 bg-white text-black hover:bg-gray-100 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
-              className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white"
+              className="bg-gradient-to-r from-indigo-400 to-purple-600 hover:from-indigo-500 hover:to-purple-700 text-white dark:from-indigo-600 dark:to-purple-900 dark:hover:from-indigo-600 dark:hover:to-purple-600"
             >
               Invitar
             </Button>
@@ -94,5 +94,6 @@ export const InviteMembersDialog = ({ open, team, onOpenChange }: InviteMembersD
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
+
 }

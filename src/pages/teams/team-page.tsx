@@ -77,7 +77,7 @@ export default function TeamsPage() {
   }, [teams, searchQuery, filterValue, sortBy]);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className="min-h-screen text-black dark:text-white dark:bg-slate-900">
       <div className="container mx-auto py-8 px-4 md:px-6">
         <TeamsHeader />
         <TeamsFilters
@@ -97,9 +97,9 @@ export default function TeamsPage() {
           </div>
         ) : filteredTeams.length === 0 ? (
           <div className="text-center py-12">
-            <Users className="mx-auto h-12 w-12 text-slate-400" />
-            <h3 className="mt-4 text-lg font-semibold text-slate-300">No teams found</h3>
-            <p className="text-slate-400">
+            <Users className="mx-auto h-12 w-12" />
+            <h3 className="mt-4 text-lg font-semibold dark:text-slate-300">No teams found</h3>
+            <p>
               Try adjusting your search or filter criteria.
             </p>
           </div>

@@ -42,7 +42,7 @@ export function DashboardHeader({
     console.log("Se renderiza:");
   }, []);
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between p-4 backdrop-blur-md bg-black/20 border-b border-white/10 ">
+    <header className="sticky top-0 z-30 flex items-center justify-between p-4 backdrop-blur-md bg-white dark:bg-black/20 border-b border-black/10 dark:border-white/10 ">
       <div className="flex items-center gap-2">
         <Button
           variant="ghost"
@@ -50,7 +50,7 @@ export function DashboardHeader({
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="text-white hover:bg-white/10"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-5 w-5 dark:text-white text-black" />
           <span className="sr-only">Toggle sidebar</span>
         </Button>
         <Link to="/" className="flex items-center gap-2">
@@ -72,9 +72,9 @@ export function DashboardHeader({
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-white hover:bg-white/10 relative"
+                className="hover:bg-black/10 dark:hover:bg-white/10 relative dark:text-white text-black"
               >
-                <Bell className="h-5 w-5" />
+                <Bell className="h-5 w-5 " />
                 {notificationCount > 0 && (
                   <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] flex items-center justify-center">
                     {notificationCount}
@@ -94,7 +94,7 @@ export function DashboardHeader({
         <Button
           variant="ghost"
           size="icon"
-          className="text-white hover:bg-white/10"
+          className="dark:hover:bg-white/10 hover:bg-black/10 dark:text-white text-black"
         >
           <Settings className="h-5 w-5" />
           <span className="sr-only">Settings</span>

@@ -48,7 +48,7 @@ export function DashboardSidebar({
   return (
     <aside
       className={cn(
-        "fixed left-0 top-16 z-20 h-[calc(100vh-4rem)] w-64 border-r border-white/10 bg-black/20 backdrop-blur-md transition-transform duration-300 ease-in-out",
+        "fixed left-0 top-16 z-20 h-[calc(100vh-4rem)] w-64 border-r border-black/10 dark:bg-black/20 bg-white backdrop-blur-md transition-transform duration-300 ease-in-out",
         sidebarOpen ? "translate-x-0" : "-translate-x-full",
         isMobile && !sidebarOpen && "hidden"
       )}

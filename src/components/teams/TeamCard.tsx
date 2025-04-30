@@ -107,7 +107,7 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
   return (
     <>
       <Card
-        className="group relative overflow-hidden transition-all hover:shadow-lg flex flex-col h-full cursor-pointer bg-white/5 backdrop-blur-md border-white/10"
+        className="group relative text-black dark:text-white overflow-hidden transition-all hover:shadow-lg flex flex-col h-full cursor-pointer dark:bg-white/5 backdrop-blur-md dark:border-white/10 border-black/20"
         onClick={() => onClick && onClick(team)}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-violet-900/50 to-transparent h-32" />
@@ -125,13 +125,13 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
                     <div className="flex items-center justify-between gap-2">
                       <CardTitle
                         ref={nameRef}
-                        className="break-words overflow-hidden text-ellipsis whitespace-nowrap flex-1 text-white"
+                        className="break-words overflow-hidden text-ellipsis whitespace-nowrap flex-1"
                       >
                         {team.name}
                       </CardTitle>
                       <Badge
                         variant={team.role === "LEADER" ? "default" : "secondary"}
-                        className="shrink-0 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white border-0"
+                        className="shrink-0 bg-gradient-to-r from-indigo-600 to-purple-900  border-0"
                       >
                         {team.role === "LEADER" ? "Leader" : "Member"}
                       </Badge>
@@ -141,7 +141,7 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
                     <Tooltip.Portal>
                       <Tooltip.Content
                         side="top"
-                        className="bg-black text-white px-2 py-1 rounded shadow-md text-sm max-w-sm"
+                        className="dark:bg-black bg-white px-2 py-1 rounded shadow-md text-sm max-w-sm"
                       >
                         {team.name}
                         <Tooltip.Arrow className="fill-black" />
@@ -154,7 +154,7 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
               <Tooltip.Provider delayDuration={300}>
                 <Tooltip.Root>
                   <Tooltip.Trigger asChild>
-                    <CardDescription ref={descRef} className="break-words overflow-hidden line-clamp-2 text-white/70">
+                    <CardDescription ref={descRef} className="break-words overflow-hidden line-clamp-2 dark:text-white/70 text-black/70">
                       {team.description}
                     </CardDescription>
                   </Tooltip.Trigger>
@@ -162,7 +162,7 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
                     <Tooltip.Portal>
                       <Tooltip.Content
                         side="top"
-                        className="bg-black text-white px-2 py-1 rounded shadow-md text-sm max-w-sm"
+                        className="bg-black px-2 py-1 rounded shadow-md text-sm max-w-sm"
                       >
                         {team.description}
                         <Tooltip.Arrow className="fill-black" />
@@ -184,22 +184,22 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-center gap-4 text-sm text-white/60">
+            <div className="flex items-center gap-4 text-sm dark:text-white/60">
               <div className="flex items-center gap-1">
                 <Users className="h-4 w-4" />
                 {team.members.length} members
               </div>
             </div>
             <div>
-              <h4 className="text-sm font-medium mb-2 text-white">Key Members</h4>
-              <div className="space-y-2 max-h-32 overflow-y-auto bg-white/5 rounded-lg p-2">
+              <h4 className="text-sm font-medium mb-2">Key Members</h4>
+              <div className="space-y-2 max-h-32 overflow-y-auto dark:bg-white/5 bg-slate-300/20 rounded-lg p-2">
                 {team.members.map((member, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 p-2 rounded-md hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-2 p-2 rounded-md dark:hover:bg-white/10 hover:bg-slate-300/30 transition-colors"
                   >
                     <div className="relative">
-                      <Avatar className="h-8 w-8 border border-white/20">
+                      <Avatar className="h-8 w-8 border dark:border-white/20 border-black/20">
                         <AvatarImage src={member.member.image} />
                         <AvatarFallback className="bg-violet-800 text-white">
                           {member.member.name.charAt(0)}
@@ -212,10 +212,10 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate text-white">{member.member.name}</p>
-                      <p className="text-xs text-white/60 truncate">{member.member.email}</p>
+                      <p className="text-sm font-medium truncate">{member.member.name}</p>
+                      <p className="text-xs text-black/60 dark:text-white/60 truncate">{member.member.email}</p>
                     </div>
-                    <Badge variant="outline" className="ml-auto border-white/20 text-white/80">
+                    <Badge variant="outline" className="ml-auto border-black/30 dark:border-white/20 text-black/80 dark:text-white/80">
                       {member.role}
                     </Badge>
                   </div>
@@ -232,7 +232,7 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
           ) : (
             <Button
               variant="outline"
-              className="ml-auto border-white/10 bg-white/5 text-white hover:bg-white/10"
+              className="ml-auto border-black/10 bg-white/5 hover:bg-white/10 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
               onClick={(e) => {
                 e.stopPropagation(), handleCopyInviteLink()
               }}
