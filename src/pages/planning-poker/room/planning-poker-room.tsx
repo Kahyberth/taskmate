@@ -14,13 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import { notifications } from "@mantine/notifications";
 import { IconCheck } from "@tabler/icons-react";
 import "@mantine/notifications/styles.css";
-
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -42,8 +35,6 @@ import {
   Users,
   History,
   Settings,
-  Moon,
-  Sun,
   LogOut,
 } from "lucide-react";
 
