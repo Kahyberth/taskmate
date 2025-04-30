@@ -95,7 +95,6 @@ export function PlanningPokerRoom() {
   const [votingHistory, setVotingHistory] = useState<
     { story_title: string; card_value: number; history_date: string }[]
   >([]);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExitDialogOpen, setIsExitDialogOpen] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
@@ -329,10 +328,6 @@ export function PlanningPokerRoom() {
     socketRef.current.emit("next-story", room_id);
   };
 
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-  };
-
   const handleExitRoom = async () => {
     if (socketRef.current && room_id) {
       socketRef.current.emit("leave-room", room_id);
@@ -469,52 +464,14 @@ export function PlanningPokerRoom() {
   };
 
   return (
-    <div
-      className={`flex h-screen ${
-        isDarkMode ? "bg-gray-900 text-gray-100" : "bg-gray-100 text-gray-900"
-      }`}
-    >
+    <div className="flex h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       <div className="flex-1 flex flex-col">
-        <header
-          className={`${
-            isDarkMode
-              ? "bg-gray-800 border-gray-700"
-              : "bg-white border-gray-200"
-          } border-b p-6 shadow-sm`}
-        >
+        <header className="p-6"> {/*bg-white border-b border-gray-200 rounded p-6 shadow-sm dark:bg-gray-800 dark:border-gray-700"*/}
           <div className="flex justify-between items-center">
-            <h1
-              className={`text-3xl font-bold ${
-                isDarkMode ? "text-gray-100" : "text-gray-800"
-              }`}
-            >
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
               Planning Poker
             </h1>
             <div className="flex items-center space-x-4">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="dark-mode"
-                        checked={isDarkMode}
-                        onCheckedChange={toggleDarkMode}
-                      />
-                      <Label htmlFor="dark-mode" className="sr-only">
-                        Dark Mode
-                      </Label>
-                      {isDarkMode ? (
-                        <Moon className="h-4 w-4 text-gray-100" />
-                      ) : (
-                        <Sun className="h-4 w-4 text-gray-600" />
-                      )}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Toggle Dark Mode</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
               <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="icon">
@@ -577,18 +534,10 @@ export function PlanningPokerRoom() {
           </div>
           <div className="mt-4 flex items-center justify-between">
             <div>
-              <h2
-                className={`text-xl font-semibold ${
-                  isDarkMode ? "text-gray-200" : "text-gray-700"
-                }`}
-              >
+              <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">
                 {currentStory?.title}
               </h2>
-              <p
-                className={`text-sm ${
-                  isDarkMode ? "text-gray-400" : "text-gray-500"
-                }`}
-              >
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 {currentStory?.description}
               </p>
             </div>
@@ -604,10 +553,7 @@ export function PlanningPokerRoom() {
         <main className="flex-1 p-6 flex gap-6 overflow-hidden">
           <div className="flex-1 flex flex-col overflow-hidden">
             <Card
-              className={`mb-6 ${
-                isDarkMode ? "bg-gray-800 text-gray-100" : "bg-white"
-              }`}
-            >
+              className="mb-6 bg-white dark:bg-gray-800 dark:text-gray-100">
               <CardHeader>
                 <CardTitle>Vote</CardTitle>
               </CardHeader>
@@ -622,9 +568,7 @@ export function PlanningPokerRoom() {
                       className={`h-20 text-xl font-semibold rounded-lg transition-all ${
                         selectedCard === value
                           ? "bg-blue-600 text-white shadow-lg ring-2 ring-blue-400"
-                          : isDarkMode
-                          ? "bg-gray-700 text-gray-200 hover:bg-gray-600"
-                          : "bg-white text-gray-800 border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50"
+                          : "dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 bg-white text-gray-800 border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50"
                       }`}
                     >
                       {value}
@@ -689,10 +633,7 @@ export function PlanningPokerRoom() {
               </CardContent>
             </Card>
             <Card
-              className={`flex-1 overflow-hidden ${
-                isDarkMode ? "bg-gray-800 text-gray-100" : "bg-white"
-              }`}
-            >
+              className="flex-1 overflow-hidden bg-white dark:bg-gray-800 dark:text-gray-100" >
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Users className="mr-2" />
@@ -705,11 +646,7 @@ export function PlanningPokerRoom() {
                     {users.map((user) => (
                       <motion.div
                         key={user.id}
-                        className={`flex items-center p-3 rounded-lg ${
-                          isDarkMode
-                            ? "bg-gray-700 border-gray-600"
-                            : "bg-white border-gray-200"
-                        } border shadow-sm`}
+                        className="flex items-center p-3 rounded-lg dark:bg-gray-700 dark:border-gray-600 bg-white border-gray-200 border shadow-sm"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3 }}
@@ -720,17 +657,11 @@ export function PlanningPokerRoom() {
                         </Avatar>
                         <div className="flex-1">
                           <div
-                            className={`text-sm font-medium ${
-                              isDarkMode ? "text-gray-200" : "text-gray-800"
-                            }`}
-                          >
+                            className="text-sm font-medium dark:text-gray-200 text-gray-800">
                             {user.name}
                           </div>
                           <div
-                            className={`text-xs ${
-                              isDarkMode ? "text-gray-400" : "text-gray-500"
-                            }`}
-                          >
+                            className="text-xs dark:text-gray-400 text-gray-500">
                             {user.role}
                           </div>
                         </div>
@@ -760,24 +691,13 @@ export function PlanningPokerRoom() {
           </div>
           <div className="w-96 flex flex-col">
             <Tabs defaultValue="statistics" className="flex-1 flex flex-col">
-              <TabsList
-                className={`grid w-full grid-cols-3 ${
-                  isDarkMode ? "bg-gray-700" : "bg-gray-100"
-                }`}
-              >
+              <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700">
                 <TabsTrigger value="statistics">Statistics</TabsTrigger>
                 <TabsTrigger value="chat">Chat</TabsTrigger>
                 <TabsTrigger value="history">History</TabsTrigger>
               </TabsList>
-              <TabsContent
-                value="statistics"
-                className="flex-1 overflow-hidden"
-              >
-                <Card
-                  className={`h-full flex-col ${
-                    isDarkMode ? "bg-gray-800 text-gray-100" : "bg-white"
-                  }`}
-                >
+              <TabsContent value="statistics" className="flex-1 overflow-hidden">
+                <Card className="h-full flex-col bg-white dark:bg-gray-800 dark:text-gray-100">
                   <CardHeader>
                     <CardTitle className="flex items-center">
                       <BarChart2 className="mr-2 text-blue-600" />
@@ -787,98 +707,52 @@ export function PlanningPokerRoom() {
                   <CardContent className="flex-1">
                     {votingResults ? (
                       <div className="space-y-6">
-                        {/* Resultados Principales */}
                         <div className="grid grid-cols-3 gap-4">
                           <div className="text-center">
-                            <p
-                              className={`text-2xl font-bold ${
-                                isDarkMode ? "text-green-400" : "text-green-600"
-                              }`}
-                            >
+                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                               {votingResults.average.toFixed(1)}
                             </p>
-                            <p
-                              className={`text-sm ${
-                                isDarkMode ? "text-gray-300" : "text-gray-600"
-                              }`}
-                            >
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
                               Average
                             </p>
                           </div>
                           <div className="text-center">
-                            <p
-                              className={`text-2xl font-bold ${
-                                isDarkMode ? "text-blue-400" : "text-blue-600"
-                              }`}
-                            >
+                            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                               {votingResults.median}
                             </p>
-                            <p
-                              className={`text-sm ${
-                                isDarkMode ? "text-gray-300" : "text-gray-600"
-                              }`}
-                            >
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
                               Median
                             </p>
                           </div>
                           <div className="text-center">
-                            <p
-                              className={`text-2xl font-bold ${
-                                isDarkMode
-                                  ? "text-purple-400"
-                                  : "text-purple-600"
-                              }`}
-                            >
+                            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                               {votingResults.mode}
                             </p>
-                            <p
-                              className={`text-sm ${
-                                isDarkMode ? "text-gray-300" : "text-gray-600"
-                              }`}
-                            >
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
                               Mode
                             </p>
                           </div>
                         </div>
 
-                        {/* Barras de Progreso */}
                         <div className="space-y-4">
                           <div>
                             <div className="flex justify-between mb-2">
-                              <span
-                                className={`text-sm ${
-                                  isDarkMode ? "text-gray-300" : "text-gray-600"
-                                }`}
-                              >
+                              <span className="text-sm text-gray-600 dark:text-gray-300">
                                 Consensus Level
                               </span>
-                              <span
-                                className={`text-sm ${
-                                  isDarkMode ? "text-gray-300" : "text-gray-600"
-                                }`}
-                              >
-                                {((votingResults.average / 34) * 100).toFixed(
-                                  0
-                                )}
-                                %
+                              <span className="text-sm text-gray-600 dark:text-gray-300">
+                                {((votingResults.average / 34) * 100).toFixed(0)}%
                               </span>
                             </div>
                             <Progress
                               value={(votingResults.average / 34) * 100}
-                              className={`h-3 ${
-                                isDarkMode ? "bg-gray-700" : "bg-gray-200"
-                              }`}
+                              className="h-3 bg-gray-200 dark:bg-gray-700"
                             />
                           </div>
                         </div>
 
-                        {/* Votos Individuales */}
                         <div className="mt-6">
-                          <h3
-                            className={`text-lg font-semibold mb-4 ${
-                              isDarkMode ? "text-gray-200" : "text-gray-800"
-                            }`}
-                          >
+                          <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
                             Individual Votes
                           </h3>
                           <div className="space-y-3">
@@ -887,36 +761,22 @@ export function PlanningPokerRoom() {
                                 key={`${vote.participant.id}-${index}`}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                className={`flex justify-between items-center p-2 rounded-lg ${
-                                  isDarkMode ? "bg-gray-700" : "bg-gray-100"
-                                }`}
+                                className="flex justify-between items-center p-2 rounded-lg bg-gray-100 dark:bg-gray-700"
                               >
                                 <div className="flex items-center">
                                   <Avatar className="h-6 w-6 mr-2">
-                                    <AvatarImage
-                                      src={vote.participant.avatar}
-                                    />
+                                    <AvatarImage src={vote.participant.avatar} />
                                     <AvatarFallback>
                                       {vote.participant.name[0]}
                                     </AvatarFallback>
                                   </Avatar>
-                                  <span
-                                    className={`text-sm ${
-                                      isDarkMode
-                                        ? "text-gray-200"
-                                        : "text-gray-700"
-                                    }`}
-                                  >
+                                  <span className="text-sm text-gray-700 dark:text-gray-200">
                                     {vote.participant.name}
                                   </span>
                                 </div>
                                 <Badge
                                   variant="outline"
-                                  className={`px-3 py-1 rounded-full ${
-                                    isDarkMode
-                                      ? "border-blue-400 text-blue-400"
-                                      : "border-blue-600 text-blue-600"
-                                  }`}
+                                  className="px-3 py-1 rounded-full border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
                                 >
                                   {vote.value}
                                 </Badge>
@@ -925,7 +785,6 @@ export function PlanningPokerRoom() {
                           </div>
                         </div>
 
-                        {/* AI Suggestion */}
                         {roomCreator &&
                           userProfile?.id === roomCreator &&
                           votingResults &&
@@ -944,52 +803,28 @@ export function PlanningPokerRoom() {
                           <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className={`mt-6 p-4 rounded-lg border ${
-                              isDarkMode
-                                ? "bg-gray-700 border-purple-700"
-                                : "bg-purple-50 border-purple-200"
-                            }`}
+                            className="mt-6 p-4 rounded-lg border bg-purple-50 border-purple-200 dark:bg-gray-700 dark:border-purple-700"
                           >
                             <div className="flex justify-between items-center mb-3">
-                              <h3
-                                className={`text-lg font-semibold ${
-                                  isDarkMode
-                                    ? "text-purple-300"
-                                    : "text-purple-700"
-                                }`}
-                              >
+                              <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-300">
                                 AI Suggestion
                               </h3>
                               <Badge
                                 variant="outline"
-                                className={`${
-                                  isDarkMode
-                                    ? "border-purple-400 text-purple-300"
-                                    : "border-purple-500 text-purple-700"
-                                }`}
+                                className="border-purple-500 text-purple-700 dark:border-purple-400 dark:text-purple-300"
                               >
                                 {aiSuggestion.confidence}% confidence
                               </Badge>
                             </div>
 
                             <div className="flex items-center justify-center my-4">
-                              <div
-                                className={`text-4xl font-bold ${
-                                  isDarkMode
-                                    ? "text-purple-300"
-                                    : "text-purple-700"
-                                }`}
-                              >
+                              <div className="text-4xl font-bold text-purple-700 dark:text-purple-300">
                                 {aiSuggestion.points}
                               </div>
                               <div className="text-sm ml-2">story points</div>
                             </div>
 
-                            <p
-                              className={`text-sm mb-4 ${
-                                isDarkMode ? "text-gray-300" : "text-gray-600"
-                              }`}
-                            >
+                            <p className="text-sm mb-4 text-gray-600 dark:text-gray-300">
                               {aiSuggestion.reasoning}
                             </p>
 
@@ -1013,31 +848,17 @@ export function PlanningPokerRoom() {
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full space-y-4">
-                        <BarChart2
-                          className={`h-12 w-12 ${
-                            isDarkMode ? "text-gray-500" : "text-gray-400"
-                          }`}
-                        />
-                        <p
-                          className={`text-lg text-center ${
-                            isDarkMode ? "text-gray-400" : "text-gray-600"
-                          }`}
-                        >
+                        <BarChart2 className="h-12 w-12 text-gray-400 dark:text-gray-500" />
+                        <p className="text-lg text-center text-gray-600 dark:text-gray-400">
                           {votes.length > 0
                             ? "Waiting for all votes..."
                             : "No votes submitted yet"}
                         </p>
                         <Progress
                           value={(votes.length / users.length) * 100}
-                          className={`h-2 w-48 ${
-                            isDarkMode ? "bg-gray-700" : "bg-gray-200"
-                          }`}
+                          className="h-2 w-48 bg-gray-200 dark:bg-gray-700"
                         />
-                        <p
-                          className={`text-sm ${
-                            isDarkMode ? "text-gray-400" : "text-gray-500"
-                          }`}
-                        >
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                           {votes.length} of {users.length} votes received
                         </p>
                       </div>
@@ -1046,13 +867,9 @@ export function PlanningPokerRoom() {
                 </Card>
               </TabsContent>
               <TabsContent value="chat" className="flex-1 overflow-hidden">
-                <Card
-                  className={`h-full flex flex-col ${
-                    isDarkMode ? "bg-gray-800 text-gray-100" : "bg-white"
-                  }`}
-                >
+                <Card className="h-full flex flex-col bg-white dark:bg-gray-800 dark:text-gray-100">
                   <CardHeader>
-                    <CardTitle className="flex items-center ">
+                    <CardTitle className="flex items-center">
                       <MessageSquare className="mr-2 text-blue-600" />
                       Team Chat
                     </CardTitle>
@@ -1064,9 +881,7 @@ export function PlanningPokerRoom() {
                           <motion.div
                             key={index}
                             ref={
-                              index === chatMessages.length - 1
-                                ? lastMessageRef
-                                : null
+                              index === chatMessages.length - 1 ? lastMessageRef : null
                             }
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -1074,29 +889,19 @@ export function PlanningPokerRoom() {
                             className="w-full flex flex-col"
                           >
                             <div
-                              className={`flex items-center mb-1 ${
-                                msg.user === "You" ? "ml-auto" : ""
-                              }`}
+                              className={`flex items-center mb-1 ${msg.user === "You" ? "ml-auto" : ""
+                                }`}
                             >
                               <span className="font-semibold text-blue-600">
                                 {msg.user}
                               </span>
-                              <span
-                                className={`text-xs ${
-                                  isDarkMode ? "text-gray-400" : "text-gray-500"
-                                } ml-2`}
-                              >
+                              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
                                 {msg.timestamp}
                               </span>
                             </div>
                             <div
-                              className={`${
-                                isDarkMode
-                                  ? "bg-gray-700 text-gray-200"
-                                  : "bg-gray-100 text-gray-700"
-                              } rounded-lg p-2 break-words whitespace-pre-wrap max-w-full w-fit
-                              overflow-hidden word-break break-all overflow-wrap-anywhere
-                              ${msg.user === "You" ? "ml-auto" : ""}`}
+                              className={`bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 rounded-lg p-2 break-words whitespace-pre-wrap max-w-full w-fit overflow-hidden word-break break-all overflow-wrap-anywhere ${msg.user === "You" ? "ml-auto" : ""
+                                }`}
                             >
                               {msg.message}
                             </div>
@@ -1104,25 +909,14 @@ export function PlanningPokerRoom() {
                         ))}
                       </div>
                     </ScrollArea>
-                    <Separator
-                      className={`my-4 ${
-                        isDarkMode ? "bg-gray-700" : "bg-gray-200"
-                      }`}
-                    />
-                    <form
-                      onSubmit={handleChatSubmit}
-                      className="flex items-center"
-                    >
+                    <Separator className="my-4 bg-gray-200 dark:bg-gray-700" />
+                    <form onSubmit={handleChatSubmit} className="flex items-center">
                       <Input
                         type="text"
                         placeholder="Type a message..."
                         value={chatMessage}
                         onChange={(e) => setChatMessage(e.target.value)}
-                        className={`flex-1 mr-3 ${
-                          isDarkMode
-                            ? "bg-gray-700 text-gray-100"
-                            : "bg-white text-gray-900"
-                        }`}
+                        className="flex-1 mr-3 bg-white text-gray-900 dark:bg-gray-700 dark:text-gray-100"
                       />
                       <Button
                         type="submit"
@@ -1136,11 +930,7 @@ export function PlanningPokerRoom() {
                 </Card>
               </TabsContent>
               <TabsContent value="history" className="flex-1 overflow-hidden">
-                <Card
-                  className={`h-full flex flex-col ${
-                    isDarkMode ? "bg-gray-800 text-gray-100" : "bg-white"
-                  }`}
-                >
+                <Card className="h-full flex flex-col bg-white dark:bg-gray-800 dark:text-gray-100">
                   <CardHeader>
                     <CardTitle className="flex items-center">
                       <History className="mr-2 text-blue-600" />
@@ -1152,39 +942,21 @@ export function PlanningPokerRoom() {
                       {votingHistory.map((vote, index) => (
                         <div
                           key={index}
-                          className={`mb-4 p-3 ${
-                            isDarkMode ? "bg-gray-700" : "bg-gray-50"
-                          } rounded-lg`}
+                          className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
                         >
                           <div className="flex justify-between items-center mb-2">
-                            <span
-                              className={`font-semibold ${
-                                isDarkMode ? "text-gray-200" : "text-gray-800"
-                              }`}
-                            >
+                            <span className="font-semibold text-gray-800 dark:text-gray-200">
                               {vote.story_title}
                             </span>
-                            <span
-                              className={`text-sm ${
-                                isDarkMode ? "text-gray-400" : "text-gray-500"
-                              }`}
-                            >
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
                               {vote.history_date}
                             </span>
                           </div>
                           <div className="flex items-center">
-                            <span
-                              className={`text-sm ${
-                                isDarkMode ? "text-gray-300" : "text-gray-600"
-                              } mr-2`}
-                            >
+                            <span className="text-sm text-gray-600 dark:text-gray-300 mr-2">
                               Average:
                             </span>
-                            <span
-                              className={`font-medium ${
-                                isDarkMode ? "text-gray-100" : "text-gray-800"
-                              }`}
-                            >
+                            <span className="font-medium text-gray-800 dark:text-gray-100">
                               {vote.card_value}
                             </span>
                           </div>
