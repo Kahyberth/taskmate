@@ -3,13 +3,13 @@ import { DashboardHeader } from "@/components/dashboard/header";
 import { cn } from "@/lib/utils";
 import { AIAssistantDialog } from "@/components/dashboard/ai-assistant-dialog";
 import { Outlet } from "react-router-dom";
-import { DashboardSidebar } from "@/components/dashboard/navbar";
+import { Sidebar } from "@/components/dashboard/navbar";
 
-export default function TeamDashboardLayout() {
+export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(3);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     const checkIfMobile = () => {
@@ -19,26 +19,21 @@ export default function TeamDashboardLayout() {
       }
     };
 
-    // Initial check
     checkIfMobile();
-
-    // Add event listener
     window.addEventListener("resize", checkIfMobile);
-
-    // Cleanup
     return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
 
   return (
-    <div className="min-h-screen dark:bg-slate-900 dark:text-white text-gray-900">
+    <div className="min-h-screen dark:bg-slate-950 dark:text-white text-gray-900">
       <DashboardHeader
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
         notificationCount={notificationCount}
       />
 
-      <div className="flex">
-        <DashboardSidebar
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar
           sidebarOpen={sidebarOpen}
           isMobile={isMobile}
           showAIAssistant={() => setShowAIAssistant(true)}
@@ -46,7 +41,7 @@ export default function TeamDashboardLayout() {
 
         <main
           className={cn(
-            "flex-1 p-4 transition-all duration-300 ease-in-out",
+            "flex-1 w-full overflow-x-hidden p-4 sm:p-6 transition-all duration-300 ease-in-out",
             sidebarOpen ? "md:ml-64" : "ml-0"
           )}
         >

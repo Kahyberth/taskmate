@@ -14,10 +14,9 @@ import InvitationVerify from "../pages/Invitation";
 import { TeamsProvider } from "@/context/TeamsContext";
 import TeamDashboard from "@/pages/teams/dashboard/page";
 import RegisterPage from "@/pages/register/page";
-import TeamDashboardLayout from "@/layouts/team/layout";
-import DashboardLayout from "@/layouts/dashboard/layout";
 import TeamChatPage from "@/pages/teams/dashboard/TeamChatPage";
 import TimeTackingPage from "@/pages/teams/dashboard/TimeTackingPage";
+import Layout from "@/layouts/dashboard/layout";
 
 
 function AppRoutes() {
@@ -29,7 +28,7 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <SessionProvider>
-                <DashboardLayout />
+                <Layout/>
               </SessionProvider>
             </ProtectedRoute>
           }
@@ -60,7 +59,7 @@ function AppRoutes() {
           path="/teams/dashboard/:team_id"
           element={
             <ProtectedRoute>
-                <TeamDashboardLayout />
+                <Layout/>
             </ProtectedRoute>
           }
           >

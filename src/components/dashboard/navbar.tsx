@@ -1,15 +1,8 @@
-import {
-  Briefcase,
-  Users,
-  Sparkles,
-  Crown,
-  FolderKanban
-} from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
-
+import { Link, useLocation } from "react-router-dom";
+import { cn, projectItems, teamDashboardMenuItems, dashboardMenuItems } from "@/lib/utils";
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -17,38 +10,20 @@ interface SidebarProps {
   showAIAssistant?: () => void;
 }
 
-// Arreglo de navegación principal
-const navItems = [
-  { title: "Dashboard", href: "/dashboard", icon: Briefcase },
-  { title: "Projects", href: "/projects", icon: FolderKanban },
-  { title: "Team", href: "teams", icon: Users },
-  { title: "Planning Poker", href: "planning-poker", icon: Crown },
-];
-
-// Arreglo de proyectos
-const projectItems = [
-  {
-    title: "Website Redesign",
-    href: "/projects/website-redesign",
-    color: "bg-green-500",
-  },
-  { title: "Mobile App", href: "/projects/mobile-app", color: "bg-blue-500" },
-  {
-    title: "API Integration",
-    href: "/projects/api-integration",
-    color: "bg-purple-500",
-  },
-];
-
-export function DashboardSidebar({
+export function Sidebar({
   sidebarOpen,
   isMobile,
   showAIAssistant,
 }: SidebarProps) {
+  const { pathname } = useLocation();
+  const isTeamRoute = pathname.startsWith("/teams");
+  const isProjectRoute = pathname.startsWith("/dashboard/projects");
+  const menuItems = isTeamRoute ? teamDashboardMenuItems : dashboardMenuItems;
+
   return (
     <aside
       className={cn(
-        "fixed left-0 top-16 z-20 h-[calc(100vh-4rem)] w-64 border-r border-black/10 dark:bg-black/20 bg-white backdrop-blur-md transition-transform duration-300 ease-in-out",
+        "fixed left-0 top-16 z-20 h-[calc(100vh-4rem)] w-64 border-r border-black/10 dark:border-white/10 dark:bg-black/20 bg-white backdrop-blur-md transition-transform duration-300 ease-in-out",
         sidebarOpen ? "translate-x-0" : "-translate-x-full",
         isMobile && !sidebarOpen && "hidden"
       )}
@@ -56,13 +31,13 @@ export function DashboardSidebar({
       <nav className="p-4">
         {/* Navegación Principal */}
         <div className="space-y-1">
-          {navItems.map((item) => {
+          {menuItems.map((item) => {
             const Icon = item.icon;
             return (
               <Link key={item.href} to={item.href} className="block">
                 <Button
                   variant="ghost"
-                  className="w-full justify-start text-gray-900 dark:text-white hover:bg-white/10 hover:dark:text-white"
+                  className="w-full justify-start text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <Icon className="mr-2 h-4 w-4" />
                   {item.title}
@@ -72,27 +47,27 @@ export function DashboardSidebar({
           })}
         </div>
 
-        {/* Sección de Proyectos */}
-        <div className="mt-8">
-          <h3 className="mb-2 px-4 text-xs font-semibold dark:text-white/50 text-black/50">
-            PROJECTS
-          </h3>
-          <div className="space-y-1">
-            {projectItems.map((project) => (
-              <Link key={project.href} to={project.href} className="block">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start text-black/70 hover:text-black dark:text-white/70 hover:bg-white/10 hover:dark:text-white"
-                >
-                  <span
-                    className={`mr-2 h-2 w-2 rounded-full ${project.color}`}
-                  />
-                  {project.title}
-                </Button>
-              </Link>
-            ))}
+        {/* Lista de Proyectos (solo en dashboard) */}
+        {!isProjectRoute && (
+          <div className="mt-8">
+            <h3 className="mb-2 px-4 text-xs font-semibold dark:text-white/50 text-black/50">
+              PROYECTOS RECIENTES
+            </h3>
+            <div className="space-y-1">
+              {projectItems.map((project) => (
+                <Link key={project.href} to={project.href} className="block">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    <span className={`mr-2 h-2 w-2 rounded-full ${project.color}`} />
+                    {project.title}
+                  </Button>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Sección del AI Assistant */}
         <div className="mt-auto pt-8 relative">
