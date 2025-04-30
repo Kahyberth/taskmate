@@ -410,9 +410,9 @@ export default function Dashboard() {
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) {
-      return "Good morning 🌞";
+      return "Good morning 🌤️";
     } else if (hour < 18) {
-      return "Good afternoon ";
+      return "Good afternoon 🌞";
     } else {
       return "Good night 🌙";
     }
@@ -445,13 +445,13 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card className="bg-black/5 border-black/10 dark:bg-white/5 dark:border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium ">
-              Total Tasks
-            </CardTitle>
+            <CardTitle className="text-sm font-medium ">Total Tasks</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline justify-between">
-              <div className="text-2xl font-bold tex-black dark:text-white">134</div>
+              <div className="text-2xl font-bold tex-black dark:text-white">
+                134
+              </div>
               <div className="text-sm text-green-400 flex items-center">
                 <ChevronUp className="h-4 w-4 mr-1" />
                 12%
@@ -466,13 +466,13 @@ export default function Dashboard() {
 
         <Card className="bg-black/5 border-black/10 dark:bg-white/5 dark:border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium ">
-              Completed
-            </CardTitle>
+            <CardTitle className="text-sm font-medium ">Completed</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline justify-between">
-              <div className="text-2xl font-bold tex-black dark:text-white">94</div>
+              <div className="text-2xl font-bold tex-black dark:text-white">
+                94
+              </div>
               <div className="text-sm text-green-400 flex items-center">
                 <ChevronUp className="h-4 w-4 mr-1" />
                 8%
@@ -487,37 +487,43 @@ export default function Dashboard() {
 
         <Card className="bg-black/5 border-black/10 dark:bg-white/5 dark:border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium ">
-              In Progress
-            </CardTitle>
+            <CardTitle className="text-sm font-medium ">In Progress</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline justify-between">
-              <div className="text-2xl font-bold tex-black dark:text-white">28</div>
+              <div className="text-2xl font-bold tex-black dark:text-white">
+                28
+              </div>
               <div className="text-sm text-yellow-400 flex items-center">
                 <ChevronDown className="h-4 w-4 mr-1" />
                 3%
               </div>
             </div>
-            <Progress value={21} className="mt-2 h-1 bg-black/10 dark:bg-white/10" />
+            <Progress
+              value={21}
+              className="mt-2 h-1 bg-black/10 dark:bg-white/10"
+            />
           </CardContent>
         </Card>
 
         <Card className="bg-black/5 border-black/10 dark:bg-white/5 dark:border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium ">
-              Overdue
-            </CardTitle>
+            <CardTitle className="text-sm font-medium ">Overdue</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline justify-between">
-              <div className="text-2xl font-bold tex-black dark:text-white">12</div>
+              <div className="text-2xl font-bold tex-black dark:text-white">
+                12
+              </div>
               <div className="text-sm text-red-400 flex items-center">
                 <ChevronUp className="h-4 w-4 mr-1" />
                 15%
               </div>
             </div>
-            <Progress value={9} className="mt-2 h-1 bg-black/10 dark:bg-white/10" />
+            <Progress
+              value={9}
+              className="mt-2 h-1 bg-black/10 dark:bg-white/10"
+            />
           </CardContent>
         </Card>
       </div>
@@ -1081,7 +1087,9 @@ export default function Dashboard() {
                           >
                             {task.title}
                           </Label>
-                          <p className="text-xs text-black/50 dark:text-white/50">{task.due}</p>
+                          <p className="text-xs text-black/50 dark:text-white/50">
+                            {task.due}
+                          </p>
                         </div>
                       </div>
                       <Badge

@@ -17,6 +17,7 @@ import RegisterPage from "@/pages/register/page";
 import TeamChatPage from "@/pages/teams/dashboard/TeamChatPage";
 import TimeTackingPage from "@/pages/teams/dashboard/TimeTackingPage";
 import Layout from "@/layouts/dashboard/layout";
+import ProjectsPage from "@/pages/projects/page";
 
 
 function AppRoutes() {
@@ -52,6 +53,8 @@ function AppRoutes() {
               </TeamsProvider>
             }
           />
+
+          <Route path="projects" element={<ProjectsPage />} />
 
         </Route>
 
