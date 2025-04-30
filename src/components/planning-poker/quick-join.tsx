@@ -35,7 +35,7 @@ export function QuickJoin() {
           </Button>
         </form>
 
-        <div className="relative my-6">
+        {/* <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t" />
           </div>
@@ -44,9 +44,9 @@ export function QuickJoin() {
               o únete usando un enlace
             </span>
           </div>
-        </div>
+        </div> */}
 
-        <div className="space-y-4">
+        {/* <div className="space-y-4">
           <div className="rounded-lg border p-4">
             <h4 className="mb-2 font-medium">¿Nuevo en Planning Poker?</h4>
             <p className="text-sm text-muted-foreground">
@@ -56,7 +56,7 @@ export function QuickJoin() {
               Ver guía
             </Button>
           </div>
-        </div>
+        </div> */}
       </CardContent>
     </Card>
   )
