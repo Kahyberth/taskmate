@@ -77,7 +77,7 @@ export default function TeamsPage() {
   }, [teams, searchQuery, filterValue, sortBy]);
 
   return (
-    <div className="min-h-screen text-black dark:text-white dark:bg-slate-900">
+    <div className="min-h-screen text-black dark:text-white dark:bg-slate-950">
       <div className="container mx-auto py-8 px-4 md:px-6">
         <TeamsHeader />
         <TeamsFilters

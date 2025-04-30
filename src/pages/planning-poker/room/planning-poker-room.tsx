@@ -455,7 +455,7 @@ export function PlanningPokerRoom() {
   };
 
   return (
-    <div className="flex h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+    <div className="flex h-screen bg-white text-gray-900 dark:bg-slate-950 dark:text-gray-100">
       <div className="flex-1 flex flex-col">
         <header className="p-6"> {/*bg-white border-b border-gray-200 rounded p-6 shadow-sm dark:bg-gray-800 dark:border-gray-700"*/}
           <div className="flex justify-between items-center">
@@ -544,7 +544,7 @@ export function PlanningPokerRoom() {
         <main className="flex-1 p-6 flex gap-6 overflow-hidden">
           <div className="flex-1 flex flex-col overflow-hidden">
             <Card
-              className="mb-6 bg-white dark:bg-gray-800 dark:text-gray-100">
+              className="mb-6 bg-white dark:bg-white/10 dark:text-gray-100">
               <CardHeader>
                 <CardTitle>Vote</CardTitle>
               </CardHeader>
@@ -559,7 +559,7 @@ export function PlanningPokerRoom() {
                       className={`h-20 text-xl font-semibold rounded-lg transition-all ${
                         selectedCard === value
                           ? "bg-blue-600 text-white shadow-lg ring-2 ring-blue-400"
-                          : "dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 bg-white text-gray-800 border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50"
+                          : "dark:bg-white/10 dark:text-gray-200 dark:hover:bg-gray-600 bg-white text-gray-800 border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50"
                       }`}
                     >
                       {value}
@@ -624,7 +624,7 @@ export function PlanningPokerRoom() {
               </CardContent>
             </Card>
             <Card
-              className="flex-1 overflow-hidden bg-white dark:bg-gray-800 dark:text-gray-100" >
+              className="flex-1 overflow-hidden bg-white dark:bg-white/10 dark:text-gray-100" >
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Users className="mr-2" />
