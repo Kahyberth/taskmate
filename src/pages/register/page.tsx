@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -18,10 +18,11 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { GeometricShapes } from "@/components/version/geometric-shapes";
 import { ScrollReveal } from "@/components/version/scroll-reveal";
 import { PasswordStrengthIndicator } from "@/components/version/password-strength-indicator";
-// Define the form validation schema
+import { AuthContext } from "@/context/AuthContext";
+
 const formSchema = z
   .object({
-    firstName: z.string().min(2, {
+    name: z.string().min(2, {
       message: "El nombre debe tener al menos 2 caracteres.",
     }),
     lastName: z.string().min(2, {
@@ -30,7 +31,7 @@ const formSchema = z
     email: z.string().email({
       message: "Por favor, introduce un email válido.",
     }),
-    companyName: z.string().min(2, {
+    company: z.string().min(2, {
       message: "El nombre de la empresa debe tener al menos 2 caracteres.",
     }),
     password: z
@@ -64,17 +65,17 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const { register } = useContext(AuthContext);
   const router = useNavigate();
   const location = useLocation();
 
-  // Initialize form with react-hook-form
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      firstName: "",
+      name: "",
       lastName: "",
       email: "",
-      companyName: "",
+      company: "",
       password: "",
       confirmPassword: "",
     },
@@ -83,29 +84,40 @@ export default function RegisterPage() {
   useEffect(() => {
     location.state as { email: string; name: string };
     form.setValue("email", location.state?.email || "");
-    form.setValue("firstName", location.state?.name || "");
+    form.setValue("name", location.state?.name || "");
   }, [location.state]);
 
-  // Form submission handler
+  useEffect(() => {
+    if (isSuccess) {
+      const timer = setTimeout(() => {
+        router("/", { replace: true });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSuccess, router]);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
-
-    try {
-      // Simulate API call with a delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      console.log(values);
-      setIsSuccess(true);
-
-      // Redirect after successful registration (after showing success message)
-      setTimeout(() => {
-        router("/");
-      }, 2000);
-    } catch (error) {
-      console.error("Registration error:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    await register({
+      name: values.name,
+      lastName: values.lastName,
+      email: values.email,
+      company: values.company,
+      password: values.password,
+    })
+      .then((res) => {
+        if (res.error) {
+          form.setError("email", { message: res.error });
+          setIsSubmitting(false);
+          return;
+        }
+        setIsSuccess(true);
+        setIsSubmitting(false);
+      })
+      .catch((error) => {
+        form.setError("email", { message: error.message });
+        setIsSubmitting(false);
+      });
   }
 
   return (
@@ -186,7 +198,7 @@ export default function RegisterPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <FormField
                           control={form.control}
-                          name="firstName"
+                          name="name"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-white/80">
@@ -248,7 +260,7 @@ export default function RegisterPage() {
 
                       <FormField
                         control={form.control}
-                        name="companyName"
+                        name="company"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-white/80">

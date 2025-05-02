@@ -15,6 +15,12 @@ export const loginRequest = async (credentials: any) => {
 };
 
 
+export const registerRequest = async (credentials: any) => {
+  const { data } = await apiClient.post("/auth/register", credentials);
+  return data;
+}
+
+
 export const fetchProfile = async (user_id: string) => {
   try {
     const response = await apiClient.get(`/auth/profile/${user_id}`);

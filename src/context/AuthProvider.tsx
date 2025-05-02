@@ -6,6 +6,7 @@ import {
   logoutRequest,
   verifyToken,
   fetchProfile,
+  registerRequest,
 } from "@/service/authService";
 import { notifications } from "@mantine/notifications";
 import { UserProfile } from "@/interfaces/profile.interface";
@@ -48,10 +49,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data: user } = res;
 
       notifications.show({
-          title: "Welcome back!",
-          message: `Hello ${user.name} 🌟`,
-          color: "green",
-          autoClose: 2000,
+        title: "Welcome back!",
+        message: `Hello ${user.name} 🌟`,
+        color: "green",
+        autoClose: 2000,
       });
 
       setTimeout(() => {
@@ -66,6 +67,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         message: error.response.data.message,
         color: "red",
         autoClose: 2000,
+      });
+      return { success: false, error: error.response.data.message };
+    }
+  };
+
+  const register = async (credentials: any) => {
+    const id = notifications.show({
+      loading: true,
+      title: "Creating your account...",
+      message: "Please wait while we create your account.",
+      color: "green",
+      autoClose: false,
+      withCloseButton: false,
+    });
+
+    try {
+      const res = await registerRequest(credentials).finally(() => {
+        notifications.update({
+          id,
+          title: "Account created!",
+          message: "Your account has been created successfully.",
+          color: "green",
+          autoClose: 2000,
+          withCloseButton: true,
+        });
+      });
+
+      const { data: user } = res;
+
+      return { success: true, user };
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      notifications.update({
+        id,
+        title: "Registration failed",
+        message: error.response.data.message,
+        color: "red",
+        autoClose: 2000,
+        withCloseButton: true,
       });
       return { success: false, error: error.response.data.message };
     }
@@ -97,6 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       loading,
       logout,
       login,
+      register,
       fetchUserProfile,
       userProfile,
       profileLoading,
@@ -107,6 +148,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       loading,
       logout,
       login,
+      register,
       fetchUserProfile,
       userProfile,
       profileLoading,
