@@ -39,16 +39,24 @@ export default function useTeamService(): UseTeamServiceResponse {
 
 
   // Obtener los equipos de un usuario
-  const fetchTeamsByUser = useCallback(async (userId: string): Promise<Team[]> => {
+  const fetchTeamsByUser = useCallback(async (userId: string, page?: number): Promise<Team[]> => {
     try {
+
+      if(!page) page = 1;
+
       setLoading(true);
-      const teamsResponse = await apiClient.get(`/teams/get-team-by-user/${userId}`, {
+      const teamsResponse = await apiClient.get(`/teams/get-team-by-user/${userId}?page=${page}`, {
         timeout: 10000,
       });
       const teamsData = teamsResponse.data;
 
+      console.log("Teams data desde el servicio ", teamsData);
+
       const teamsWithMembers = await Promise.all(
         teamsData.map(async (team: Team) => {
+
+          console.log("Teams Information ", team);
+
           const membersResponse = await apiClient.get(`/teams/get-members-by-team/${team.id}`);
           const members = membersResponse.data;
           

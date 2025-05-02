@@ -18,7 +18,7 @@ import TeamChatPage from "@/pages/teams/dashboard/TeamChatPage";
 import TimeTackingPage from "@/pages/teams/dashboard/TimeTackingPage";
 import Layout from "@/layouts/dashboard/layout";
 import ProjectsPage from "@/pages/projects/page";
-
+import ProjectManagement from "@/components/backlog/project-management";
 
 function AppRoutes() {
   return (
@@ -29,7 +29,7 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <SessionProvider>
-                <Layout/>
+                <Layout />
               </SessionProvider>
             </ProtectedRoute>
           }
@@ -55,21 +55,31 @@ function AppRoutes() {
           />
 
           <Route path="projects" element={<ProjectsPage />} />
-
         </Route>
 
         <Route
           path="/teams/dashboard/:team_id"
           element={
             <ProtectedRoute>
-                <Layout/>
+              <Layout />
             </ProtectedRoute>
           }
-          >
+        >
           <Route index element={<TeamDashboard />} />
           <Route path="chat" element={<TeamChatPage />} />
           <Route path="time-tracking" element={<TimeTackingPage />} />
-          </Route>
+        </Route>
+
+        <Route
+          path="projects/backlog/:project_id"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<ProjectManagement />} />
+        </Route>
 
         <Route
           path="/invitation"

@@ -13,11 +13,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SignInModal } from "@/components/version/sign-in-modal"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { FeatureCard } from "@/components/version/FeatureCard"
+import { useNavigate } from "react-router-dom"
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("features")
   const [isScrolled, setIsScrolled] = useState(false)
+  const [email, setEmail] = useState("")
+  const [name, setName] = useState("")
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false)
+  const navigate = useNavigate();
+
 
   useEffect(() => {
     const handleScroll = () => {
@@ -31,6 +36,15 @@ export default function Home() {
   const openSignInModal = () => {
     setIsSignInModalOpen(true)
   }
+
+
+  const handleGetStartedClick = (e: any) => {
+    e.preventDefault()
+    navigate("/auth/register", { state: { email, name } })
+  }
+
+
+
 
   return (
     <div
@@ -273,6 +287,8 @@ export default function Home() {
                         <Input
                           id="email"
                           type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
                           placeholder="tucorreo@empresa.com"
                           className="bg-white/10 border-white/10 focus:border-violet-500 h-12 text-black dark:text-white placeholder:text-black/40 placeholder:dark:text-white/40 pr-8"
                         />
@@ -289,6 +305,8 @@ export default function Home() {
                         <Input
                           id="name"
                           type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
                           placeholder="Tu nombre"
                           className="bg-white/10 border-white/10 focus:border-violet-500 h-12 text-black dark:text-white placeholder:text-black/40 placeholder:dark:text-white/40 pr-8"
                         />
@@ -299,7 +317,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <Button className="w-full h-12 text-base font-medium bg-gradient-to-r from-blue-400 via-indigo-600 to-purple-900 hover:from-indigo-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-purple-500/20 group relative overflow-hidden">
+                  <Button className="w-full h-12 text-base font-medium bg-gradient-to-r from-blue-400 via-indigo-600 to-purple-900 hover:from-indigo-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-purple-500/20 group relative overflow-hidden" onClick={handleGetStartedClick}>
                     <span className="relative z-10 flex items-center">
                       Get Started
                       <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
