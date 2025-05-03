@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ChevronRight, ArrowRight, Check, Play, ArrowUpRight, User, Mail, Activity, Users, NotebookText, Code, Zap } from "lucide-react"
+import { ChevronRight, ArrowRight, Play, ArrowUpRight, User, Mail, Activity, Users, NotebookText, Code, Zap } from "lucide-react"
 import { MobileNav } from "@/components/version/mobile-nav"
 import { GeometricShapes } from "@/components/version/geometric-shapes"
 import { TaskCompletionChart } from "@/components/version/task-completion-chart"

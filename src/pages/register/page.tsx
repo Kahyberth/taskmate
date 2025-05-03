@@ -146,16 +146,24 @@ export default function RegisterPage() {
             </Link>
 
             <div className="flex items-center space-x-3 mb-8">
-              <div className="w-10 h-10 bg-gradient-to-br from-violet-400 to-purple-600 rounded-lg shadow-lg shadow-purple-500/20 flex items-center justify-center relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.3),rgba(255,255,255,0))]"></div>
-                <span className="text-white text-lg font-bold relative z-10">
-                  TM
-                </span>
+              <div className="w-10 h-10 rounded-lg shadow-lg shadow-purple-500/20 relative overflow-hidden group flex items-center justify-center bg-gradient-to-br from-blue-300 to-purple-600">
+                <div className="absolute inset-0 bg-gradient-to-br from-violet-100 via-indigo-400 to-purple-300 dark:from-violet-200 dark:via-indigo-300 dark:to-purple-300 opacity-0 group-hover:opacity-60 transition-opacity duration-500 pointer-events-none"></div>
+                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.3),rgba(255,255,255,0))] pointer-events-none"></div>
+                <img
+                  src="/image/taskmate-x.png"
+                  alt="TaskMate Logo"
+                  width={28}
+                  height={28}
+                  className="relative z-10"
+                />
               </div>
-              <span className="text-white text-2xl font-bold tracking-tight">
-                TaskMate
-              </span>
+              <h1 className="text-xl font-bold">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-600 to-purple-900">
+                  TaskMate
+                </span>
+              </h1>
             </div>
+
 
             <div className="bg-white/5 backdrop-blur-md p-8 rounded-2xl border border-white/10 shadow-xl shadow-purple-900/10 relative overflow-hidden">
               {/* Decorative corner shapes */}
@@ -383,23 +391,6 @@ export default function RegisterPage() {
                 </>
               )}
             </div>
-
-            <p className="text-white/40 text-xs text-center mt-6">
-              Al registrarte, aceptas nuestros{" "}
-              <a
-                href="#"
-                className="text-violet-400 hover:text-violet-300 transition-colors"
-              >
-                Términos de servicio
-              </a>{" "}
-              y{" "}
-              <a
-                href="#"
-                className="text-violet-400 hover:text-violet-300 transition-colors"
-              >
-                Política de privacidad
-              </a>
-            </p>
           </ScrollReveal>
         </div>
       </div>
