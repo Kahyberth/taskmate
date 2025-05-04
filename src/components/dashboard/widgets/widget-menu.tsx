@@ -1,10 +1,9 @@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal } from "lucide-react";
-import { WidgetSize } from "@/data/dashboard-types";
 
 interface WidgetMenuProps {
-  onChangeSize: (size: WidgetSize) => void;
+  onChangeSize: (size: string) => void;
   onRemove: () => void;
 }
 

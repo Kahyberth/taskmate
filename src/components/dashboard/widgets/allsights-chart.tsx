@@ -44,7 +44,6 @@ export function AIIsightsWidget({
     <Card
       className={`${size} relative bg-gradient-to-br from-indigo-600/80 via-black/20 to-purple-600/80 dark:from-indigo-900/80 dark:via-black/50 dark:to-purple-900/80 border-white/20 overflow-hidden`}
     >
-      {/* Overlay animado: dos capas para un efecto más dinámico y pronunciado */}
       <div className="absolute inset-0 wave-overlay wave-overlay-1 pointer-events-none"></div>
       <div className="absolute inset-0 wave-overlay wave-overlay-2 pointer-events-none"></div>
 
