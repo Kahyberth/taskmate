@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/backlog/status-badge";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -26,16 +27,45 @@ export const ProjectCard = ({
   project: any;
   onToggleStar: (id: string) => void;
 }) => {
+  const navigate = useNavigate();
+
+
+  const handleViewDetails = () => {
+    navigate(`/projects/backlog/${project.id}`, {state: { project }});
+  };
+
+  const handleStarClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); 
+    onToggleStar(project.id);
+  };
+
+
+  const handleEditProject = () => {
+    navigate(`/projects/${project.id}/edit`);
+  };
+
+  const handleArchiveProject = () => {
+    navigate(`/projects/${project.id}/archive`);
+  };
+
+  const handleDeleteProject = () => {
+    navigate(`/projects/${project.id}/delete`);
+  };
+
+
   return (
-    <Card className="h-full">
+    <Card 
+      className="h-full cursor-pointer hover:bg-gray-50 transition-colors" 
+      onClick={handleViewDetails}
+    >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h3 className="text-lg font-semibold">{project.name}</h3>
-              <button
-                onClick={() => onToggleStar(project.id)}
-                className="text-yellow-400 hover:text-yellow-500"
+              <button 
+                onClick={handleStarClick}
+                className="text-yellow-400 hover:text-yellow-500 cursor-default" // cursor-default aquí
               >
                 {project.isStarred ? (
                   <Star size={16} />
@@ -48,14 +78,20 @@ export const ProjectCard = ({
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0 cursor-default" // cursor-default aquí
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>View Details</DropdownMenuItem>
-              <DropdownMenuItem>Edit Project</DropdownMenuItem>
-              <DropdownMenuItem>Archive Project</DropdownMenuItem>
+            <DropdownMenuContent align="end" className="cursor-default"> {/* cursor-default aquí */}
+              <DropdownMenuItem onClick={handleViewDetails}>View Details</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleEditProject}>Edit Project</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleArchiveProject}>Archive Project</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDeleteProject}>Delete Project</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

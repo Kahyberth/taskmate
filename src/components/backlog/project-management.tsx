@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Search, ChevronDown, MoreHorizontal, Maximize2, Star, CheckSquare, Edit, Copy, Trash } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,6 +23,8 @@ import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useLocation } from "react-router-dom"
+import { Projects } from "@/interfaces/projects.interface"
 
 // Define types for our tasks and sprints
 interface Task {
@@ -35,6 +37,7 @@ interface Task {
   description?: string
   storyPoints?: number
   assignedTo?: string
+  type?: 'bug' | 'feature' | 'task' | 'refactor' | 'user_story';
 }
 
 interface Sprint {
@@ -56,7 +59,7 @@ const teamMembers = [
 ]
 
 export default function ProjectManagement() {
-  // Initial tasks for Sprint 1
+
   const initialTasks: Task[] = [
     {
       id: "task-1",
@@ -115,6 +118,9 @@ export default function ProjectManagement() {
       assignedTo: "user-2",
     },
   ])
+  const [newUserStoryTitle, setNewUserStoryTitle] = useState("")
+  const [newUserStoryType, setNewUserStoryType] = useState<'bug' | 'feature' | 'task' | 'refactor' | 'user_story'>('user_story');
+  const [activeTab, setActiveTab] = useState("sprints")
 
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
     "sprint-1": true,
@@ -138,7 +144,8 @@ export default function ProjectManagement() {
   const [editTaskPriority, setEditTaskPriority] = useState<"low" | "medium" | "high">("medium")
   const [editTaskStatus, setEditTaskStatus] = useState<"todo" | "in-progress" | "done">("todo")
   const [editTaskStoryPoints, setEditTaskStoryPoints] = useState<number>(0)
-  const [editTaskAssignedTo, setEditTaskAssignedTo] = useState<string | undefined>(undefined)
+  const [editTaskAssignedTo, setEditTaskAssignedTo] = useState<string | undefined>("unassigned")
+  const [editTaskType, setEditTaskType] = useState<'bug' | 'feature' | 'task' | 'refactor' | 'user_story'>('user_story');
 
   const [isEditSprintOpen, setIsEditSprintOpen] = useState(false)
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null)
@@ -146,7 +153,8 @@ export default function ProjectManagement() {
   const [editSprintStartDate, setEditSprintStartDate] = useState<Date>()
   const [editSprintEndDate, setEditSprintEndDate] = useState<Date>()
   const [editSprintGoal, setEditSprintGoal] = useState("")
-
+  const [project, setProject] = useState<Projects | null>(null)
+  const location = useLocation()
   const { toast } = useToast()
 
   const toggleSection = (section: string) => {
@@ -185,6 +193,40 @@ export default function ProjectManagement() {
     })
   }
 
+  const handleCreateUserStory = () => {
+    if (!newUserStoryTitle.trim()) {
+      toast({
+        title: "Error",
+        description: "El título de la historia de usuario no puede estar vacío.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const newTask: Task = {
+      id: `task-${Date.now()}`,
+      code: `${project?.project_key}-${Math.floor(Math.random() * 1000)}`,
+      title: newUserStoryTitle,
+      status: "todo",
+      isCompleted: false,
+      type: newUserStoryType,
+    }
+
+    setBacklogTasks([...backlogTasks, newTask])
+    setNewUserStoryTitle("") // Clear the input
+    toast({
+      title: "Historia de usuario creada",
+      description: `Se ha añadido "${newTask.title}" al backlog.`,
+    })
+  }
+
+  useEffect(() => {
+    const project = location.state?.project
+    if (project) {
+      setProject(project)
+    }
+  }, [location.state])
+
   const handleStartSprint = (sprintId: string) => {
     setSprints(sprints.map((sprint) => (sprint.id === sprintId ? { ...sprint, isActive: true } : sprint)))
 
@@ -200,7 +242,6 @@ export default function ProjectManagement() {
     if (!currentSprint) return
 
     // Filter tasks based on status
-    const completedTasks = currentSprint.tasks.filter((task) => task.status === "done" || task.isCompleted)
     const incompleteTasks = currentSprint.tasks.filter((task) => task.status !== "done" && !task.isCompleted)
 
     // Create a new sprint for incomplete tasks if there are any
@@ -281,6 +322,23 @@ export default function ProjectManagement() {
     })
   }
 
+  const handleToggleBacklogTaskCompletion = (taskId: string) => {
+    setBacklogTasks(
+      backlogTasks.map((task) =>
+        task.id === taskId
+          ? { ...task, isCompleted: !task.isCompleted, status: !task.isCompleted ? "done" : "todo" }
+          : task
+      )
+    );
+    const taskDetails = backlogTasks.find(t => t.id === taskId);
+    if (taskDetails) {
+      toast({
+        title: "Tarea de Backlog actualizada",
+        description: `El estado de "${taskDetails.title}" ha sido actualizado.`,
+      });
+    }
+  };
+
   const toggleTaskCompletion = (sprintId: string, taskId: string) => {
     setSprints(
       sprints.map((sprint) =>
@@ -288,50 +346,29 @@ export default function ProjectManagement() {
           ? {
               ...sprint,
               tasks: sprint.tasks.map((task) =>
-                task.id === taskId ? { ...task, isCompleted: !task.isCompleted } : task,
+                task.id === taskId ? { ...task, isCompleted: !task.isCompleted, status: !task.isCompleted ? "done" : task.status === "done" ? "todo" : task.status } : task
               ),
             }
-          : sprint,
-      ),
-    )
-  }
-
-  const toggleBacklogTaskCompletion = (taskId: string) => {
-    setBacklogTasks(
-      backlogTasks.map((task) => (task.id === taskId ? { ...task, isCompleted: !task.isCompleted } : task)),
-    )
-  }
-
-  const handleCreateUserStory = () => {
-    if (newTaskInput.trim() === "") return
-
-    const newTask: Task = {
-      id: `task-${Date.now()}`,
-      code: `TEST-${backlogTasks.length + 5}`, // Incrementing from the existing tasks
-      title: newTaskInput,
-      status: "todo",
-      isCompleted: false,
-      priority: "medium",
-      description: "",
-      storyPoints: 0,
+          : sprint
+      )
+    );
+    const currentSprint = sprints.find(s => s.id === sprintId);
+    const taskDetails = currentSprint?.tasks.find(t => t.id === taskId);
+    if (taskDetails) {
+      toast({
+        title: "Tarea actualizada",
+        description: `El estado de "${taskDetails.title}" ha sido actualizado.`,
+      });
     }
-
-    setBacklogTasks([...backlogTasks, newTask])
-    setnewTaskInput("")
-
-    toast({
-      title: "Historia de usuario creada",
-      description: `Se ha creado la historia "${newTaskInput}" exitosamente.`,
-    })
-  }
+  };
 
   const moveTaskToSprint = (taskId: string, targetSprintId: string) => {
     // Find the task in the backlog
-    const taskToMove = backlogTasks.find((task) => task.id === taskId)
-    if (!taskToMove) return
+    const taskToMove = backlogTasks.find((task) => task.id === taskId);
+    if (!taskToMove) return;
 
     // If the task is completed, update its status to "todo"
-    const updatedTask = taskToMove.isCompleted ? { ...taskToMove, isCompleted: false, status: "todo" } : taskToMove
+    const updatedTask = taskToMove.isCompleted ? { ...taskToMove, isCompleted: false, status: "todo" as "todo" } : { ...taskToMove, status: taskToMove.status as "todo" | "in-progress" | "done" };
 
     // Add the task to the target sprint
     setSprints(
@@ -382,6 +419,7 @@ export default function ProjectManagement() {
     setEditTaskStatus(task.status)
     setEditTaskStoryPoints(task.storyPoints || 0)
     setEditTaskAssignedTo(task.assignedTo || "unassigned")
+    setEditTaskType(task.type || 'user_story');
     setIsEditTaskOpen(true)
   }
 
@@ -396,6 +434,7 @@ export default function ProjectManagement() {
       status: editTaskStatus,
       storyPoints: editTaskStoryPoints,
       assignedTo: editTaskAssignedTo === "unassigned" ? undefined : editTaskAssignedTo,
+      type: editTaskType,
     }
 
     if (editingSprintId) {
@@ -421,6 +460,23 @@ export default function ProjectManagement() {
       description: "Los cambios han sido guardados exitosamente.",
     })
   }
+
+  const getTypeColor = (type?: string) => {
+    switch (type) {
+      case 'bug':
+        return 'bg-red-100 text-red-800';
+      case 'feature':
+        return 'bg-blue-100 text-blue-800';
+      case 'task':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'refactor':
+        return 'bg-purple-100 text-purple-800';
+      case 'user_story':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   const getPriorityColor = (priority?: string) => {
     switch (priority) {
@@ -457,12 +513,11 @@ export default function ProjectManagement() {
       {/* Header */}
       <header className="border-b bg-white">
         <div className="flex items-center p-3 px-4">
-          <div className="text-sm text-gray-500">Proyectos</div>
         </div>
         <div className="flex items-center justify-between px-4 pb-2">
           <div className="flex items-center gap-2">
             <div className="flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs rounded">T</div>
-            <h1 className="font-medium">TEST</h1>
+            <h1 className="font-medium">{project?.name}</h1>
             <button className="text-gray-400">
               <MoreHorizontal size={16} />
             </button>
@@ -633,8 +688,17 @@ export default function ProjectManagement() {
                         <span className={task.isCompleted ? "line-through text-gray-400" : ""}>{task.title}</span>
 
                         {task.priority && (
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${getPriorityColor(task.priority)}`}>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full ${getPriorityColor(task.priority)}`}
+                          >
                             {task.priority}
+                          </span>
+                        )}
+                        {task.type && (
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full ${getTypeColor(task.type)}`}
+                          >
+                            {task.type}
                           </span>
                         )}
 
@@ -777,6 +841,36 @@ export default function ProjectManagement() {
 
           {expandedSections["backlog"] && (
             <div className="pl-8">
+              {/* Input for new user story */}
+              <div className="flex items-center gap-2 my-4">
+                <Input
+                  type="text"
+                  placeholder="Escribe el título de la nueva historia de usuario"
+                  value={newUserStoryTitle}
+                  onChange={(e) => setNewUserStoryTitle(e.target.value)}
+                  className="flex-grow"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleCreateUserStory();
+                    }
+                  }}
+                />
+                <Select value={newUserStoryType} onValueChange={(value: 'bug' | 'feature' | 'task' | 'refactor' | 'user_story') => setNewUserStoryType(value)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user_story">User Story</SelectItem>
+                    <SelectItem value="task">Task</SelectItem>
+                    <SelectItem value="bug">Bug</SelectItem>
+                    <SelectItem value="feature">Feature</SelectItem>
+                    <SelectItem value="refactor">Refactor</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleCreateUserStory} size="sm">Añadir</Button>
+              </div>
+              {/* End of input for new user story */}
+
               {backlogTasks.map((task) => (
                 <div className="border rounded-md mb-1" key={task.id}>
                   <div className="flex items-center p-3 hover:bg-gray-50">
@@ -784,7 +878,7 @@ export default function ProjectManagement() {
                       className="mr-2"
                       id={task.id}
                       checked={task.isCompleted}
-                      onCheckedChange={() => toggleBacklogTaskCompletion(task.id)}
+                      onCheckedChange={() => handleToggleBacklogTaskCompletion(task.id)}
                     />
                     <label htmlFor={task.id} className="flex items-center gap-2 flex-1 cursor-pointer">
                       <span className="text-gray-500 text-sm">{task.code}</span>
@@ -793,6 +887,11 @@ export default function ProjectManagement() {
                       {task.priority && (
                         <span className={`text-xs px-2 py-0.5 rounded-full ${getPriorityColor(task.priority)}`}>
                           {task.priority}
+                        </span>
+                      )}
+                      {task.type && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${getTypeColor(task.type)}`}>
+                          {task.type}
                         </span>
                       )}
 
@@ -1041,6 +1140,24 @@ export default function ProjectManagement() {
                   <SelectItem value="todo">Por hacer</SelectItem>
                   <SelectItem value="in-progress">En progreso</SelectItem>
                   <SelectItem value="done">Completado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Tipo</Label>
+              <Select
+                value={editTaskType}
+                onValueChange={(value) => setEditTaskType(value as 'bug' | 'feature' | 'task' | 'refactor' | 'user_story')}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Seleccionar tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user_story">User Story</SelectItem>
+                  <SelectItem value="task">Task</SelectItem>
+                  <SelectItem value="bug">Bug</SelectItem>
+                  <SelectItem value="feature">Feature</SelectItem>
+                  <SelectItem value="refactor">Refactor</SelectItem>
                 </SelectContent>
               </Select>
             </div>
