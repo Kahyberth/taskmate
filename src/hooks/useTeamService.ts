@@ -40,41 +40,58 @@ export default function useTeamService(): UseTeamServiceResponse {
 
   // Obtener los equipos de un usuario
   const fetchTeamsByUser = useCallback(async (userId: string, page?: number): Promise<Team[]> => {
+    console.log("Fetching teams for user: ", userId);
     try {
-
       if(!page) page = 1;
 
       setLoading(true);
       const teamsResponse = await apiClient.get(`/teams/get-team-by-user/${userId}?page=${page}`, {
         timeout: 10000,
       });
-      const teamsData = teamsResponse.data;
+      
+      if (!teamsResponse.data) {
+        throw new Error("No data received from the server");
+      }
 
-      console.log("Teams data desde el servicio ", teamsData);
+      const teamsData = teamsResponse.data;
 
       const teamsWithMembers = await Promise.all(
         teamsData.map(async (team: Team) => {
+          try {
+            const membersResponse = await apiClient.get(`/teams/get-members-by-team/${team.id}`);
+            const members = membersResponse.data;
+            
+            // Find the user's role in this team
+            const userMembership = members.find((membership: any) => 
+              membership.member?.id === userId
+            );
+            
+            const userRole = userMembership?.role;
 
-          console.log("Teams Information ", team);
-
-          const membersResponse = await apiClient.get(`/teams/get-members-by-team/${team.id}`);
-          const members = membersResponse.data;
-          
-          const userRole = members.find((member: TeamMember) => member.member.id === userId)?.role;
-
-          return {
-            ...team,
-            role: userRole,
-            members,
-          };
+            return {
+              ...team,
+              role: userRole,
+              members: members.map((member: any) => ({
+                ...member,
+                role: member.role
+              }))
+            };
+          } catch (error: any) {
+            console.error(`Error fetching members for team ${team.id}:`, error);
+            return {
+              ...team,
+              role: null,
+              members: [],
+            };
+          }
         })
       );
 
       return teamsWithMembers;
     } catch (error: any) {
-      throw new Error(
-        (error.response?.data?.message) || "An error occurred while fetching teams."
-      );
+      const errorMessage = error.response?.data?.message || error.message || "An error occurred while fetching teams";
+      console.error("Error fetching teams:", errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
