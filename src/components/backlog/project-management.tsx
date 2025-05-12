@@ -23,8 +23,9 @@ import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { useLocation } from "react-router-dom"
+import { useLocation, useParams } from "react-router-dom"
 import { Projects } from "@/interfaces/projects.interface"
+import { apiClient } from "@/api/client-gateway"
 
 // Define types for our tasks and sprints
 interface Task {
@@ -156,6 +157,7 @@ export default function ProjectManagement() {
   const [project, setProject] = useState<Projects | null>(null)
   const location = useLocation()
   const { toast } = useToast()
+  const { backlogId } = useParams();
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
@@ -213,12 +215,28 @@ export default function ProjectManagement() {
     }
 
     setBacklogTasks([...backlogTasks, newTask])
-    setNewUserStoryTitle("") // Clear the input
+    setNewUserStoryTitle("")
     toast({
       title: "Historia de usuario creada",
       description: `Se ha añadido "${newTask.title}" al backlog.`,
     })
   }
+
+
+  useEffect(()=> {
+    fetchBacklogTasks();
+  }, [project])
+
+  const fetchBacklogTasks = async () => {
+    try {
+      console.log(project?.id)
+      const response = await apiClient.get(`/backlog/get-backlog-by-project/${project?.id}`)
+      console.log(response)
+    } catch (error) {
+      console.error("Error fetching backlog tasks:", error)
+    }
+  }
+
 
   useEffect(() => {
     const project = location.state?.project
