@@ -1,54 +1,34 @@
-import { useEffect, useState } from "react"
-import { Search, ChevronDown, MoreHorizontal, Maximize2, Star, CheckSquare, Edit, Copy, Trash } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useContext, useEffect, useState, useMemo } from "react"
 import { Tabs } from "@/components/ui/tabs"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { format } from "date-fns"
-import { CalendarIcon } from "lucide-react"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useLocation, useParams } from "react-router-dom"
 import { Projects } from "@/interfaces/projects.interface"
 import { apiClient } from "@/api/client-gateway"
+import { Task } from "@/interfaces/task.interface"
+import { Epic } from "@/interfaces/epic.interface"
+import { SprintSection } from "./sprint-section"
+import { BacklogSection } from "./backlog-section"
+import { EpicDialog } from "./epic-dialog"
+import { AuthContext } from "@/context/AuthContext"
+import { InviteMembersDialog } from "./invite-members-dialog"
+import { useTeams } from "@/context/TeamsContext"
+import { EditTaskModal } from "./edit-task-modal"
+import { EditSprintModal } from "./edit-sprint-modal"
+import { CreateSprintModal } from "./create-sprint-modal"
+import { ProjectHeader } from "./project-header"
+import { SearchFilters } from "./search-filters"
 
-// Define types for our tasks and sprints
-interface Task {
-  id: string
-  title: string
-  code: string
-  status: "todo" | "in-progress" | "done"
-  isCompleted: boolean
-  priority?: "low" | "medium" | "high"
-  description?: string
-  storyPoints?: number
-  assignedTo?: string
-  type?: 'bug' | 'feature' | 'task' | 'refactor' | 'user_story';
-}
-
+// Define sprint interface
 interface Sprint {
-  id: string
-  name: string
-  isActive: boolean
-  tasks: Task[]
-  startDate?: Date
-  endDate?: Date
-  goal?: string
+  id: string;
+  name: string;
+  isActive: boolean;
+  tasks: Task[];
+  startDate?: Date;
+  endDate?: Date;
+  goal?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // Mock team members for assignment
@@ -59,105 +39,76 @@ const teamMembers = [
   { id: "user-4", name: "Casey Morgan", initials: "CM" },
 ]
 
+// Mock sprints for fallback
+const mockSprints: Sprint[] = [
+  {
+    id: "sprint-1",
+    name: "Tablero Sprint 1",
+    isActive: true,
+    tasks: [],
+    startDate: new Date(),
+    endDate: new Date(new Date().setDate(new Date().getDate() + 14)),
+    goal: "Completar las funcionalidades principales",
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: "sprint-2",
+    name: "Tablero Sprint 2",
+    isActive: false,
+    tasks: [],
+    startDate: new Date(new Date().setDate(new Date().getDate() + 15)),
+    endDate: new Date(new Date().setDate(new Date().getDate() + 28)),
+    goal: "Mejorar la experiencia de usuario",
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }
+]
+
 export default function ProjectManagement() {
-
-  const initialTasks: Task[] = [
-    {
-      id: "task-1",
-      code: "TEST-1",
-      title: "Pruebas",
-      status: "todo",
-      isCompleted: false,
-      priority: "medium",
-      description: "Realizar pruebas de integración del sistema",
-      storyPoints: 5,
-    },
-    {
-      id: "task-2",
-      code: "TEST-2",
-      title: "Autenticacion",
-      status: "todo",
-      isCompleted: false,
-      priority: "high",
-      description: "Implementar sistema de autenticación con OAuth",
-      storyPoints: 8,
-      assignedTo: "user-1",
-    },
-  ]
-
-  // Initial sprints
-  const initialSprints: Sprint[] = [
-    {
-      id: "sprint-1",
-      name: "Tablero Sprint 1",
-      isActive: false,
-      tasks: initialTasks,
-    },
-  ]
-
-  const [sprints, setSprints] = useState<Sprint[]>(initialSprints)
-  const [backlogTasks, setBacklogTasks] = useState<Task[]>([
-    {
-      id: "task-3",
-      code: "TEST-3",
-      title: "Navbar",
-      status: "todo",
-      isCompleted: false,
-      priority: "low",
-      description: "Diseñar e implementar la barra de navegación",
-      storyPoints: 3,
-    },
-    {
-      id: "task-4",
-      code: "TEST-4",
-      title: "Footer",
-      status: "todo",
-      isCompleted: false,
-      priority: "low",
-      description: "Crear el pie de página con enlaces a redes sociales",
-      storyPoints: 2,
-      assignedTo: "user-2",
-    },
-  ])
+  const [sprints, setSprints] = useState<Sprint[]>([]);
+  const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
+  const { toast } = useToast();
+  const { project_id } = useParams();
+  const location = useLocation();
+  const [project, setProject] = useState<Projects | null>(null);
   const [newUserStoryTitle, setNewUserStoryTitle] = useState("")
   const [newUserStoryType, setNewUserStoryType] = useState<'bug' | 'feature' | 'task' | 'refactor' | 'user_story'>('user_story');
-  const [activeTab, setActiveTab] = useState("sprints")
+  const [newUserStoryPriority, setNewUserStoryPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
+  const [loading, setIsLoading] = useState<boolean> (false)
+  const [error, setError] = useState<any> (null)
+  const [backlogId, setBacklogId] = useState<string | null>(null);
+  const [projectMembers, setProjectMembers] = useState<any[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isMembersDialogOpen, setIsMembersDialogOpen] = useState(false);
 
+  // Epic state
+  const [epics, setEpics] = useState<Epic[]>([]);
+  const [isEpicDialogOpen, setIsEpicDialogOpen] = useState(false);
+  const [newUserStoryEpicId, setNewUserStoryEpicId] = useState<string | undefined>(undefined);
+
+  const { user } = useContext(AuthContext);
+  // Use the teams hook to access teams data
+  const { teams, loading: loadingTeams } = useTeams();
+  
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
     "sprint-1": true,
     backlog: true,
   })
 
+  // Create sprint state
   const [isCreateSprintOpen, setIsCreateSprintOpen] = useState(false)
-  const [sprintName, setSprintName] = useState("")
-  const [startDate, setStartDate] = useState<Date>()
-  const [endDate, setEndDate] = useState<Date>()
-  const [sprintGoal, setSprintGoal] = useState("")
   const [nextSprintNumber, setNextSprintNumber] = useState(2)
-  const [newTaskInput, setnewTaskInput] = useState("")
 
   // Edit task state
   const [isEditTaskOpen, setIsEditTaskOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [editingSprintId, setEditingSprintId] = useState<string | null>(null)
-  const [editTaskTitle, setEditTaskTitle] = useState("")
-  const [editTaskDescription, setEditTaskDescription] = useState("")
-  const [editTaskPriority, setEditTaskPriority] = useState<"low" | "medium" | "high">("medium")
-  const [editTaskStatus, setEditTaskStatus] = useState<"todo" | "in-progress" | "done">("todo")
-  const [editTaskStoryPoints, setEditTaskStoryPoints] = useState<number>(0)
-  const [editTaskAssignedTo, setEditTaskAssignedTo] = useState<string | undefined>("unassigned")
-  const [editTaskType, setEditTaskType] = useState<'bug' | 'feature' | 'task' | 'refactor' | 'user_story'>('user_story');
 
+  // Edit sprint state
   const [isEditSprintOpen, setIsEditSprintOpen] = useState(false)
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null)
-  const [editSprintName, setEditSprintName] = useState("")
-  const [editSprintStartDate, setEditSprintStartDate] = useState<Date>()
-  const [editSprintEndDate, setEditSprintEndDate] = useState<Date>()
-  const [editSprintGoal, setEditSprintGoal] = useState("")
-  const [project, setProject] = useState<Projects | null>(null)
-  const location = useLocation()
-  const { toast } = useToast()
-  const { backlogId } = useParams();
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
@@ -166,84 +117,357 @@ export default function ProjectManagement() {
     }))
   }
 
-  const handleCreateSprint = () => {
-    // Create a new sprint
-    const newSprint: Sprint = {
-      id: `sprint-${nextSprintNumber}`,
-      name: sprintName || `Tablero Sprint ${nextSprintNumber}`,
-      isActive: false,
-      tasks: [],
+  const handleCreateSprint = async (sprintData: {
+    name: string;
+    startDate?: Date;
+    endDate?: Date;
+    goal: string;
+  }) => {
+    try {
+      // Create a new sprint
+      const newSprintData = {
+        name: sprintData.name,
+        projectId: project_id,
+        startDate: sprintData.startDate ? sprintData.startDate.toISOString() : undefined,
+        endDate: sprintData.endDate ? sprintData.endDate.toISOString() : undefined,
+        goal: sprintData.goal || ""
+      };
+
+      // Llamar a la API para crear el sprint
+      const response = await apiClient.post(`/backlog/create-sprint`, newSprintData);
+      
+      if (response.data) {
+        const newSprint: Sprint = {
+          id: response.data.id,
+          name: response.data.name,
+          isActive: false,
+          tasks: [],
+          startDate: sprintData.startDate,
+          endDate: sprintData.endDate,
+          goal: sprintData.goal
+        };
+        
+        setSprints([...sprints, newSprint]);
+        setNextSprintNumber(nextSprintNumber + 1);
+        setExpandedSections((prev) => ({
+          ...prev,
+          [newSprint.id]: true,
+        }));
+
+        toast({
+          title: "Sprint creado",
+          description: `Se ha creado el sprint "${newSprint.name}" exitosamente.`,
+        });
+      }
+    } catch (error) {
+      console.error("Error creating sprint:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo crear el sprint",
+        variant: "destructive",
+      });
     }
+  };
 
-    setSprints([...sprints, newSprint])
-    setNextSprintNumber(nextSprintNumber + 1)
-    setExpandedSections((prev) => ({
-      ...prev,
-      [newSprint.id]: true,
-    }))
+  const fetchBacklogId = async () => {
+    try {
+      const response = await apiClient.get(`/backlog/get-backlog-by-project/${project_id}`);
+      if (response.data && response.data.id) {
+        console.log("Backlog ID fetched:", response.data.id);
+        setBacklogId(response.data.id);
+        return response.data.id;
+      } else {
+        console.error("No backlog ID found in response:", response.data);
+        toast({
+          title: "Error",
+          description: "No se pudo obtener el ID del backlog",
+          variant: "destructive",
+        });
+        return null;
+      }
+    } catch (error) {
+      console.error("Error fetching backlog ID:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo obtener el ID del backlog",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
 
-    // Reset form and close modal
-    setSprintName("")
-    setStartDate(undefined)
-    setEndDate(undefined)
-    setSprintGoal("")
-    setIsCreateSprintOpen(false)
+  const fetchEpics = async () => {
+    if (!project_id) return;
+    
+    try {
+      const response = await apiClient.get(`/projects/epics/${project_id}`);
+      
+      if (response.data) {
+        console.log("Epics fetched:", response.data);
+        setEpics(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching epics:", error);
+      // Set empty array as fallback
+      setEpics([]);
+    }
+  };
 
-    toast({
-      title: "Sprint creado",
-      description: `Se ha creado el sprint "${newSprint.name}" exitosamente.`,
-    })
-  }
-
-  const handleCreateUserStory = () => {
+  const handleCreateUserStory = async () => {
     if (!newUserStoryTitle.trim()) {
       toast({
         title: "Error",
         description: "El título de la historia de usuario no puede estar vacío.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    const newTask: Task = {
-      id: `task-${Date.now()}`,
-      code: `${project?.project_key}-${Math.floor(Math.random() * 1000)}`,
-      title: newUserStoryTitle,
-      status: "todo",
-      isCompleted: false,
-      type: newUserStoryType,
+    if (!backlogId) {
+      toast({
+        title: "Error",
+        description: "No se ha cargado el ID del backlog",
+        variant: "destructive",
+      });
+      return;
     }
 
-    setBacklogTasks([...backlogTasks, newTask])
-    setNewUserStoryTitle("")
-    toast({
-      title: "Historia de usuario creada",
-      description: `Se ha añadido "${newTask.title}" al backlog.`,
-    })
-  }
+    try {
+      const newTask = {
+        title: newUserStoryTitle,
+        description: "descripcion de la historia de usuario",
+        type: newUserStoryType,
+        status: "to-do",
+        priority: newUserStoryPriority,
+        createdBy: user?.id,
+        acceptanceCriteria: "",
+        productBacklogId: backlogId,
+        epicId: newUserStoryEpicId,
+        // No incluimos storyPoints en la creación para evitar la validación @Min(1)
+        // El valor por defecto será 0 (sin estimar)
+      };
 
-
-  useEffect(()=> {
-    fetchBacklogTasks();
-  }, [project])
+      const response = await apiClient.post(`/issues/create`, newTask);
+      
+      if (response.data) {
+        // Cast to any to avoid TypeScript issues with the different model structures
+        // between the API response and our Task interface
+        setBacklogTasks([...backlogTasks, response.data as any]);
+        setNewUserStoryTitle("");
+        setNewUserStoryEpicId(undefined);
+        toast({
+          title: "Historia de usuario creada",
+          description: `Se ha añadido "${newTask.title}" al backlog.`,
+        });
+      }
+      
+    } catch (error) {
+      console.error("Error creating user story:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create user story",
+        variant: "destructive",
+      });
+      throw error; // Re-throw error to be caught by the loading state handler
+    }
+  };
 
   const fetchBacklogTasks = async () => {
+    console.log("fetching backlog tasks for project:", project_id);
     try {
-      console.log(project?.id)
-      const response = await apiClient.get(`/backlog/get-backlog-by-project/${project?.id}`)
-      console.log(response)
+      setIsLoading(true);
+      setError(null);
+      const response = await apiClient.get(`/projects/issues/${project_id}`);
+      console.log("Raw backend response:", response.data);
+      
+      if (response.data) {
+        // The response.data is already an array of issues
+        const tasks = Array.isArray(response.data) ? response.data : [];
+        console.log("Processed tasks:", tasks);
+        
+        // Map the tasks to ensure they have all required fields
+        const mappedTasks = tasks.map((task: any) => ({
+          id: task.id,
+          title: task.title,
+          description: task.description || "",
+          type: task.type || "user_story",
+          status: task.status || "to-do",
+          code: task.code || "",
+          priority: task.priority || "medium",
+          createdBy: task.createdBy || user?.id,
+          acceptanceCriteria: task.acceptanceCriteria || "",
+          productBacklogId: task.productBacklogId || backlogId,
+          storyPoints: task.story_points || 0,
+          assignedTo: task.assignedTo,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt,
+          resolvedAt: task.resolvedAt,
+          finishedAt: task.finishedAt
+        }));
+        
+        console.log("Mapped tasks:", mappedTasks);
+        setBacklogTasks(mappedTasks);
+      }
     } catch (error) {
-      console.error("Error fetching backlog tasks:", error)
+      console.error("Error fetching backlog tasks:", error);
+      setError("Failed to fetch backlog tasks");
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar las tareas del backlog",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
 
+  const fetchSprints = async () => {
+    console.log("fetching sprints for project:", project_id);
+    try {
+      const response = await apiClient.get(`/backlog/sprints/${project_id}`);
+      console.log("Sprints response:", response.data);
+      
+      if (response.data && Array.isArray(response.data)) {
+        const mappedSprints = response.data.map((sprint: any) => ({
+          id: sprint.id,
+          name: sprint.name,
+          isActive: sprint.status === 'active',
+          tasks: sprint.tasks ? sprint.tasks.map((task: any) => ({
+            id: task.id,
+            title: task.title,
+            description: task.description || "",
+            type: task.type || "user_story",
+            status: task.status || "to-do",
+            priority: task.priority || "medium",
+            createdBy: task.createdBy || user?.id,
+            acceptanceCriteria: task.acceptanceCriteria || "",
+            productBacklogId: task.productBacklogId || backlogId,
+            storyPoints: task.story_points || 0,
+            assignedTo: task.assignedTo,
+            createdAt: task.createdAt,
+            updatedAt: task.updatedAt,
+            resolvedAt: task.resolvedAt,
+            finishedAt: task.finishedAt
+          })) : [],
+          startDate: sprint.startDate ? new Date(sprint.startDate) : undefined,
+          endDate: sprint.endDate ? new Date(sprint.endDate) : undefined,
+          goal: sprint.goal || "",
+          createdAt: sprint.createdAt ? new Date(sprint.createdAt) : undefined,
+          updatedAt: sprint.updatedAt ? new Date(sprint.updatedAt) : undefined
+        }));
+        
+        console.log("Mapped sprints:", mappedSprints);
+        setSprints(mappedSprints);
+        
+        // Actualizar el número del próximo sprint
+        if (mappedSprints.length > 0) {
+          const sprintNumbers = mappedSprints
+            .map((s: Sprint) => {
+              const match = s.name.match(/Sprint\s+(\d+)/i);
+              return match ? parseInt(match[1]) : 0;
+            })
+            .filter(n => !isNaN(n));
+            
+          if (sprintNumbers.length > 0) {
+            const maxNumber = Math.max(...sprintNumbers);
+            setNextSprintNumber(maxNumber + 1);
+          }
+        }
+      } else {
+        // Fallback to mock data if no sprints returned from API
+        console.log("Using mock sprints as fallback");
+        setSprints(mockSprints);
+        
+        // Set next sprint number based on mock data
+        const maxSprintNumber = Math.max(...mockSprints.map((s: Sprint) => {
+          const match = s.name.match(/Sprint\s+(\d+)/i);
+          return match ? parseInt(match[1]) : 0;
+        }));
+        setNextSprintNumber(maxSprintNumber + 1);
+      }
+    } catch (error) {
+      console.error("Error fetching sprints:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los sprints",
+        variant: "destructive",
+      });
+      
+      // Fallback to mock data on error
+      console.log("Using mock sprints due to error");
+      setSprints(mockSprints);
+      
+      // Set next sprint number based on mock data
+      const maxSprintNumber = Math.max(...mockSprints.map((s: Sprint) => {
+        const match = s.name.match(/Sprint\s+(\d+)/i);
+        return match ? parseInt(match[1]) : 0;
+      }));
+      setNextSprintNumber(maxSprintNumber + 1);
+    }
+  };
+
+  const fetchProjectMembers = async () => {
+    if (!project_id) return;
+    
+    try {
+      setLoadingMembers(true);
+      const response = await apiClient.get(`/projects/members/${project_id}`);
+      
+      if (response.data && Array.isArray(response.data)) {
+        console.log("Project members fetched:", response.data);
+        setProjectMembers(response.data);
+      } else {
+        console.error("No members found in response:", response.data);
+        // Fallback to empty array
+        setProjectMembers([]);
+      }
+    } catch (error) {
+      console.error("Error fetching project members:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los miembros del proyecto",
+        variant: "destructive",
+      });
+      // Fallback to empty array  
+      setProjectMembers([]);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
+  // Find the team associated with the current project
+  const currentTeam = useMemo(() => {
+    if (!project || !teams) return null;
+    return teams.find(team => team.id === project.team_id);
+  }, [project, teams]);
+  
+  useEffect(() => {
+    console.log("project_id from params:", project_id);
+    if (project_id) {
+      fetchBacklogId().then(id => {
+        if (id) {
+          fetchBacklogTasks();
+          fetchSprints();
+          fetchEpics();
+        }
+      });
+      fetchProjectMembers();
+    }
+  }, [project_id]);
 
   useEffect(() => {
-    const project = location.state?.project
+    const project = location.state?.project;
     if (project) {
-      setProject(project)
+      setProject(project);
     }
-  }, [location.state])
+  }, [location.state]);
+
+  // Add effect to update members when members dialog opens
+  useEffect(() => {
+    if (isMembersDialogOpen) {
+      fetchProjectMembers();
+    }
+  }, [isMembersDialogOpen]);
 
   const handleStartSprint = (sprintId: string) => {
     setSprints(sprints.map((sprint) => (sprint.id === sprintId ? { ...sprint, isActive: true } : sprint)))
@@ -256,43 +480,46 @@ export default function ProjectManagement() {
 
   const handleCompleteSprint = (sprintId: string) => {
     // Find the current sprint
-    const currentSprint = sprints.find((sprint) => sprint.id === sprintId)
-    if (!currentSprint) return
+    const currentSprint = sprints.find((sprint) => sprint.id === sprintId);
+    if (!currentSprint) return;
 
     // Filter tasks based on status
-    const incompleteTasks = currentSprint.tasks.filter((task) => task.status !== "done" && !task.isCompleted)
+    const incompleteTasks = currentSprint.tasks.filter((task: Task) => 
+      task.status !== "resolved" && task.status !== "closed"
+    );
 
-    // Create a new sprint for incomplete tasks if there are any
     if (incompleteTasks.length > 0) {
-      const newSprintId = `sprint-${nextSprintNumber}`
+      const newSprintId = `sprint-${nextSprintNumber}`;
       const newSprint: Sprint = {
         id: newSprintId,
         name: `Tablero Sprint ${nextSprintNumber}`,
         isActive: false,
         tasks: incompleteTasks,
-      }
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
 
-      setSprints([...sprints.filter((s) => s.id !== sprintId), newSprint])
-      setNextSprintNumber(nextSprintNumber + 1)
+      setSprints([...sprints.filter((s) => s.id !== sprintId), newSprint]);
+      setNextSprintNumber(nextSprintNumber + 1);
       setExpandedSections((prev) => ({
         ...prev,
         [newSprintId]: true,
-      }))
+      }));
 
       toast({
         title: "Sprint completado",
         description: `Se han movido ${incompleteTasks.length} tareas incompletas a "${newSprint.name}".`,
-      })
+      });
     } else {
       // If no incomplete tasks, just remove the current sprint
-      setSprints(sprints.filter((s) => s.id !== sprintId))
+      setSprints(sprints.filter((s) => s.id !== sprintId));
 
       toast({
         title: "Sprint completado",
         description: "Todas las tareas fueron completadas exitosamente.",
-      })
+      });
     }
-  }
+  };
 
   const handleDeleteSprint = (sprintId: string) => {
     // Find the sprint to be deleted
@@ -308,31 +535,82 @@ export default function ProjectManagement() {
     })
   }
 
+  const openEditTaskModal = (task: Task, sprintId: string | null = null) => {
+    setEditingTask(task)
+    setEditingSprintId(sprintId)
+    setIsEditTaskOpen(true)
+  }
+
+  const handleSaveTaskEdit = async (updatedTask: Partial<Task>) => {
+    if (!editingTask) return;
+
+    try {
+      // Preparar los datos de actualización según lo requerido por la API
+      const taskData = {
+        id: editingTask.id,
+        userId: user?.id,
+        title: updatedTask.title,
+        description: updatedTask.description,
+        priority: updatedTask.priority,
+        status: updatedTask.status,
+        assignedTo: updatedTask.assignedTo,
+        type: updatedTask.type,
+        acceptanceCriteria: editingTask.acceptanceCriteria || "",
+        storyPoints: updatedTask.storyPoints,
+        epicId: updatedTask.epicId,
+      };
+
+      // Solo incluir storyPoints en la solicitud si es mayor que 0
+      // Esto evita la validación @Min(1) en el backend
+      if (updatedTask.storyPoints && updatedTask.storyPoints > 0) {
+        taskData.storyPoints = updatedTask.storyPoints;
+      }
+
+      const response = await apiClient.patch(`/issues/update`, taskData);
+
+      if (response.data) {
+        // Actualizar el estado local según dónde estaba la tarea (sprint o backlog)
+        if (editingSprintId) {
+          setSprints(sprints.map(sprint =>
+            sprint.id === editingSprintId
+              ? {
+                  ...sprint,
+                  tasks: sprint.tasks.map((task: Task) =>
+                      task.id === editingTask.id ? { ...response.data, storyPoints: updatedTask.storyPoints, epicId: updatedTask.epicId } : task
+                  ),
+                }
+              : sprint
+          ));
+        } else {
+          setBacklogTasks(backlogTasks.map(task =>
+              task.id === editingTask.id ? { ...response.data, storyPoints: updatedTask.storyPoints, epicId: updatedTask.epicId } : task
+          ));
+        }
+
+        toast({
+          title: "Cambios guardados",
+          description: "Los cambios han sido guardados exitosamente.",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating task:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar la tarea. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const openEditSprintModal = (sprint: Sprint) => {
     if (!sprint) return
 
     setEditingSprint(sprint)
-    setEditSprintName(sprint.name)
-    // Si el sprint tiene fechas almacenadas, úsalas; de lo contrario, undefined
-    setEditSprintStartDate(sprint.startDate || undefined)
-    setEditSprintEndDate(sprint.endDate || undefined)
-    setEditSprintGoal(sprint.goal || "") // Si el sprint tiene una meta almacenada, úsala
     setIsEditSprintOpen(true)
   }
 
-  const handleSaveSprintEdit = () => {
-    if (!editingSprint) return
-
-    const updatedSprint: Sprint = {
-      ...editingSprint,
-      name: editSprintName,
-      startDate: editSprintStartDate,
-      endDate: editSprintEndDate,
-      goal: editSprintGoal,
-    }
-
-    setSprints(sprints.map((s) => (s.id === editingSprint.id ? updatedSprint : s)))
-    setIsEditSprintOpen(false)
+  const handleSaveSprintEdit = (updatedSprint: Sprint) => {
+    setSprints(sprints.map((s) => (s.id === updatedSprint.id ? updatedSprint : s)))
 
     toast({
       title: "Sprint actualizado",
@@ -344,7 +622,10 @@ export default function ProjectManagement() {
     setBacklogTasks(
       backlogTasks.map((task) =>
         task.id === taskId
-          ? { ...task, isCompleted: !task.isCompleted, status: !task.isCompleted ? "done" : "todo" }
+          ? {
+              ...task,
+              status: task.status === "to-do" || task.status === "in-progress" ? "resolved" : "to-do",
+            } as Task
           : task
       )
     );
@@ -363,15 +644,20 @@ export default function ProjectManagement() {
         sprint.id === sprintId
           ? {
               ...sprint,
-              tasks: sprint.tasks.map((task) =>
-                task.id === taskId ? { ...task, isCompleted: !task.isCompleted, status: !task.isCompleted ? "done" : task.status === "done" ? "todo" : task.status } : task
+              tasks: sprint.tasks.map((task: Task) =>
+                task.id === taskId
+                  ? {
+                      ...task,
+                      status: task.status === "to-do" || task.status === "in-progress" ? "resolved" : "to-do",
+                    } as Task
+                  : task
               ),
             }
           : sprint
       )
     );
     const currentSprint = sprints.find(s => s.id === sprintId);
-    const taskDetails = currentSprint?.tasks.find(t => t.id === taskId);
+    const taskDetails = currentSprint?.tasks.find((t: Task) => t.id === taskId);
     if (taskDetails) {
       toast({
         title: "Tarea actualizada",
@@ -380,104 +666,154 @@ export default function ProjectManagement() {
     }
   };
 
-  const moveTaskToSprint = (taskId: string, targetSprintId: string) => {
+  const moveTaskToSprint = async (taskId: string, targetSprintId: string) => {
     // Find the task in the backlog
     const taskToMove = backlogTasks.find((task) => task.id === taskId);
     if (!taskToMove) return;
 
-    // If the task is completed, update its status to "todo"
-    const updatedTask = taskToMove.isCompleted ? { ...taskToMove, isCompleted: false, status: "todo" as "todo" } : { ...taskToMove, status: taskToMove.status as "todo" | "in-progress" | "done" };
+    const taskCopy = { ...taskToMove };
+    
+    try {
+      // Optimistic update - remove from backlog immediately
+      setBacklogTasks(prev => prev.filter(task => task.id !== taskId));
+      
+      try {
+        const response = await apiClient.post(`/backlog/move-issue-to-sprint`, {
+          taskId,
+          sprintId: targetSprintId,
+        });
 
-    // Add the task to the target sprint
-    setSprints(
-      sprints.map((sprint) =>
-        sprint.id === targetSprintId ? { ...sprint, tasks: [...sprint.tasks, updatedTask] } : sprint,
-      ),
-    )
+        if (response.data) {
+          // Asegurarse de que la tarea tenga todos los campos necesarios
+         const movedTask = {
+           ...taskToMove,
+            ...response.data,
+            // Asegurar que estos campos estén presentes
+            productBacklogId: response.data.productBacklogId || backlogId,
+            storyPoints: response.data.story_points || taskToMove.storyPoints || 0
+         };
 
-    // Remove the task from the backlog
-    setBacklogTasks(backlogTasks.filter((task) => task.id !== taskId))
-
-    toast({
-      title: "Historia movida",
-      description: `La historia "${taskToMove.title}" ha sido movida al sprint.`,
-    })
-  }
-
-  const moveTaskToBacklog = (sprintId: string, taskId: string) => {
-    // Find the sprint and task
-    const sprint = sprints.find((s) => s.id === sprintId)
-    if (!sprint) return
-
-    const taskToMove = sprint.tasks.find((task) => task.id === taskId)
-    if (!taskToMove) return
-
-    // Add the task to the backlog
-    setBacklogTasks([...backlogTasks, taskToMove])
-
-    // Remove the task from the sprint
-    setSprints(
-      sprints.map((sprint) =>
-        sprint.id === sprintId ? { ...sprint, tasks: sprint.tasks.filter((task) => task.id !== taskId) } : sprint,
-      ),
-    )
-
-    toast({
-      title: "Historia movida",
-      description: `La historia "${taskToMove.title}" ha sido movida al backlog.`,
-    })
-  }
-
-  const openEditTaskModal = (task: Task, sprintId: string | null = null) => {
-    setEditingTask(task)
-    setEditingSprintId(sprintId)
-    setEditTaskTitle(task.title)
-    setEditTaskDescription(task.description || "")
-    setEditTaskPriority(task.priority || "medium")
-    setEditTaskStatus(task.status)
-    setEditTaskStoryPoints(task.storyPoints || 0)
-    setEditTaskAssignedTo(task.assignedTo || "unassigned")
-    setEditTaskType(task.type || 'user_story');
-    setIsEditTaskOpen(true)
-  }
-
-  const handleSaveTaskEdit = () => {
-    if (!editingTask) return
-
-    const updatedTask: Task = {
-      ...editingTask,
-      title: editTaskTitle,
-      description: editTaskDescription,
-      priority: editTaskPriority,
-      status: editTaskStatus,
-      storyPoints: editTaskStoryPoints,
-      assignedTo: editTaskAssignedTo === "unassigned" ? undefined : editTaskAssignedTo,
-      type: editTaskType,
+         // Update sprint tasks
+         setSprints(sprints.map(sprint => 
+           sprint.id === targetSprintId 
+             ? { ...sprint, tasks: [...sprint.tasks, movedTask] } 
+             : sprint
+         ));
+        
+      toast({
+        title: "Tarea movida",
+        description: `La historia "${taskToMove.title}" ha sido movida al sprint.`,
+        });
+        }
+      } catch (error: any) {
+        console.error("Error moving task to sprint:", error);
+        
+        // Revert changes on error
+        setBacklogTasks(prev => [...prev, taskCopy]);
+        
+        // Mostrar mensaje específico según el error
+        if (error.response?.status === 404) {
+          toast({
+            title: "Error al mover tarea",
+            description: "No se encontró el sprint o la tarea. Verifica que ambos existan.",
+            variant: "destructive",
+          });
+        } else {
+       toast({
+         title: "Error",
+         description: "No se pudo mover la tarea al sprint. Inténtalo de nuevo más tarde.",
+         variant: "destructive",
+       });
+        }
+      }
+    } catch (error) {
+      console.error("Unexpected error in moveTaskToSprint:", error);
+      toast({
+        title: "Error inesperado",
+        description: "Ocurrió un error al procesar la solicitud",
+        variant: "destructive",
+      });
     }
+  };
 
-    if (editingSprintId) {
-      // Update task in a sprint
-      setSprints(
-        sprints.map((sprint) =>
-          sprint.id === editingSprintId
-            ? {
-                ...sprint,
-                tasks: sprint.tasks.map((task) => (task.id === editingTask.id ? updatedTask : task)),
-              }
-            : sprint,
-        ),
-      )
-    } else {
-      // Update task in backlog
-      setBacklogTasks(backlogTasks.map((task) => (task.id === editingTask.id ? updatedTask : task)))
+  const moveTaskToBacklog = async (sprintId: string, taskId: string) => {
+    try {
+      // Encontrar el sprint y la tarea antes de llamar a la API
+      const sprint = sprints.find(s => s.id === sprintId);
+      const taskToMove = sprint?.tasks.find((task: Task) => task.id === taskId);
+      
+      if (!sprint || !taskToMove) {
+        console.error("Sprint or task not found:", sprintId, taskId);
+        return;
+      }
+      
+      const taskCopy = { ...taskToMove };
+      
+      // Optimistic update - remove from sprint immediately
+      setSprints(sprints.map(sprint =>
+        sprint.id === sprintId
+          ? { ...sprint, tasks: sprint.tasks.filter((task: Task) => task.id !== taskId) }
+          : sprint
+      ));
+      
+      try {
+        const response = await apiClient.post(`/backlog/move-issue-to-backlog`, {
+          taskId,
+          sprintId,
+        });
+
+        if (response.data) {
+          // Asegurarse de que la tarea tenga todos los campos necesarios
+         const movedTask = {
+           ...taskToMove,
+            ...response.data,
+            // Asegurar que estos campos estén presentes
+            productBacklogId: response.data.productBacklogId || backlogId,
+            storyPoints: response.data.story_points || taskToMove.storyPoints || 0
+         };
+
+         // Add to backlog
+         setBacklogTasks([...backlogTasks, movedTask]);
+        
+      toast({
+        title: "Tarea movida",
+        description: `La historia "${taskToMove.title}" ha sido movida al backlog.`,
+        });
+        }
+      } catch (error: any) {
+        console.error("Error moving task to backlog:", error);
+        
+        // Revert changes on error
+        setSprints(sprints.map(s => 
+          s.id === sprintId 
+            ? { ...s, tasks: [...s.tasks.filter((t: Task) => t.id !== taskId), taskCopy] }
+            : s
+        ));
+        
+        // Mostrar mensaje específico según el error
+        if (error.response?.status === 404) {
+          toast({
+            title: "Error al mover tarea",
+            description: "No se encontró el sprint o la tarea en el servidor. Verifica que ambos existan.",
+            variant: "destructive",
+          });
+        } else {
+       toast({
+         title: "Error",
+         description: "No se pudo mover la tarea al backlog. Inténtalo de nuevo más tarde.",
+         variant: "destructive",
+       });
+        }
+      }
+    } catch (error) {
+      console.error("Unexpected error in moveTaskToBacklog:", error);
+      toast({
+        title: "Error inesperado",
+        description: "Ocurrió un error al procesar la solicitud",
+        variant: "destructive",
+      });
     }
-
-    setIsEditTaskOpen(false)
-    toast({
-      title: "Historia actualizada",
-      description: "Los cambios han sido guardados exitosamente.",
-    })
-  }
+  };
 
   const getTypeColor = (type?: string) => {
     switch (type) {
@@ -511,813 +847,401 @@ export default function ProjectManagement() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "done":
-        return "bg-green-100 text-green-800"
+      case "resolved":
+      case "closed":
+        return "bg-green-100 text-green-800";
       case "in-progress":
-        return "bg-blue-100 text-blue-800"
-      case "todo":
+        return "bg-blue-100 text-blue-800";
+      case "review":
+        return "bg-yellow-100 text-yellow-800";
+      case "to-do":
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800";
+    }
+  }
+
+  const getStatusDisplayText = (status: string) => {
+    switch (status) {
+      case "to-do":
+        return "POR HACER";
+      case "in-progress":
+        return "EN PROGRESO";
+      case "resolved":
+        return "RESUELTO";
+      case "closed":
+        return "CERRADO";
+      case "review":
+        return "EN REVISIÓN";
+      default:
+        return "POR HACER";
     }
   }
 
   const getAssignedUser = (userId?: string) => {
-    if (!userId) return null
-    return teamMembers.find((member) => member.id === userId)
+    if (!userId) return null;
+    
+    // Buscar en los miembros reales del proyecto
+    const projectMember = projectMembers.find(member => member.user_id === userId);
+    if (projectMember && projectMember.user) {
+      return { 
+        initials: projectMember.initials || 'U',
+        name: projectMember.user.name,
+        lastName: projectMember.user.lastName || ''
+      };
+    }
+    
+    // Fallback a miembros de ejemplo si no se encuentra en los miembros del proyecto
+    const mockMember = teamMembers.find((member) => member.id === userId);
+    return mockMember 
+      ? { initials: mockMember.initials, name: mockMember.name, lastName: '' } 
+      : { initials: 'U', name: 'Usuario', lastName: '' };
   }
 
-  return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      <header className="border-b bg-white">
-        <div className="flex items-center p-3 px-4">
-        </div>
-        <div className="flex items-center justify-between px-4 pb-2">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs rounded">T</div>
-            <h1 className="font-medium">{project?.name}</h1>
-            <button className="text-gray-400">
-              <MoreHorizontal size={16} />
-            </button>
-          </div>
-        </div>
+  // Funciones para actualizar el estado de tareas
 
-        {/* Navigation Tabs */}
-        <Tabs defaultValue="backlog" className="w-full"></Tabs>
-      </header>
+  /**
+   * Actualiza el estado de una tarea en un sprint
+   * @param sprintId ID del sprint que contiene la tarea
+   * @param taskId ID de la tarea a actualizar
+   * @param status Nuevo estado
+   */
+  const handleSprintTaskStatusChange = async (sprintId: string, taskId: string, status: Task["status"]) => {
+    try {
+      // Encontrar la tarea en el sprint
+      const sprint = sprints.find(s => s.id === sprintId);
+      const task = sprint?.tasks.find((t: Task) => t.id === taskId);
+      
+      if (!task || !sprint) {
+        console.error("Task not found in sprint:", taskId);
+        return;
+      }
+      
+      // Guardar el estado anterior para restaurarlo en caso de error
+      const previousStatus = task.status;
+      
+      // Actualización optimista
+      const updatedTask = { ...task, status } as Task;
+      setSprints(sprints.map(s =>
+        s.id === sprintId
+          ? { ...s, tasks: s.tasks.map((t: Task) => t.id === taskId ? updatedTask : t) }
+          : s
+      ));
+      
+      try {
+        // Llamar a la API para actualizar el estado
+        const response = await apiClient.patch(`/issues/update`, {
+          id: taskId,
+          status,
+          userId: user?.id
+        });
+        
+        if (response.data) {
+          toast({
+            title: "Estado actualizado",
+            description: `El estado de "${task.title}" ha sido actualizado a ${getStatusDisplayText(status).toLowerCase()}.`,
+          });
+        }
+      } catch (error) {
+        console.error("Error updating task status:", error);
+        
+        // Restaurar el estado anterior
+        setSprints(sprints.map(s =>
+          s.id === sprintId
+            ? { 
+                ...s, 
+                tasks: s.tasks.map((t: Task) => 
+                  t.id === taskId ? { ...t, status: previousStatus } as Task : t
+                ) 
+              }
+            : s
+        ));
+        
+        toast({
+          title: "Error",
+          description: "No se pudo actualizar el estado de la tarea",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Unexpected error updating task status:", error);
+      toast({
+        title: "Error inesperado",
+        description: "Ocurrió un error al actualizar el estado",
+        variant: "destructive",
+      });
+    }
+  };
+
+  /**
+   * Actualiza el estado de una tarea en el backlog
+   * @param taskId ID de la tarea a actualizar
+   * @param status Nuevo estado
+   */
+  const handleBacklogTaskStatusChange = async (taskId: string, status: Task["status"]) => {
+    try {
+      // Encontrar la tarea en el backlog
+      const task = backlogTasks.find((t: Task) => t.id === taskId);
+      if (!task) {
+        console.error("Task not found in backlog:", taskId);
+        return;
+      }
+      
+      // Guardar el estado anterior para restaurarlo en caso de error
+      const previousStatus = task.status;
+      
+      // Actualización optimista
+      const updatedTask = { ...task, status } as Task;
+      setBacklogTasks(backlogTasks.map(t => t.id === taskId ? updatedTask : t));
+      
+      try {
+        // Llamar a la API para actualizar el estado
+        const response = await apiClient.patch(`/issues/update`, {
+          id: taskId,
+          status,
+          userId: user?.id
+        });
+        
+        if (response.data) {
+          toast({
+            title: "Estado actualizado",
+            description: `El estado de "${task.title}" ha sido actualizado a ${getStatusDisplayText(status).toLowerCase()}.`,
+          });
+        }
+      } catch (error) {
+        console.error("Error updating task status:", error);
+        
+        // Restaurar el estado anterior
+        setBacklogTasks(backlogTasks.map(t => 
+          t.id === taskId ? { ...t, status: previousStatus } as Task : t
+        ));
+        
+        toast({
+          title: "Error",
+          description: "No se pudo actualizar el estado de la tarea",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Unexpected error updating task status:", error);
+      toast({
+        title: "Error inesperado",
+        description: "Ocurrió un error al actualizar el estado",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    console.log("taskId", taskId);
+    console.log("handleDeleteTask", taskId);
+    console.log("backlogTasks", backlogTasks);
+    try {
+      // Find the task to show its title in the toast
+      const taskToDelete = backlogTasks.find(task => task.id === taskId);
+      
+      if (!taskToDelete) {
+        console.error("Task not found:", taskId);
+        return;
+      }
+      
+      // Optimistic update - remove from UI immediately
+      setBacklogTasks(prev => prev.filter(task => task.id !== taskId));
+      
+      try {
+        // Call API to delete the task
+        await apiClient.delete(`/issues/delete/${taskId}`);
+        
+        toast({
+          title: "Tarea eliminada",
+          description: `La tarea "${taskToDelete.title}" ha sido eliminada exitosamente.`,
+        });
+      } catch (error) {
+        console.error("Error deleting task:", error);
+        
+        // Revert the UI change on error
+        setBacklogTasks(prev => [...prev, taskToDelete]);
+        
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar la tarea. Inténtalo de nuevo más tarde.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Unexpected error in handleDeleteTask:", error);
+      toast({
+        title: "Error inesperado",
+        description: "Ocurrió un error al procesar la solicitud",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Helper function to get epic by ID
+  const getEpicById = (epicId?: string) => {
+    if (!epicId) return null;
+    return epics.find(epic => epic.id === epicId) || null;
+  };
+
+  // Función para filtrar tareas según el término de búsqueda
+  const filteredBacklogTasks = useMemo(() => {
+    if (!searchTerm.trim()) return backlogTasks;
+    
+    const searchLower = searchTerm.toLowerCase().trim();
+    
+    return backlogTasks.filter(task => {
+      // Función auxiliar que verifica si alguna palabra en un texto comienza con el término de búsqueda
+      const hasWordStartingWith = (text: string | undefined): boolean => {
+        if (!text) return false;
+        
+        // Dividir el texto en palabras y verificar cada una
+        return text.toLowerCase()
+          .split(/\s+/) // Dividir por espacios en blanco (incluye espacios, tabs, saltos de línea)
+          .some(word => word.startsWith(searchLower));
+      };
+      
+      // Comprobar si alguna palabra en el título comienza con el término de búsqueda
+      const titleMatches = hasWordStartingWith(task.title);
+      
+      // Comprobar si alguna palabra en el código comienza con el término de búsqueda
+      const codeMatches = hasWordStartingWith(task.code);
+      
+      // Comprobar si alguna palabra en la descripción comienza con el término de búsqueda
+      const descriptionMatches = hasWordStartingWith(task.description);
+      
+      return titleMatches || codeMatches || descriptionMatches;
+    });
+  }, [backlogTasks, searchTerm]);
+
+  // Function to refetch project members
+  const refetchProjectMembers = async () => {
+    await fetchProjectMembers();
+  };
+
+  return (
+    <div className="flex flex-col h-screen dark:bg-black/20">
+      {/* Header */}
+      <ProjectHeader 
+        project={project}
+        projectMembers={projectMembers}
+        loadingMembers={loadingMembers}
+        onOpenMembersDialog={() => setIsMembersDialogOpen(true)}
+      />
+
+      {/* Navigation Tabs */}
+      <Tabs defaultValue="backlog" className="w-full"></Tabs>
 
       {/* Search Bar */}
-      <div className="flex items-center gap-2 p-2 border-b bg-white">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-          <Input placeholder="Buscar en el backlog..." className="pl-8 h-8 text-sm" />
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="flex items-center justify-center w-6 h-6 bg-green-500 text-white text-xs rounded-full">
-            KP
-          </div>
-          <Button variant="outline" size="sm" className="h-8 text-sm flex items-center gap-1">
-            Epic <ChevronDown size={14} />
-          </Button>
-        </div>
-        <div className="ml-auto flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Maximize2 size={16} />
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <MoreHorizontal size={14} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation()
-                  // No podemos editar un sprint aquí porque no tenemos referencia a ningún sprint específico
-                  toast({
-                    title: "Selecciona un sprint",
-                    description: "Por favor, selecciona un sprint específico para editarlo.",
-                  })
-                }}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                <span>Editar sprint</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  // Aquí puedes implementar la duplicación del sprint
-                  toast({
-                    title: "Duplicar sprint",
-                    description: "Esta funcionalidad será implementada próximamente.",
-                  })
-                }}
-              >
-                <Copy className="mr-2 h-4 w-4" />
-                <span>Duplicar sprint</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation()
-                  //The sprint variable is undeclared. Please fix the import or declare the variable before using it.
-                  //Fixed: Accessing sprint id from the parent component
-                }}
-                className="text-red-600 focus:text-red-600"
-              >
-                <Trash className="mr-2 h-4 w-4" />
-                <span>Eliminar sprint</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+      <SearchFilters 
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filteredResultsCount={filteredBacklogTasks.length}
+      />
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
         {/* Sprint Sections */}
         {sprints.map((sprint) => (
-          <div className="mb-6 border border-gray-200 rounded-md p-3 shadow-sm bg-white" key={sprint.id}>
-            <div className="flex items-center mb-2 cursor-pointer" onClick={() => toggleSection(sprint.id)}>
-              <Checkbox className="mr-2" />
-              <ChevronDown
-                size={16}
-                className={`mr-2 transition-transform ${expandedSections[sprint.id] ? "transform rotate-0" : "transform rotate-270"}`}
-              />
-              <span className="font-medium">{sprint.name}</span>
-              <span className="ml-2 text-gray-500 text-sm">
-                <button className="text-xs text-gray-500 underline">Añadir fechas</button> ({sprint.tasks.length}{" "}
-                actividades)
-              </span>
-              <div className="ml-auto flex items-center gap-2">
-                <span className="text-xs text-gray-500">0</span>
-                <div className="w-6 h-4 bg-blue-100 rounded-sm flex items-center justify-center text-xs text-blue-800">
-                  0
-                </div>
-                <span className="text-xs text-gray-500">0</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    sprint.isActive ? handleCompleteSprint(sprint.id) : handleStartSprint(sprint.id)
-                  }}
-                >
-                  {sprint.isActive ? "Completar sprint" : "Iniciar sprint"}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                      <MoreHorizontal size={14} />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation() // Detener la propagación para evitar que se active toggleSection
-                        openEditSprintModal(sprint) // Pasar el sprint actual al modal
-                      }}
-                    >
-                      <Edit className="mr-2 h-4 w-4" />
-                      <span>Editar sprint</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        // Aquí puedes implementar la duplicación del sprint
-                        toast({
-                          title: "Duplicar sprint",
-                          description: "Esta funcionalidad será implementada próximamente.",
-                        })
-                      }}
-                    >
-                      <Copy className="mr-2 h-4 w-4" />
-                      <span>Duplicar sprint</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteSprint(sprint.id)
-                      }}
-                      className="text-red-600 focus:text-red-600"
-                    >
-                      <Trash className="mr-2 h-4 w-4" />
-                      <span>Eliminar sprint</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-
-            {expandedSections[sprint.id] && (
-              <div className="pl-8">
-                {sprint.tasks.map((task) => (
-                  <div className="border rounded-md mb-1" key={task.id}>
-                    <div className="flex items-center p-3 hover:bg-gray-50">
-                      <Checkbox
-                        className="mr-2"
-                        id={task.id}
-                        checked={task.isCompleted}
-                        onCheckedChange={() => toggleTaskCompletion(sprint.id, task.id)}
-                      />
-                      <label htmlFor={task.id} className="flex items-center gap-2 flex-1 cursor-pointer">
-                        <span className="text-gray-500 text-sm">{task.code}</span>
-                        <span className={task.isCompleted ? "line-through text-gray-400" : ""}>{task.title}</span>
-
-                        {task.priority && (
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full ${getPriorityColor(task.priority)}`}
-                          >
-                            {task.priority}
-                          </span>
-                        )}
-                        {task.type && (
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full ${getTypeColor(task.type)}`}
-                          >
-                            {task.type}
-                          </span>
-                        )}
-
-                        {task.storyPoints && (
-                          <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
-                            {task.storyPoints} pts
-                          </span>
-                        )}
-
-                        {task.assignedTo && (
-                          <Avatar className="h-6 w-6">
-                            <AvatarFallback className="text-xs bg-blue-100 text-blue-800">
-                              {getAssignedUser(task.assignedTo)?.initials}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                      </label>
-                      <div className="ml-auto flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openEditTaskModal(task, sprint.id)
-                          }}
-                        >
-                          <Edit size={14} />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-7 text-xs">
-                              <span className={`px-2 py-0.5 rounded ${getStatusColor(task.status)}`}>
-                                {task.status === "todo"
-                                  ? "POR HACER"
-                                  : task.status === "in-progress"
-                                    ? "EN PROGRESO"
-                                    : "COMPLETADO"}
-                              </span>
-                              <ChevronDown size={14} className="ml-1" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                const updatedTask = { ...task, status: "todo" as const }
-                                setSprints(
-                                  sprints.map((s) =>
-                                    s.id === sprint.id
-                                      ? { ...s, tasks: s.tasks.map((t) => (t.id === task.id ? updatedTask : t)) }
-                                      : s,
-                                  ),
-                                )
-                              }}
-                            >
-                              Por hacer
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                const updatedTask = { ...task, status: "in-progress" as const }
-                                setSprints(
-                                  sprints.map((s) =>
-                                    s.id === sprint.id
-                                      ? { ...s, tasks: s.tasks.map((t) => (t.id === task.id ? updatedTask : t)) }
-                                      : s,
-                                  ),
-                                )
-                              }}
-                            >
-                              En progreso
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                const updatedTask = { ...task, status: "done" as const }
-                                setSprints(
-                                  sprints.map((s) =>
-                                    s.id === sprint.id
-                                      ? { ...s, tasks: s.tasks.map((t) => (t.id === task.id ? updatedTask : t)) }
-                                      : s,
-                                  ),
-                                )
-                              }}
-                            >
-                              Completado
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => moveTaskToBacklog(sprint.id, task.id)}
-                        >
-                          Mover al backlog
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                          <Star size={14} />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center justify-center py-4 text-gray-400">
-              <CheckSquare size={16} className="mr-2" />
-              <span className="text-sm">
-                {sprint.tasks.length} actividades | Estimación:{" "}
-                {sprint.tasks.reduce((sum, task) => sum + (task.storyPoints || 0), 0)}
-              </span>
-            </div>
-          </div>
+          <SprintSection
+            key={sprint.id}
+            sprint={sprint}
+            isExpanded={expandedSections[sprint.id]}
+            onToggleExpand={() => toggleSection(sprint.id)}
+            onToggleTaskCompletion={(taskId) => toggleTaskCompletion(sprint.id, taskId)}
+            onEditTask={(task) => openEditTaskModal(task, sprint.id)}
+            onMoveTaskToBacklog={(taskId) => moveTaskToBacklog(sprint.id, taskId)}
+            onStatusChange={handleSprintTaskStatusChange}
+            onStartSprint={handleStartSprint}
+            onCompleteSprint={handleCompleteSprint}
+            getPriorityColor={getPriorityColor}
+            getTypeColor={getTypeColor}
+            getStatusColor={getStatusColor}
+            getStatusDisplayText={getStatusDisplayText}
+            getAssignedUser={getAssignedUser}
+            onDeleteTask={handleDeleteTask}
+            getEpicById={getEpicById}
+          />
         ))}
 
         {/* Backlog Section */}
-        <div className="border border-gray-200 rounded-md p-3 shadow-sm bg-white mb-6">
-          <div className="flex items-center mb-2 cursor-pointer" onClick={() => toggleSection("backlog")}>
-            <Checkbox className="mr-2" />
-            <ChevronDown
-              size={16}
-              className={`mr-2 transition-transform ${expandedSections["backlog"] ? "transform rotate-0" : "transform rotate-270"}`}
-            />
-            <span className="font-medium">Backlog</span>
-            <span className="ml-2 text-gray-500 text-sm">({backlogTasks.length} actividades)</span>
-            <div className="ml-auto flex items-center gap-2">
-              <span className="text-xs text-gray-500">0</span>
-              <div className="w-6 h-4 bg-blue-100 rounded-sm flex items-center justify-center text-xs text-blue-800">
-                0
-              </div>
-              <span className="text-xs text-gray-500">0</span>
-              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setIsCreateSprintOpen(true)}>
-                Crear sprint
-              </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <MoreHorizontal size={14} />
-              </Button>
-            </div>
-          </div>
-
-          {expandedSections["backlog"] && (
-            <div className="pl-8">
-              {/* Input for new user story */}
-              <div className="flex items-center gap-2 my-4">
-                <Input
-                  type="text"
-                  placeholder="Escribe el título de la nueva historia de usuario"
-                  value={newUserStoryTitle}
-                  onChange={(e) => setNewUserStoryTitle(e.target.value)}
-                  className="flex-grow"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleCreateUserStory();
-                    }
-                  }}
-                />
-                <Select value={newUserStoryType} onValueChange={(value: 'bug' | 'feature' | 'task' | 'refactor' | 'user_story') => setNewUserStoryType(value)}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user_story">User Story</SelectItem>
-                    <SelectItem value="task">Task</SelectItem>
-                    <SelectItem value="bug">Bug</SelectItem>
-                    <SelectItem value="feature">Feature</SelectItem>
-                    <SelectItem value="refactor">Refactor</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button onClick={handleCreateUserStory} size="sm">Añadir</Button>
-              </div>
-              {/* End of input for new user story */}
-
-              {backlogTasks.map((task) => (
-                <div className="border rounded-md mb-1" key={task.id}>
-                  <div className="flex items-center p-3 hover:bg-gray-50">
-                    <Checkbox
-                      className="mr-2"
-                      id={task.id}
-                      checked={task.isCompleted}
-                      onCheckedChange={() => handleToggleBacklogTaskCompletion(task.id)}
-                    />
-                    <label htmlFor={task.id} className="flex items-center gap-2 flex-1 cursor-pointer">
-                      <span className="text-gray-500 text-sm">{task.code}</span>
-                      <span className={task.isCompleted ? "line-through text-gray-400" : ""}>{task.title}</span>
-
-                      {task.priority && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${getPriorityColor(task.priority)}`}>
-                          {task.priority}
-                        </span>
-                      )}
-                      {task.type && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${getTypeColor(task.type)}`}>
-                          {task.type}
-                        </span>
-                      )}
-
-                      {task.storyPoints && (
-                        <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
-                          {task.storyPoints} pts
-                        </span>
-                      )}
-
-                      {task.assignedTo && (
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback className="text-xs bg-blue-100 text-blue-800">
-                            {getAssignedUser(task.assignedTo)?.initials}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                    </label>
-                    <div className="ml-auto flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openEditTaskModal(task)
-                        }}
-                      >
-                        <Edit size={14} />
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-7 text-xs">
-                            <span className={`px-2 py-0.5 rounded ${getStatusColor(task.status)}`}>
-                              {task.status === "todo"
-                                ? "POR HACER"
-                                : task.status === "in-progress"
-                                  ? "EN PROGRESO"
-                                  : "COMPLETADO"}
-                            </span>
-                            <ChevronDown size={14} className="ml-1" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              const updatedTask = { ...task, status: "todo" as const }
-                              setBacklogTasks(backlogTasks.map((t) => (t.id === task.id ? updatedTask : t)))
-                            }}
-                          >
-                            Por hacer
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              const updatedTask = { ...task, status: "in-progress" as const }
-                              setBacklogTasks(backlogTasks.map((t) => (t.id === task.id ? updatedTask : t)))
-                            }}
-                          >
-                            En progreso
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              const updatedTask = { ...task, status: "done" as const }
-                              setBacklogTasks(backlogTasks.map((t) => (t.id === task.id ? updatedTask : t)))
-                            }}
-                          >
-                            Completado
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-7 text-xs">
-                            Mover a <ChevronDown size={14} />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          {sprints.map((sprint) => (
-                            <DropdownMenuItem key={sprint.id} onClick={() => moveTaskToSprint(task.id, sprint.id)}>
-                              {sprint.name}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <Star size={14} />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <BacklogSection
+          isExpanded={expandedSections["backlog"]}
+          onToggleExpand={() => toggleSection("backlog")}
+          tasks={filteredBacklogTasks}
+          onToggleTaskCompletion={handleToggleBacklogTaskCompletion}
+          onEditTask={(task) => openEditTaskModal(task)}
+          onMoveTaskToSprint={moveTaskToSprint}
+          onStatusChange={handleBacklogTaskStatusChange}
+          onCreateSprint={() => setIsCreateSprintOpen(true)}
+          availableSprints={sprints.map(s => ({ id: s.id, name: s.name }))}
+          newUserStoryTitle={newUserStoryTitle}
+          onNewUserStoryTitleChange={setNewUserStoryTitle}
+          newUserStoryType={newUserStoryType}
+          onNewUserStoryTypeChange={setNewUserStoryType}
+          newUserStoryPriority={newUserStoryPriority}
+          onNewUserStoryPriorityChange={setNewUserStoryPriority}
+          newUserStoryEpicId={newUserStoryEpicId}
+          onNewUserStoryEpicIdChange={setNewUserStoryEpicId}
+          onCreateUserStory={handleCreateUserStory}
+          getPriorityColor={getPriorityColor}
+          getTypeColor={getTypeColor}
+          getStatusColor={getStatusColor}
+          getStatusDisplayText={getStatusDisplayText}
+          getAssignedUser={getAssignedUser}
+          onDeleteTask={handleDeleteTask}
+          epics={epics}
+          onOpenEpicDialog={() => setIsEpicDialogOpen(true)}
+          getEpicById={getEpicById}
+          searchTerm={searchTerm}
+        />
       </div>
 
-      {/* Create Sprint Modal */}
-      <Dialog open={isCreateSprintOpen} onOpenChange={setIsCreateSprintOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Crear nuevo sprint</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="sprint-name" className="text-right">
-                Nombre
-              </Label>
-              <Input
-                id="sprint-name"
-                value={sprintName}
-                onChange={(e) => setSprintName(e.target.value)}
-                className="col-span-3"
-                placeholder={`Tablero Sprint ${nextSprintNumber}`}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Fecha inicio</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "col-span-3 justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP") : <span>Seleccionar fecha</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Fecha fin</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "col-span-3 justify-start text-left font-normal",
-                      !endDate && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP") : <span>Seleccionar fecha</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="sprint-goal" className="text-right">
-                Meta
-              </Label>
-              <Textarea
-                id="sprint-goal"
-                value={sprintGoal}
-                onChange={(e) => setSprintGoal(e.target.value)}
-                className="col-span-3"
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateSprintOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" onClick={handleCreateSprint}>
-              Crear
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Modals */}
+      <CreateSprintModal
+        isOpen={isCreateSprintOpen}
+        onOpenChange={setIsCreateSprintOpen}
+        onCreateSprint={handleCreateSprint}
+        nextSprintNumber={nextSprintNumber}
+      />
 
-      {/* Edit Task Modal */}
-      <Dialog open={isEditTaskOpen} onOpenChange={setIsEditTaskOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Editar historia de usuario</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="task-title" className="text-right">
-                Título
-              </Label>
-              <Input
-                id="task-title"
-                value={editTaskTitle}
-                onChange={(e) => setEditTaskTitle(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="task-description" className="text-right">
-                Descripción
-              </Label>
-              <Textarea
-                id="task-description"
-                value={editTaskDescription}
-                onChange={(e) => setEditTaskDescription(e.target.value)}
-                className="col-span-3"
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Prioridad</Label>
-              <RadioGroup
-                value={editTaskPriority}
-                onValueChange={(value) => setEditTaskPriority(value as "low" | "medium" | "high")}
-                className="col-span-3 flex space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="low" id="priority-low" />
-                  <Label htmlFor="priority-low" className="text-green-600">
-                    Baja
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="medium" id="priority-medium" />
-                  <Label htmlFor="priority-medium" className="text-yellow-600">
-                    Media
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="high" id="priority-high" />
-                  <Label htmlFor="priority-high" className="text-red-600">
-                    Alta
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Estado</Label>
-              <Select
-                value={editTaskStatus}
-                onValueChange={(value) => setEditTaskStatus(value as "todo" | "in-progress" | "done")}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Seleccionar estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todo">Por hacer</SelectItem>
-                  <SelectItem value="in-progress">En progreso</SelectItem>
-                  <SelectItem value="done">Completado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Tipo</Label>
-              <Select
-                value={editTaskType}
-                onValueChange={(value) => setEditTaskType(value as 'bug' | 'feature' | 'task' | 'refactor' | 'user_story')}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Seleccionar tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user_story">User Story</SelectItem>
-                  <SelectItem value="task">Task</SelectItem>
-                  <SelectItem value="bug">Bug</SelectItem>
-                  <SelectItem value="feature">Feature</SelectItem>
-                  <SelectItem value="refactor">Refactor</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="story-points" className="text-right">
-                Puntos
-              </Label>
-              <Select
-                value={editTaskStoryPoints.toString()}
-                onValueChange={(value) => setEditTaskStoryPoints(Number.parseInt(value))}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Seleccionar puntos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">0 puntos</SelectItem>
-                  <SelectItem value="1">1 punto</SelectItem>
-                  <SelectItem value="2">2 puntos</SelectItem>
-                  <SelectItem value="3">3 puntos</SelectItem>
-                  <SelectItem value="5">5 puntos</SelectItem>
-                  <SelectItem value="8">8 puntos</SelectItem>
-                  <SelectItem value="13">13 puntos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Asignado a</Label>
-              <Select
-                value={editTaskAssignedTo || "unassigned"}
-                onValueChange={(value) => setEditTaskAssignedTo(value === "unassigned" ? undefined : value)}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Seleccionar miembro" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Sin asignar</SelectItem>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditTaskOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" onClick={handleSaveTaskEdit}>
-              Guardar cambios
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditTaskModal
+        isOpen={isEditTaskOpen}
+        onOpenChange={setIsEditTaskOpen}
+        task={editingTask}
+        onSave={handleSaveTaskEdit}
+        projectMembers={projectMembers}
+        loadingMembers={loadingMembers}
+        teamMembers={teamMembers}
+        epics={epics}
+        onOpenEpicDialog={() => setIsEpicDialogOpen(true)}
+      />
 
-      {/* Edit Sprint Modal */}
-      <Dialog open={isEditSprintOpen} onOpenChange={setIsEditSprintOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Editar sprint</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-sprint-name" className="text-right">
-                Nombre
-              </Label>
-              <Input
-                id="edit-sprint-name"
-                value={editSprintName}
-                onChange={(e) => setEditSprintName(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Fecha inicio</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "col-span-3 justify-start text-left font-normal",
-                      !editSprintStartDate && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {editSprintStartDate ? format(editSprintStartDate, "PPP") : <span>Seleccionar fecha</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={editSprintStartDate}
-                    onSelect={setEditSprintStartDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Fecha fin</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "col-span-3 justify-start text-left font-normal",
-                      !editSprintEndDate && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {editSprintEndDate ? format(editSprintEndDate, "PPP") : <span>Seleccionar fecha</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={editSprintEndDate} onSelect={setEditSprintEndDate} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-sprint-goal" className="text-right">
-                Meta
-              </Label>
-              <Textarea
-                id="edit-sprint-goal"
-                value={editSprintGoal}
-                onChange={(e) => setEditSprintGoal(e.target.value)}
-                className="col-span-3"
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditSprintOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" onClick={handleSaveSprintEdit}>
-              Guardar cambios
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditSprintModal
+        isOpen={isEditSprintOpen}
+        onOpenChange={setIsEditSprintOpen}
+        sprint={editingSprint}
+        onSave={handleSaveSprintEdit}
+      />
+
+      <EpicDialog
+        open={isEpicDialogOpen}
+        onOpenChange={setIsEpicDialogOpen}
+        projectId={project_id || ""}
+        onEpicCreated={(epic) => {
+          setEpics([...epics, epic]);
+        }}
+        selectedEpicId={null}
+      />
+
+      <InviteMembersDialog
+        open={isMembersDialogOpen}
+        onOpenChange={setIsMembersDialogOpen}
+        project={project}
+        projectMembers={projectMembers}
+        refetchMembers={refetchProjectMembers}
+        teams={teams}
+        currentTeam={currentTeam}
+      />
     </div>
   )
 }
