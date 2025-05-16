@@ -59,7 +59,7 @@ export function CreateRoomDialog({
   const [accessCode, setAccessCode] = useState("");
   const [loadAllStories, setLoadAllStories] = useState(true);
   const [selectedStories, setSelectedStories] = useState<UserStory[]>([]);
-  console.log("ID: ", user?.id)
+
 
  
 
