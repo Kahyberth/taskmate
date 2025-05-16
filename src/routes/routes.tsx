@@ -19,6 +19,7 @@ import TimeTackingPage from "@/pages/teams/dashboard/TimeTackingPage";
 import Layout from "@/layouts/dashboard/layout";
 import ProjectsPage from "@/pages/projects/page";
 import ProjectManagement from "@/components/backlog/project-management";
+import ProjectBoardPage from "@/pages/projects/board";
 
 function AppRoutes() {
   return (
@@ -54,14 +55,19 @@ function AppRoutes() {
             }
           />
 
-          <Route path="projects" element={<ProjectsPage />} />
+          <Route 
+            path="projects" 
+            element={<ProjectsPage />} 
+          />
         </Route>
 
         <Route
           path="/teams/dashboard/:team_id"
           element={
             <ProtectedRoute>
-              <Layout />
+              <TeamsProvider>
+                <Layout />
+              </TeamsProvider>
             </ProtectedRoute>
           }
         >
@@ -74,11 +80,24 @@ function AppRoutes() {
           path="projects/backlog/:project_id"
           element={
             <ProtectedRoute>
-              <Layout />
+              <TeamsProvider>
+                <Layout />
+              </TeamsProvider>
             </ProtectedRoute>
           }
         >
           <Route index element={<ProjectManagement />} />
+        </Route>
+
+        <Route
+          path="projects/board/:project_id"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<ProjectBoardPage />} />
         </Route>
 
         <Route

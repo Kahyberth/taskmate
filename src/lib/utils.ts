@@ -1,7 +1,9 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { TeamRoleEnum } from "@/enums/team-roles.enum"
-import { AlarmClockPlus, Briefcase, ChartSpline, GitBranch, Home, LayoutGrid, LogsIcon, MessageSquare, PlaySquare, SquareKanban, Users, Users2 } from "lucide-react"
+import { AlarmClockPlus, Briefcase, ChartSpline, GitBranch, Home, LayoutGrid, ListTodo, LogsIcon, MessageSquare, PlaySquare, SquareKanban, Users, Users2 } from "lucide-react"
+import { LucideIcon } from "lucide-react"
+import { Projects } from "@/interfaces/projects.interface"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -20,35 +22,37 @@ export const rolesE = [
   TeamRoleEnum.LEADER,
 ]
 
-export const projectsMenuItems = [
+export interface MenuItem {
+  title: string;
+  href: string;
+  icon: LucideIcon;
+  state?: { project: Projects };
+}
+
+export const projectsMenuItems: MenuItem[] = [
   {
     title: "Dashboard",
     href: "/dashboard",
     icon: Home,
   },
   {
+    title: "Proyectos",
+    href: "/dashboard/projects",
+    icon: LayoutGrid,
+  },
+  {
     title: "Backlog",
-    href: "backlog",
-    icon: LogsIcon,
+    href: "/projects/backlog",
+    icon: ListTodo,
   },
   {
     title: "Board",
-    href: "board",
+    href: "/projects/board",
     icon: SquareKanban,
-  },
-  {
-    title: "Repositories",
-    href: "issues",
-    icon: GitBranch,
-  },
-  {
-    title: "Reports",
-    href: "reports",
-    icon: ChartSpline,
   },
 ]
 
-export const dashboardMenuItems = [
+export const dashboardMenuItems: MenuItem[] = [
   {
     title: "Dashboard",
     href: "/dashboard",
@@ -71,29 +75,12 @@ export const dashboardMenuItems = [
   },
 ]
 
-export const teamDashboardMenuItems = [
+export const teamDashboardMenuItems: MenuItem[] = [
   { title: "Resume", href: "", icon: Users },
   { title: "Chat", href: "chat", icon: MessageSquare },
   { title: "Members", href: "members", icon: Users },
   { title: "Time Tracking", href: "time-tracking", icon: AlarmClockPlus },
   { title: "Dashboard", href: "/dashboard", icon: Briefcase },
-];
-
-export const projectItems = [
-  {
-    title: "Website Redesign",
-    href: "/projects/website-redesign",
-    color: "bg-green-500",
-  },
-  { title: "Mobile App", 
-    href: "/projects/mobile-app", 
-    color: "bg-blue-500" 
-  },
-  {
-    title: "API Integration",
-    href: "/projects/api-integration",
-    color: "bg-purple-500",
-  },
 ];
 
 export const sidebarConfig = {

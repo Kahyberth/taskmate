@@ -1,7 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 import { Team } from "@/lib/store";
 import { AuthContext } from "@/context/AuthContext";
-import useTeamService from "@/hooks/useTeamService";
+import { useTeamsByUser } from "@/api/queries";
 
 interface TeamsContextType {
   teams: Team[] | null;
@@ -18,26 +18,28 @@ const TeamsContext = createContext<TeamsContextType | undefined>(undefined);
 
 export const TeamsProvider = ({ children }: { children: React.ReactNode }) => {
   const { user: user_data } = useContext(AuthContext);
-  const { fetchTeamsByUser, loading, error } = useTeamService();
   const [teams, setTeams] = useState<Team[] | null>(null);
 
-  // Función para obtener los equipos del usuario
-  const fetchTeams = useCallback(async () => {
-    if (user_data?.id) {
-      try {
-        const teamsData = await fetchTeamsByUser(user_data.id);
-        setTeams(teamsData);
-      } catch (err) {
-        console.error("Error fetching teams:", err);
-      }
-    }
-  }, [user_data?.id, fetchTeamsByUser]);
+  // Usar React Query para obtener los equipos
+  const { 
+    data: teamsData, 
+    isLoading: loading, 
+    error: queryError,
+    refetch
+  } = useTeamsByUser(user_data?.id);
 
-  // Obtener los equipos al montar el componente o cuando cambie el usuario
-  useEffect(() => {
-    fetchTeams();
-  }, [fetchTeams]);
+  // Actualizar el estado local cuando cambian los datos de React Query
+  const error = queryError ? (queryError as Error).message : null;
 
+  // Sincronizar el estado local con los datos de la consulta
+  if (teamsData && JSON.stringify(teamsData) !== JSON.stringify(teams)) {
+    setTeams(teamsData);
+  }
+
+  // Función para obtener los equipos del usuario (ahora usa refetch de React Query)
+  const fetchTeams = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   const addTeam = (newTeam: Team) => {
     setTeams((prevTeams) => (prevTeams ? [...prevTeams, newTeam] : [newTeam]));

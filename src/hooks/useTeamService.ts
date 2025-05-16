@@ -1,5 +1,5 @@
 import { apiClient } from "@/api/client-gateway";
-import { CreateTeamDTO, Team, TeamMember, UpdateTeamDto } from "@/lib/store";
+import { CreateTeamDTO, Team, UpdateTeamDto } from "@/lib/store";
 import { useCallback, useState } from "react";
 
 interface UseTeamServiceResponse {

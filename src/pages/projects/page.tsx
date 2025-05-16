@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useContext } from "react";
 import { Plus, Search, Filter, AlertCircle, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,100 +19,55 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { CreateProjectForm } from "@/components/projects/create-project";
-import { ProjectCard } from "@/components/backlog/project-card";
+import { ProjectCard } from "@/components/projects/project-card";
+import { ProjectCardSkeleton } from "@/components/projects/project-card-skeleton";
 import { AuthContext } from "@/context/AuthContext";
-import { apiClient } from "@/api/client-gateway";
-
-import { Loader } from "@mantine/core";
+import { useProjectsByUser } from "@/api/queries";
 
 export default function ProjectsPage() {
   const { user } = useContext(AuthContext);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  
+  // Usar React Query para obtener los proyectos
+  const { data: projects = [], isLoading, refetch } = useProjectsByUser(user?.id);
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      if (user?.id) {
-        try {
-          await apiClient
-            .get(`/teams/get-team-by-user/${user.id}`)
-            .then(async (teamData) => {
-              const team_id = teamData.data[0]?.id;
-              console.log("Team ID:", team_id);
-              
-              const response = await apiClient.get(`/projects/find/${team_id}`);
-              
-              console.log("Projects response:", response.data);
-              const projectsWithProgress = response.data.map(
-                (project: any) => ({
-                  ...project,
-                  progress: calculateProgress(project),
-                  isStarred: false,
-                })
-              );
-
-              console.log("Projects:", projectsWithProgress);
-
-
-              setProjects(projectsWithProgress);
-            });
-          return;
-        } catch (error) {
-          console.error("Error fetching projects:", error);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchProjects();
-  }, [user?.id]);
-
-  const calculateProgress = (project: any) => {
-    return project.members.length > 0 ? 0 : 0;
+  const handleCreateProjectSuccess = () => {
+    setCreateDialogOpen(false);
+    refetch();
   };
 
-  const filteredProjects = projects.filter((project) => {
-    const matchesSearch =
-  project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  project.description.toLowerCase().includes(searchQuery.toLowerCase());
+  // Definir un tipo para el proyecto
+  type Project = {
+    id: string;
+    name?: string;
+    description?: string;
+    status?: string;
+    priority?: string;
+  };
 
-    const matchesStatus =
-      statusFilter === "all" || project.status === statusFilter;
-    const matchesPriority =
-      priorityFilter === "all" || project.priority === priorityFilter;
+  const filteredProjects = projects.filter((project: Project) => {
+    // Validar que project.name y project.description existan antes de usar toLowerCase
+    const nameMatches = project.name && 
+      project.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const descriptionMatches = project.description && 
+      project.description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesSearch = nameMatches || descriptionMatches;
+    const matchesStatus = statusFilter === "all" || project.status === statusFilter;
+    const matchesPriority = priorityFilter === "all" || project.priority === priorityFilter;
 
     return matchesSearch && matchesStatus && matchesPriority;
   });
-
-  const handleToggleStar = (id: string) => {
-    setProjects(
-      projects.map((project) =>
-        project.id === id
-          ? { ...project, isStarred: !project.isStarred }
-          : project
-      )
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader color="blue" />
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold">Projects</h1>
-          <p className="text-gray-500">Manage and track your team's projects</p>
+          <p className="text-muted-foreground">Manage and track your team's projects</p>
         </div>
 
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
@@ -126,7 +81,7 @@ export default function ProjectsPage() {
             <DialogHeader>
               <DialogTitle>Create New Project</DialogTitle>
             </DialogHeader>
-            <CreateProjectForm onClose={() => setCreateDialogOpen(false)} />
+            <CreateProjectForm onClose={handleCreateProjectSuccess} />
           </DialogContent>
         </Dialog>
       </div>
@@ -199,28 +154,32 @@ export default function ProjectsPage() {
         <TabsList>
           <TabsTrigger value="all">All Projects</TabsTrigger>
           <TabsTrigger value="my">My Projects</TabsTrigger>
-          <TabsTrigger value="starred">Starred</TabsTrigger>
           <TabsTrigger value="recent">Recent</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="mt-6">
-          {filteredProjects.length === 0 ? (
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <ProjectCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : filteredProjects.length === 0 ? (
             <div className="text-center py-12">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 mb-4">
-                <AlertCircle className="h-6 w-6 text-gray-500" />
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
+                <AlertCircle className="h-6 w-6 text-gray-500 dark:text-gray-400" />
               </div>
               <h3 className="text-lg font-medium">No projects found</h3>
-              <p className="text-gray-500 mt-1">
+              <p className="text-muted-foreground mt-1">
                 Try adjusting your search or filters
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProjects.map((project) => (
+              {filteredProjects.map((project: Project) => (
                 <ProjectCard
                   key={project.id}
                   project={project}
-                  onToggleStar={handleToggleStar}
                 />
               ))}
             </div>
@@ -228,29 +187,31 @@ export default function ProjectsPage() {
         </TabsContent>
 
         <TabsContent value="my">
-          <div className="text-center py-12">
-            <p>My projects will be displayed here</p>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="starred">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-            {filteredProjects
-              .filter((p) => p.isStarred)
-              .map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  onToggleStar={handleToggleStar}
-                />
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+              {[1, 2, 3].map((i) => (
+                <ProjectCardSkeleton key={i} />
               ))}
-          </div>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p>My projects will be displayed here</p>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="recent">
-          <div className="text-center py-12">
-            <p>Recent projects will be displayed here</p>
-          </div>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+              {[1, 2, 3].map((i) => (
+                <ProjectCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p>Recent projects will be displayed here</p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
