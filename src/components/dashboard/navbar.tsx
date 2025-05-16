@@ -1,8 +1,12 @@
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link, useLocation } from "react-router-dom";
-import { cn, projectItems, teamDashboardMenuItems, dashboardMenuItems } from "@/lib/utils";
+import { Link, useLocation, useParams } from "react-router-dom";
+import { cn, teamDashboardMenuItems, dashboardMenuItems, projectsMenuItems } from "@/lib/utils";
+import { useState, useEffect, useContext } from "react";
+import { AuthContext } from "@/context/AuthContext";
+import { apiClient } from "@/api/client-gateway";
+import { Projects } from "@/interfaces/projects.interface";
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -16,9 +20,73 @@ export function Sidebar({
   showAIAssistant,
 }: SidebarProps) {
   const { pathname } = useLocation();
+  const { project_id } = useParams();
+  const { user } = useContext(AuthContext);
+  const [recentProjects, setRecentProjects] = useState<Projects[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
   const isTeamRoute = pathname.startsWith("/teams");
   const isProjectRoute = pathname.startsWith("/dashboard/projects");
-  const menuItems = isTeamRoute ? teamDashboardMenuItems : dashboardMenuItems;
+  const isBacklogRoute = pathname.startsWith("/projects/backlog");
+  const isBoardRoute = pathname.startsWith("/projects/board");
+  const isProjectDetailRoute = isBacklogRoute || isBoardRoute;
+
+  // Determinar los elementos del menú según la ruta
+  const menuItems = 
+  isTeamRoute 
+  ? teamDashboardMenuItems 
+  : isProjectRoute
+  ? dashboardMenuItems
+  : isProjectDetailRoute
+  ? projectsMenuItems.map(item => {
+      // Si estamos en una ruta de proyecto (backlog o board) y el ítem es Backlog o Board,
+      // modificamos la URL para incluir el ID del proyecto actual
+      if ((item.title === "Backlog" || item.title === "Board") && project_id) {
+        // Buscar el proyecto actual en los proyectos recientes
+        const currentProject = recentProjects.find(p => p.id === project_id);
+        return {
+          ...item,
+          href: `/projects/${item.title.toLowerCase()}/${project_id}`,
+          state: currentProject ? { project: currentProject } : undefined
+        };
+      }
+      return item;
+    })
+  : dashboardMenuItems;
+
+  useEffect(() => {
+    const fetchRecentProjects = async () => {
+      if (!user?.id) return;
+      
+      setIsLoading(true);
+      try {
+        const response = await apiClient.get(`/projects/findByUser/${user.id}`);
+        
+        if (response.data && Array.isArray(response.data)) {
+          // Ordenar por fecha de actualización (los más recientes primero)
+          const sortedProjects = response.data.sort((a: Projects, b: Projects) => {
+            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+          });
+          
+          // Tomar solo los 3 más recientes
+          setRecentProjects(sortedProjects.slice(0, 3));
+        }
+      } catch (error) {
+        console.error("Error fetching recent projects:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchRecentProjects();
+  }, [user?.id]);
+
+  // Función para determinar el color del proyecto usando los mismos colores que en los mocks
+  const getProjectColor = (index: number) => {
+    // Usamos los mismos colores que tenían los proyectos mock
+    const colors = ["bg-green-500", "bg-blue-500", "bg-purple-500"];
+    return colors[index % colors.length];
+  };
 
   return (
     <aside
@@ -34,7 +102,12 @@ export function Sidebar({
           {menuItems.map((item) => {
             const Icon = item.icon;
             return (
-              <Link key={item.href} to={item.href} className="block">
+              <Link 
+                key={item.href} 
+                to={item.href} 
+                state={item.state}
+                className="block"
+              >
                 <Button
                   variant="ghost"
                   className="w-full justify-start text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -54,17 +127,28 @@ export function Sidebar({
               PROYECTOS RECIENTES
             </h3>
             <div className="space-y-1">
-              {projectItems.map((project) => (
-                <Link key={project.href} to={project.href} className="block">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+              {isLoading ? (
+                <div className="px-4 py-2 text-sm text-gray-500">Cargando proyectos...</div>
+              ) : recentProjects.length > 0 ? (
+                recentProjects.map((project, index) => (
+                  <Link 
+                    key={project.id} 
+                    to={`/projects/backlog/${project.id}`}
+                    state={{ project }}
+                    className="block"
                   >
-                    <span className={`mr-2 h-2 w-2 rounded-full ${project.color}`} />
-                    {project.title}
-                  </Button>
-                </Link>
-              ))}
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      <span className={`mr-2 h-2 w-2 rounded-full ${getProjectColor(index)}`} />
+                      {project.name}
+                    </Button>
+                  </Link>
+                ))
+              ) : (
+                <div className="px-4 py-2 text-sm text-gray-500">No hay proyectos recientes</div>
+              )}
             </div>
           </div>
         )}
