@@ -1,11 +1,10 @@
 import { useState, useEffect, useContext, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { UserPlus, Users, Loader2, Mail } from "lucide-react";
+import { UserPlus, Users, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/api/client-gateway";
 import { AuthContext } from "@/context/AuthContext";
@@ -34,18 +33,17 @@ export function InviteMembersDialog({
   const { user } = useContext(AuthContext);
   
   // Estado para el formulario
-  const [newMemberEmail, setNewMemberEmail] = useState('');
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [selectedTeamMember, setSelectedTeamMember] = useState<string>('');
-  const [inviteMethod, setInviteMethod] = useState<'email' | 'team'>('email');
   const [loadingMembers, setLoadingMembers] = useState(false);
+  // Crear un estado para trackear los miembros recién añadidos
+  const [recentlyAddedMembers, setRecentlyAddedMembers] = useState<string[]>([]);
 
   // Limpiar el formulario cuando se abre/cierra el modal
   useEffect(() => {
     if (!open) {
-      setNewMemberEmail('');
       setSelectedTeamMember('');
-      setInviteMethod('email');
+      setRecentlyAddedMembers([]);
     }
   }, [open]);
 
@@ -56,74 +54,20 @@ export function InviteMembersDialog({
       return [];
     }
     
-    console.log("Miembros del equipo actual:", currentTeam.members);
-    console.log("Miembros del proyecto:", projectMembers);
-    
     // Obtener los IDs de los miembros actuales del proyecto
     const projectMemberIds = projectMembers.map(pm => pm.user_id);
-    console.log("IDs de miembros del proyecto:", projectMemberIds);
+    
+    // También excluir los miembros que acabamos de añadir pero que quizás aún no aparecen en projectMembers
+    const excludedIds = [...projectMemberIds, ...recentlyAddedMembers];
     
     // Filtrar los miembros del equipo que no están en el proyecto
     const availableMembers = currentTeam.members.filter(teamMember => {
       const memberId = teamMember.member.id;
-      const isAlreadyMember = projectMemberIds.includes(memberId);
-      
-      console.log(`Evaluando miembro de equipo: ${teamMember.member.name} (ID: ${memberId}) - ¿Ya es miembro?: ${isAlreadyMember}`);
-      
-      return !isAlreadyMember;
+      return !excludedIds.includes(memberId);
     });
     
-    console.log(`Encontrados ${availableMembers.length} miembros disponibles para invitar:`, availableMembers);
     return availableMembers;
-  }, [currentTeam, projectMembers]);
-
-  // Función para invitar a un miembro por correo
-  const handleAddMember = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!newMemberEmail.trim() || isAddingMember || !project?.id) return;
-    
-    setIsAddingMember(true);
-    
-    try {
-      // Llamar al endpoint mejorado que maneja la invitación a proyectos
-      // El backend comprobará si el usuario existe, si está en el equipo, etc.
-      const response = await apiClient.post(`/projects/invite-member`, {
-        projectId: project.id,
-        email: newMemberEmail,
-        userId: user?.id,
-        teamId: project.team_id // Enviamos el ID del equipo para que el backend pueda añadir al usuario al equipo si es necesario
-      });
-      
-      if (response.data) {
-        await refetchMembers();
-        setNewMemberEmail('');
-        
-        // Mensaje personalizado según la respuesta
-        if (response.data.addedToTeam) {
-          toast({
-            title: "Usuario invitado al equipo y proyecto",
-            description: `El usuario con correo ${newMemberEmail} ha sido añadido al equipo y al proyecto.`,
-          });
-        } else {
-          toast({
-            title: "Usuario añadido al proyecto",
-            description: `${newMemberEmail} ha sido añadido al proyecto.`,
-          });
-        }
-      }
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || "No se pudo enviar la invitación";
-      
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setIsAddingMember(false);
-    }
-  };
+  }, [currentTeam, projectMembers, recentlyAddedMembers]);
 
   // Función para añadir un miembro existente del equipo
   const handleAddTeamMember = async () => {
@@ -139,8 +83,6 @@ export function InviteMembersDialog({
         throw new Error("Miembro seleccionado no encontrado");
       }
       
-      console.log("Invitando miembro del equipo:", selectedMember);
-      
       // Obtener el correo del miembro del equipo
       const email = selectedMember.member.email;
       
@@ -148,18 +90,22 @@ export function InviteMembersDialog({
         throw new Error("No se pudo determinar el correo electrónico del miembro");
       }
       
-      console.log("Usando email para invitación:", email);
-      
       // Ya que sabemos que este usuario ya está en el equipo, solo lo añadimos al proyecto
       const response = await apiClient.post(`/projects/invite-member`, {
         projectId: project.id,
         email: email,
         userId: user?.id,
-        teamId: project.team_id
+        invitedUserId: selectedMember.member.id,
       });
       
       if (response.data) {
+        // Añadir el ID del miembro a la lista de recientemente añadidos
+        setRecentlyAddedMembers(prev => [...prev, selectedMember.member.id]);
+        
+        // Refrescar la lista de miembros
         await refetchMembers();
+        
+        // Limpiar la selección
         setSelectedTeamMember('');
         
         const displayName = `${selectedMember.member.name || ''} ${selectedMember.member.lastName || ''}`.trim();
@@ -182,13 +128,34 @@ export function InviteMembersDialog({
     }
   };
 
+  // Generar una clave única para cada miembro
+  const getMemberKey = (member: any) => {
+    // Usar una combinación de user_id e id para crear una clave realmente única
+    return `member-${member.user_id}`;
+  };
+
+  // Filtrar miembros duplicados antes de mostrarlos
+  const uniqueProjectMembers = useMemo(() => {
+    const uniqueMembers: Record<string, any> = {};
+    
+    projectMembers.forEach(member => {
+      const userId = member.user_id;
+      // Solo guardamos la primera aparición de cada usuario
+      if (!uniqueMembers[userId]) {
+        uniqueMembers[userId] = member;
+      }
+    });
+    
+    return Object.values(uniqueMembers);
+  }, [projectMembers]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] dark:bg-gray-800 dark:border-gray-700">
         <DialogHeader>
           <DialogTitle className="dark:text-gray-200">Miembros del Proyecto</DialogTitle>
           <DialogDescription className="dark:text-gray-400">
-            {`${projectMembers.length} miembro(s) en este proyecto`}
+            {`${uniqueProjectMembers.length} miembro(s) en este proyecto`}
             {currentTeam && (
               <span className="ml-1">
                 - Equipo: {currentTeam.name}
@@ -197,77 +164,7 @@ export function InviteMembersDialog({
           </DialogDescription>
         </DialogHeader>
         
-        {/* Tabs para métodos de invitación */}
-        <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex space-x-1 pb-3">
-            <Button
-              variant={inviteMethod === 'email' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setInviteMethod('email')}
-              className="flex-1 dark:text-gray-200"
-            >
-              <Mail className="h-4 w-4 mr-2" />
-              Invitar por correo
-            </Button>
-            <Button
-              variant={inviteMethod === 'team' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setInviteMethod('team')}
-              className="flex-1 dark:text-gray-200"
-              disabled={!currentTeam || !currentTeam.members || currentTeam.members.length === 0}
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Miembros del equipo
-            </Button>
-          </div>
-        </div>
-        
-        {/* Formulario para invitar por correo */}
-        {inviteMethod === 'email' && (
-          <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-            <form onSubmit={handleAddMember} className="flex flex-col gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="member-email" className="text-sm font-medium dark:text-gray-200">
-                  Añadir nuevo miembro por correo
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="member-email"
-                    type="email"
-                    placeholder="correo@ejemplo.com"
-                    value={newMemberEmail}
-                    onChange={(e) => setNewMemberEmail(e.target.value)}
-                    className="flex-1 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:placeholder:text-gray-500"
-                    disabled={isAddingMember}
-                  />
-                  <Button 
-                    type="submit" 
-                    disabled={isAddingMember || !newMemberEmail.trim()}
-                    className="dark:bg-blue-700 dark:text-white dark:hover:bg-blue-600"
-                  >
-                    {isAddingMember ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        <span>Añadiendo...</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        <span>Invitar</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Si el usuario no existe o no está en el equipo, se le enviará una invitación por correo electrónico.
-                </p>
-              </div>
-            </form>
-          </div>
-        )}
-        
         {/* Selector de miembros del equipo */}
-        {inviteMethod === 'team' && (
           <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex flex-col gap-4">
               <div className="grid gap-2">
@@ -287,7 +184,7 @@ export function InviteMembersDialog({
                       {availableTeamMembers.length > 0 ? (
                         availableTeamMembers.map((teamMember) => (
                           <SelectItem 
-                            key={teamMember.member.id} 
+                          key={`select-${teamMember.member.id}`} 
                             value={teamMember.member.id}
                             className="dark:text-gray-200"
                           >
@@ -335,14 +232,13 @@ export function InviteMembersDialog({
               </div>
             </div>
           </div>
-        )}
         
         {/* Lista de miembros actuales */}
         <div className="max-h-[60vh] overflow-y-auto">
           {loadingMembers ? (
             <div className="flex flex-col gap-2">
               {[1, 2, 3].map(i => (
-                <div key={i} className="flex items-center p-2 rounded-md">
+                <div key={`skeleton-${i}`} className="flex items-center p-2 rounded-md">
                   <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-full"></div>
                   <div className="ml-3 space-y-2">
                     <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 animate-pulse rounded"></div>
@@ -351,21 +247,25 @@ export function InviteMembersDialog({
                 </div>
               ))}
             </div>
-          ) : projectMembers.length > 0 ? (
+          ) : uniqueProjectMembers.length > 0 ? (
             <div className="grid gap-2">
-              {projectMembers.map((member) => (
+              {uniqueProjectMembers.map((member) => (
                 <div 
-                  key={member.user_id} 
+                  key={getMemberKey(member)} 
                   className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/50"
                 >
                   <Avatar className="h-10 w-10">
                     <AvatarFallback className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                      {member.user ? member.user.name.charAt(0) + (member.user.lastName ? member.user.lastName.charAt(0) : '') : 'U'}
+                      {member.user && member.user.name 
+                        ? member.user.name.charAt(0) + (member.user.lastName ? member.user.lastName.charAt(0) : '') 
+                        : 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="ml-3">
                     <p className="text-sm font-medium dark:text-gray-200">
-                      {member.user ? `${member.user.name} ${member.user.lastName || ''}` : 'Usuario'}
+                      {member.user 
+                        ? `${member.user.name || ''} ${member.user.lastName || ''}`.trim() 
+                        : 'Usuario'}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {member.user?.email || member.user_id}

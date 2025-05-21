@@ -36,7 +36,8 @@ export const CreateProjectForm = ({ onClose }: { onClose: () => void }) => {
   const currentTeam = selectedTeam ? teams?.find(team => team.id === selectedTeam) : null;
   
   // Los miembros ya están disponibles en el team desde el context
-  const teamMembers = currentTeam?.members || [];
+  // Filter out the current user from the team members list
+  const teamMembers = currentTeam?.members?.filter(member => member.member.id !== user?.id) || [];
 
   const toggleMember = (id: string) => {
     setSelectedMembers((prev) =>
@@ -79,7 +80,6 @@ export const CreateProjectForm = ({ onClose }: { onClose: () => void }) => {
         name: projectName,
         description,
         created_by: user?.id,
-        createdBy: user?.id, // Para la invalidación de caché
         team_id: selectedTeam,
         tags: tags
           .split(",")
@@ -236,7 +236,9 @@ export const CreateProjectForm = ({ onClose }: { onClose: () => void }) => {
                   ))
                 ) : (
                   <p className="text-center text-gray-500 py-4">
-                    No members found in this team
+                    {currentTeam?.members?.length === 1 && currentTeam.members[0].member.id === user?.id
+                      ? "You are the only member in this team"
+                      : "No members found in this team"}
                   </p>
                 )}
               </>

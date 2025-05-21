@@ -41,6 +41,7 @@ export function EditTaskModal({
   const [editTaskAssignedTo, setEditTaskAssignedTo] = useState<string | undefined>("unassigned");
   const [editTaskType, setEditTaskType] = useState<'bug' | 'feature' | 'task' | 'refactor' | 'user_story'>('user_story');
   const [editTaskEpicId, setEditTaskEpicId] = useState<string | undefined>(undefined);
+  const [editTaskAcceptanceCriteria, setEditTaskAcceptanceCriteria] = useState("");
 
   // Update form state when task changes
   useEffect(() => {
@@ -53,6 +54,7 @@ export function EditTaskModal({
       setEditTaskAssignedTo(task.assignedTo || "unassigned");
       setEditTaskType(task.type || 'user_story');
       setEditTaskEpicId(task.epicId);
+      setEditTaskAcceptanceCriteria(task.acceptanceCriteria || "");
     }
   }, [task]);
 
@@ -69,6 +71,7 @@ export function EditTaskModal({
       assignedTo: editTaskAssignedTo === "unassigned" ? undefined : editTaskAssignedTo,
       type: editTaskType,
       epicId: editTaskEpicId,
+      acceptanceCriteria: editTaskAcceptanceCriteria,
     };
 
     onSave(updatedTask);
@@ -101,6 +104,19 @@ export function EditTaskModal({
               id="task-description"
               value={editTaskDescription}
               onChange={(e) => setEditTaskDescription(e.target.value)}
+              className="col-span-3 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:placeholder:text-gray-500"
+              rows={3}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="task-acceptance-criteria" className="text-right dark:text-gray-200">
+              Criterios de aceptación
+            </Label>
+            <Textarea
+              id="task-acceptance-criteria"
+              value={editTaskAcceptanceCriteria}
+              onChange={(e) => setEditTaskAcceptanceCriteria(e.target.value)}
+              placeholder="Define los criterios para considerar esta tarea como completada (un criterio por línea)..."
               className="col-span-3 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:placeholder:text-gray-500"
               rows={3}
             />

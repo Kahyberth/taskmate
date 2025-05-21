@@ -57,7 +57,11 @@ function AppRoutes() {
 
           <Route 
             path="projects" 
-            element={<ProjectsPage />} 
+            element={
+              <TeamsProvider>
+                <ProjectsPage />
+              </TeamsProvider>
+            } 
           />
         </Route>
 
@@ -86,7 +90,13 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<ProjectManagement />} />
+          <Route index 
+            element={
+              <TeamsProvider>
+                <ProjectManagement />
+              </TeamsProvider>
+            }
+          />
         </Route>
 
         <Route

@@ -17,6 +17,8 @@ import { EditSprintModal } from "./edit-sprint-modal"
 import { CreateSprintModal } from "./create-sprint-modal"
 import { ProjectHeader } from "./project-header"
 import { SearchFilters } from "./search-filters"
+import { useUpdateIssue, invalidateProjectIssues } from "@/api/queries"
+import { useQueryClient } from "@tanstack/react-query"
 
 // Define sprint interface
 interface Sprint {
@@ -109,6 +111,12 @@ export default function ProjectManagement() {
   // Edit sprint state
   const [isEditSprintOpen, setIsEditSprintOpen] = useState(false)
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null)
+
+  // Add the queryClient hook
+  const queryClient = useQueryClient();
+
+  // Add the mutation hook
+  const { mutate: updateIssue } = useUpdateIssue();
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
@@ -907,11 +915,15 @@ export default function ProjectManagement() {
    */
   const handleSprintTaskStatusChange = async (sprintId: string, taskId: string, status: Task["status"]) => {
     try {
-      // Encontrar la tarea en el sprint
-      const sprint = sprints.find(s => s.id === sprintId);
-      const task = sprint?.tasks.find((t: Task) => t.id === taskId);
+      // Encontrar el sprint y la tarea
+      const sprint = sprints.find((s) => s.id === sprintId);
+      if (!sprint) {
+        console.error("Sprint not found:", sprintId);
+        return;
+      }
       
-      if (!task || !sprint) {
+      const task = sprint.tasks.find((t) => t.id === taskId);
+      if (!task) {
         console.error("Task not found in sprint:", taskId);
         return;
       }
@@ -921,40 +933,77 @@ export default function ProjectManagement() {
       
       // Actualización optimista
       const updatedTask = { ...task, status } as Task;
-      setSprints(sprints.map(s =>
-        s.id === sprintId
-          ? { ...s, tasks: s.tasks.map((t: Task) => t.id === taskId ? updatedTask : t) }
-          : s
-      ));
-      
-      try {
-        // Llamar a la API para actualizar el estado
-        const response = await apiClient.patch(`/issues/update`, {
-          id: taskId,
-          status,
-          userId: user?.id
-        });
-        
-        if (response.data) {
-          toast({
-            title: "Estado actualizado",
-            description: `El estado de "${task.title}" ha sido actualizado a ${getStatusDisplayText(status).toLowerCase()}.`,
-          });
-        }
-      } catch (error) {
-        console.error("Error updating task status:", error);
-        
-        // Restaurar el estado anterior
-        setSprints(sprints.map(s =>
+      setSprints(
+        sprints.map((s) =>
           s.id === sprintId
-            ? { 
-                ...s, 
-                tasks: s.tasks.map((t: Task) => 
-                  t.id === taskId ? { ...t, status: previousStatus } as Task : t
-                ) 
+            ? {
+                ...s,
+                tasks: s.tasks.map((t) => (t.id === taskId ? updatedTask : t)),
               }
             : s
-        ));
+        )
+      );
+      
+      try {
+        // Use the mutation hook instead of direct API call
+        updateIssue({
+          id: taskId,
+          status,
+          userId: user?.id,
+          projectId: project_id // Needed for client-side cache invalidation, will be removed before API call
+        }, {
+          onSuccess: () => {
+            toast({
+              title: "Estado actualizado",
+              description: `El estado de "${task.title}" ha sido actualizado a ${getStatusDisplayText(status).toLowerCase()}.`,
+            });
+            
+            // Force refresh of project issues data with queryClient
+            if (project_id) {
+              invalidateProjectIssues(queryClient, project_id as string);
+            }
+          },
+          onError: (error) => {
+            console.error("Error updating task status:", error);
+            
+            // Restaurar el estado anterior
+            setSprints(
+              sprints.map((s) =>
+                s.id === sprintId
+                  ? {
+                      ...s,
+                      tasks: s.tasks.map((t) =>
+                        t.id === taskId ? { ...t, status: previousStatus } as Task : t
+                      ),
+                    }
+                  : s
+              )
+            );
+            
+            toast({
+              title: "Error",
+              description: "No se pudo actualizar el estado de la tarea",
+              variant: "destructive",
+            });
+          }
+        });
+      } catch (error) {
+        // Handle any unexpected errors in the mutation call itself
+        console.error("Error in mutation call:", error);
+        
+        // Restaurar el estado anterior
+        setSprints(
+          sprints.map((s) =>
+            s.id === sprintId
+              ? {
+                  ...s,
+                  tasks: s.tasks.map((t) =>
+                    t.id === taskId ? { ...t, status: previousStatus } as Task : t
+                  ),
+                }
+              : s
+          )
+        );
         
         toast({
           title: "Error",
@@ -994,21 +1043,41 @@ export default function ProjectManagement() {
       setBacklogTasks(backlogTasks.map(t => t.id === taskId ? updatedTask : t));
       
       try {
-        // Llamar a la API para actualizar el estado
-        const response = await apiClient.patch(`/issues/update`, {
+        // Use the mutation hook instead of direct API call
+        updateIssue({
           id: taskId,
           status,
-          userId: user?.id
+          userId: user?.id,
+          projectId: project_id // Needed for client-side cache invalidation, will be removed before API call
+        }, {
+          onSuccess: () => {
+            toast({
+              title: "Estado actualizado",
+              description: `El estado de "${task.title}" ha sido actualizado a ${getStatusDisplayText(status).toLowerCase()}.`,
+            });
+            
+            // Force refresh of project issues data with queryClient
+            if (project_id) {
+              invalidateProjectIssues(queryClient, project_id as string);
+            }
+          },
+          onError: (error) => {
+            console.error("Error updating task status:", error);
+            
+            // Restaurar el estado anterior
+            setBacklogTasks(backlogTasks.map(t => 
+              t.id === taskId ? { ...t, status: previousStatus } as Task : t
+            ));
+            
+            toast({
+              title: "Error",
+              description: "No se pudo actualizar el estado de la tarea",
+              variant: "destructive",
+            });
+          }
         });
-        
-        if (response.data) {
-          toast({
-            title: "Estado actualizado",
-            description: `El estado de "${task.title}" ha sido actualizado a ${getStatusDisplayText(status).toLowerCase()}.`,
-          });
-        }
       } catch (error) {
-        console.error("Error updating task status:", error);
+        console.error("Error in mutation call:", error);
         
         // Restaurar el estado anterior
         setBacklogTasks(backlogTasks.map(t => 

@@ -33,7 +33,7 @@ export const TeamsProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Sincronizar el estado local con los datos de la consulta
   if (teamsData && JSON.stringify(teamsData) !== JSON.stringify(teams)) {
-    setTeams(teamsData);
+        setTeams(teamsData);
   }
 
   // Función para obtener los equipos del usuario (ahora usa refetch de React Query)

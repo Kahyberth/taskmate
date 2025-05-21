@@ -10,6 +10,8 @@ export const queryKeys = {
   projects: "projects",
   project: (id: string) => ["project", id],
   userProjects: (userId: string) => ["userProjects", userId],
+  backlogIssues: (projectId: string) => ["backlogIssues", projectId],
+  projectIssues: (projectId: string) => ["projectIssues", projectId],
 };
 
 // ====================== TEAMS API ======================
@@ -136,7 +138,7 @@ export const useDeleteTeam = () => {
 
 // ====================== PROJECTS API ======================
 
-// Obtener proyectos por usuario
+// Obtener proyectos donde el usuario es miembro 
 export const useProjectsByUser = (userId: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.userProjects(userId || ""),
@@ -162,6 +164,26 @@ export const useProjectsByUser = (userId: string | undefined) => {
       return projectsWithProgress;
     },
     enabled: Boolean(userId),
+  });
+};
+
+// Obtener issues de un proyecto para calcular progreso
+export const useProjectIssues = (projectId: string | undefined) => {
+  return useQuery({
+    queryKey: queryKeys.projectIssues(projectId || ""),
+    queryFn: async () => {
+      if (!projectId) return [];
+      try {
+        const response = await apiClient.get(`/projects/issues/${projectId}`);
+        return response.data || [];
+      } catch (error) {
+        console.error("Error fetching project issues:", error);
+        return [];
+      }
+    },
+    enabled: Boolean(projectId),
+    // Setting a short staleTime to refresh data more frequently
+    staleTime: 30000, // 30 seconds
   });
 };
 
@@ -236,4 +258,98 @@ export const useDeleteProject = () => {
       queryClient.invalidateQueries({ queryKey: [queryKeys.projects] });
     },
   });
+};
+
+// ====================== ISSUES API ======================
+
+// Crear un issue
+export const useCreateIssue = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (issueData: any) => {
+      const response = await apiClient.post("/issues/create", issueData);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      if (variables.projectId) {
+        queryClient.invalidateQueries({ 
+          queryKey: queryKeys.backlogIssues(variables.projectId) 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: queryKeys.project(variables.projectId) 
+        });
+        // Also invalidate projectIssues cache
+        queryClient.invalidateQueries({ 
+          queryKey: queryKeys.projectIssues(variables.projectId) 
+        });
+      }
+    },
+  });
+};
+
+// Actualizar un issue
+export const useUpdateIssue = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (updateData: any) => {
+      // Create a new object without the projectId property to send to the API
+      const { projectId, ...apiUpdateData } = updateData;
+      const response = await apiClient.patch(`/issues/update`, apiUpdateData);
+      return response.data;
+    },
+    onSuccess: (_, variables: any) => {
+      // Extract project ID from the update data or issue
+      let projectId = variables.projectId;
+      
+      // If the issue data has the project ID information, use it
+      if (!projectId && variables.id) {
+        // We need to try to find the project ID in the cache
+        const queryCache = queryClient.getQueryCache();
+        const queries = queryCache.findAll();
+        
+        // Look through all query keys for backlogIssues
+        for (const query of queries) {
+          const queryKey = query.queryKey;
+          if (Array.isArray(queryKey) && queryKey[0] === "backlogIssues") {
+            const cachedData = queryClient.getQueryData(queryKey);
+            if (Array.isArray(cachedData)) {
+              const issue = cachedData.find((i: any) => i.id === variables.id);
+              if (issue && issue.productBacklogId) {
+                // Extract project ID from productBacklogId
+                const response = queryClient.getQueryData(["project", issue.productBacklogId]);
+                if (response && (response as any).id) {
+                  projectId = (response as any).id;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      if (projectId) {
+        // Invalidate all relevant caches
+        queryClient.invalidateQueries({ 
+          queryKey: queryKeys.backlogIssues(projectId) 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: queryKeys.project(projectId) 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: queryKeys.projectIssues(projectId) 
+        });
+      }
+    },
+  });
+};
+
+// Utility function to invalidate project issues cache
+export const invalidateProjectIssues = (queryClient: any, projectId: string | undefined) => {
+  if (projectId) {
+    queryClient.invalidateQueries({ 
+      queryKey: queryKeys.projectIssues(projectId) 
+    });
+  }
 }; 

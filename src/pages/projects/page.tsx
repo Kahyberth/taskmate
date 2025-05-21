@@ -1,7 +1,9 @@
-import { useState, useContext } from "react";
-import { Plus, Search, Filter, AlertCircle, ChevronDown } from "lucide-react";
+import { useState, useContext, useCallback, useMemo } from "react";
+import { Plus, Search, Filter, AlertCircle, ChevronDown, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useDebounce } from "@/hooks/use-debounce";
+import { Badge } from "@/components/ui/badge";
 
 import {
   Dialog,
@@ -16,51 +18,103 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 import { CreateProjectForm } from "@/components/projects/create-project";
 import { ProjectCard } from "@/components/projects/project-card";
 import { ProjectCardSkeleton } from "@/components/projects/project-card-skeleton";
 import { AuthContext } from "@/context/AuthContext";
-import { useProjectsByUser } from "@/api/queries";
+import { useProjectsByUser, useCreateIssue, queryKeys } from "@/api/queries";
+import { useQueryClient } from '@tanstack/react-query';
+
+// Definir un tipo para el proyecto
+type Project = {
+  id: string;
+  name?: string;
+  description?: string;
+  status?: string;
+  createdBy?: string;
+};
+
+// Definir un tipo para issue
+interface Issue {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority?: string;
+  projectId: string;
+}
 
 export default function ProjectsPage() {
   const { user } = useContext(AuthContext);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
   
-  // Usar React Query para obtener los proyectos
-  const { data: projects = [], isLoading, refetch } = useProjectsByUser(user?.id);
+  // Debounce search input to prevent excessive re-renders
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  const handleCreateProjectSuccess = () => {
+  // Usar React Query para obtener los proyectos donde el usuario es miembro (creados por el usuario o invitado)
+  const { data: projects = [], isLoading, refetch } = useProjectsByUser(user?.id);
+ 
+
+  const handleCreateProjectSuccess = useCallback(() => {
     setCreateDialogOpen(false);
     refetch();
-  };
+  }, [setCreateDialogOpen, refetch]);
 
-  // Definir un tipo para el proyecto
-  type Project = {
-    id: string;
-    name?: string;
-    description?: string;
-    status?: string;
-    priority?: string;
-  };
-
-  const filteredProjects = projects.filter((project: Project) => {
-    // Validar que project.name y project.description existan antes de usar toLowerCase
-    const nameMatches = project.name && 
-      project.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const descriptionMatches = project.description && 
-      project.description.toLowerCase().includes(searchQuery.toLowerCase());
+  // Memoize filtered projects to prevent recalculation on every render
+  const filteredProjects = useMemo(() => {
+    // First filter by tab (all vs. my)
+    const tabFiltered = activeTab === "all" 
+      ? projects 
+      : projects.filter((project: Project) => project.createdBy === user?.id);
     
-    const matchesSearch = nameMatches || descriptionMatches;
-    const matchesStatus = statusFilter === "all" || project.status === statusFilter;
-    const matchesPriority = priorityFilter === "all" || project.priority === priorityFilter;
+    // Then apply search and other filters
+    return tabFiltered.filter((project: Project) => {
+      // Validar que project.name y project.description existan antes de usar toLowerCase
+      const nameMatches = project.name && 
+        project.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+      const descriptionMatches = project.description && 
+        project.description.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+      
+      const matchesSearch = nameMatches || descriptionMatches;
+      const matchesStatus = statusFilter === "all" || project.status === statusFilter;
 
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
+      return matchesSearch && matchesStatus;
+    });
+  }, [projects, debouncedSearchQuery, statusFilter, activeTab, user?.id]);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  }, []);
+
+  const handleStatusFilter = useCallback((status: string) => {
+    setStatusFilter(status);
+  }, []);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "not-started":
+        return "bg-gray-200 text-gray-800";
+      case "in-progress":
+        return "bg-blue-100 text-blue-800";
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "at-risk":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const resetFilters = () => {
+    setStatusFilter("all");
+    setSearchQuery("");
+  };
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -93,68 +147,78 @@ export default function ProjectsPage() {
             placeholder="Search projects..."
             className="pl-9"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
           />
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {/* Status filters with better visuals */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="flex items-center gap-2">
                 <Filter className="h-4 w-4" />
                 <span>Status</span>
+                {statusFilter !== "all" && (
+                  <Badge variant="outline" className={getStatusColor(statusFilter)}>
+                    {statusFilter.replace("-", " ")}
+                  </Badge>
+                )}
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setStatusFilter("all")}>
-                All
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuItem 
+                onClick={() => handleStatusFilter("all")}
+                className="flex items-center justify-between"
+              >
+                <span>All Statuses</span>
+                {statusFilter === "all" && <Circle className="h-2 w-2 fill-current" />}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("not-started")}>
-                Not Started
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => handleStatusFilter("not-started")}
+                className="flex items-center gap-2"
+              >
+                <Badge variant="outline" className="bg-gray-200 text-gray-800">Not Started</Badge>
+                {statusFilter === "not-started" && <Circle className="h-2 w-2 fill-current ml-auto" />}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("in-progress")}>
-                In Progress
+              <DropdownMenuItem 
+                onClick={() => handleStatusFilter("in-progress")}
+                className="flex items-center gap-2"
+              >
+                <Badge variant="outline" className="bg-blue-100 text-blue-800">In Progress</Badge>
+                {statusFilter === "in-progress" && <Circle className="h-2 w-2 fill-current ml-auto" />}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("completed")}>
-                Completed
+              <DropdownMenuItem 
+                onClick={() => handleStatusFilter("completed")}
+                className="flex items-center gap-2"
+              >
+                <Badge variant="outline" className="bg-green-100 text-green-800">Completed</Badge>
+                {statusFilter === "completed" && <Circle className="h-2 w-2 fill-current ml-auto" />}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("at-risk")}>
-                At Risk
+              <DropdownMenuItem 
+                onClick={() => handleStatusFilter("at-risk")}
+                className="flex items-center gap-2"
+              >
+                <Badge variant="outline" className="bg-red-100 text-red-800">At Risk</Badge>
+                {statusFilter === "at-risk" && <Circle className="h-2 w-2 fill-current ml-auto" />}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                <span>Priority</span>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setPriorityFilter("all")}>
-                All
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setPriorityFilter("low")}>
-                Low
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setPriorityFilter("medium")}>
-                Medium
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setPriorityFilter("high")}>
-                High
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Reset filters button - only show when filters are active */}
+          {(statusFilter !== "all" || searchQuery) && (
+            <Button variant="ghost" size="sm" onClick={resetFilters}>
+              Clear Filters
+            </Button>
+          )}
         </div>
       </div>
 
-      <Tabs defaultValue="all" className="w-full">
+      <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="all">All Projects</TabsTrigger>
           <TabsTrigger value="my">My Projects</TabsTrigger>
-          <TabsTrigger value="recent">Recent</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="mt-6">
@@ -186,30 +250,41 @@ export default function ProjectsPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="my">
+        <TabsContent value="my" className="mt-6">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
                 <ProjectCardSkeleton key={i} />
               ))}
             </div>
-          ) : (
+          ) : filteredProjects.length === 0 ? (
             <div className="text-center py-12">
-              <p>My projects will be displayed here</p>
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
+                <AlertCircle className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium">No projects found</h3>
+              <p className="text-muted-foreground mt-1">
+                {searchQuery || statusFilter !== "all" 
+                  ? "Try adjusting your search or filters" 
+                  : "You haven't created any projects yet"}
+              </p>
+              <Button 
+                onClick={() => setCreateDialogOpen(true)} 
+                className="mt-4"
+                variant="outline"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Project
+              </Button>
             </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="recent">
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-              {[1, 2, 3].map((i) => (
-                <ProjectCardSkeleton key={i} />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredProjects.map((project: Project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                />
               ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <p>Recent projects will be displayed here</p>
             </div>
           )}
         </TabsContent>

@@ -1,7 +1,7 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Edit, Trash, ChevronDown, MoveRight, Loader2, Bug, FileText, Wrench, Sparkles, GitBranch, CircleDot, Circle, CircleDashed, BookOpen, Lightbulb } from "lucide-react";
+import { Edit, Trash, ChevronDown, MoveRight, Loader2, Bug, FileText, Sparkles, GitBranch, Circle, BookOpen, Lightbulb } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { EpicBadge } from "./epic-badge";
+import { IssueDetailModal } from "./issue-detail-modal";
 
 interface TaskItemProps {
   task: Task;
@@ -69,6 +70,7 @@ export function TaskItem({
   const [movingToSprintId, setMovingToSprintId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isIssueDetailOpen, setIsIssueDetailOpen] = useState(false);
 
   const handleMoveToSprint = async (sprintId: string) => {
     if (!onMoveToSprint) return;
@@ -123,10 +125,43 @@ export function TaskItem({
     }
   };
 
+  // Handle task update for issue detail modal
+  const handleTaskUpdate = async (updatedTask: Partial<Task>) => {
+    // Use the existing edit handler but modify it to work with partial updates
+    try {
+      // Create a merged task object with the updates
+      const mergedTask = {
+        ...task,
+        ...updatedTask,
+        // Ensure required fields are present
+        title: updatedTask.title || task.title,
+        status: updatedTask.status || task.status,
+        priority: updatedTask.priority || task.priority,
+        description: updatedTask.description || task.description,
+        acceptanceCriteria: updatedTask.acceptanceCriteria || task.acceptanceCriteria,
+      } as Task;
+      
+      await onEdit(mergedTask);
+      return Promise.resolve();
+    } catch (error) {
+      console.error("Error updating task:", error);
+      return Promise.reject(error);
+    }
+  };
+
+  // Handle opening the edit modal directly
+  const handleOpenEditModal = (taskToEdit: Task) => {
+    setIsIssueDetailOpen(false); // Close the detail modal
+    onEdit(taskToEdit); // Use the existing onEdit function to open the edit modal
+  };
+
   return (
     <div className={`border border-black/10 dark:border-white/10 rounded-md mb-1 ${isMoving || isDeleting ? 'opacity-60' : ''}`}>
-      <div className="flex flex-wrap items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-        <div className="flex items-center mr-2">
+      <div 
+        className="flex flex-wrap items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
+        onClick={() => setIsIssueDetailOpen(true)}
+      >
+        <div className="flex items-center mr-2" onClick={(e) => e.stopPropagation()}>
           <Checkbox
             className="mr-2"
             id={`checkbox-${task.id}`}
@@ -159,7 +194,7 @@ export function TaskItem({
             </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 justify-end ml-auto">
+        <div className="flex flex-wrap items-center gap-2 justify-end ml-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex flex-wrap gap-1 items-center order-2 sm:order-1">
               {task.priority && (
                 <span className={`text-xs px-2 py-0.5 rounded-full ${getPriorityColor(task.priority)}`}>
@@ -369,6 +404,16 @@ export function TaskItem({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Issue Detail Modal */}
+      <IssueDetailModal
+        isOpen={isIssueDetailOpen}
+        onOpenChange={setIsIssueDetailOpen}
+        task={task}
+        onTaskUpdate={handleTaskUpdate}
+        getAssignedUser={getAssignedUser}
+        onOpenEditModal={handleOpenEditModal}
+      />
     </div>
   );
 } 

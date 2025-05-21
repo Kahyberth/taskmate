@@ -371,7 +371,7 @@ export default function KanbanBoard() {
   }
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white dark:bg-slate-950 min-h-screen">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -380,7 +380,7 @@ export default function KanbanBoard() {
         onDragOver={handleDragOver}
       >
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-semibold">Tablero Kanban</h1>
+          <h1 className="text-xl font-semibold dark:text-white">Tablero Kanban</h1>
           <div className="flex items-center gap-2">
             {!visibleColumns.review && (
               <TooltipProvider>
@@ -426,7 +426,7 @@ export default function KanbanBoard() {
         </div>
 
         {/* En pantallas pequeñas usamos grid-cols-1, en pantallas medianas y grandes usamos grid dinámico */}
-        <div className="grid grid-cols-1 md:hidden gap-4 h-full min-h-[600px] border border-gray-200 rounded-lg p-4 bg-white shadow-sm mb-8">
+        <div className="grid grid-cols-1 md:hidden gap-4 h-full min-h-[600px] border border-black/10 dark:border-white/10 rounded-lg p-4 bg-white dark:bg-black/20 shadow-sm mb-8">
           {/* TO DO Column */}
           <KanbanColumn 
             title="POR HACER" 
@@ -483,7 +483,7 @@ export default function KanbanBoard() {
         </div>
 
         {/* Versión de pantallas medianas y grandes con grid dinámico */}
-        <div className="hidden md:grid gap-4 h-full min-h-[600px] border border-gray-200 rounded-lg p-4 bg-white shadow-sm mb-8" 
+        <div className="hidden md:grid gap-4 h-full min-h-[600px] border border-black/10 dark:border-white/10 rounded-lg p-4 bg-white dark:bg-black/20 shadow-sm mb-8" 
              style={{ gridTemplateColumns }}>
           {/* TO DO Column */}
           <KanbanColumn 
@@ -544,9 +544,9 @@ export default function KanbanBoard() {
         <DragOverlay adjustScale={false} zIndex={100}>
           {activeTask ? (
             <div className="w-[350px] opacity-90">
-              <Card className="shadow-lg">
+              <Card className="shadow-lg dark:border-white/10">
                 <CardHeader className="p-3 pb-0">
-                  <h3 className="text-sm font-medium">{activeTask.title}</h3>
+                  <h3 className="text-sm font-medium dark:text-white">{activeTask.title}</h3>
                 </CardHeader>
                 <CardContent className="p-3 pt-2">
                   <div className="flex items-center">
@@ -555,7 +555,7 @@ export default function KanbanBoard() {
                     </Badge>
                     <div className="flex items-center ml-auto">
                       {activeTask.code && (
-                        <div className="flex items-center mr-2 text-gray-500">
+                        <div className="flex items-center mr-2 text-gray-500 dark:text-gray-400">
                           <FileText className="h-3.5 w-3.5 mr-1" />
                           <span className="text-xs">{activeTask.code}</span>
                         </div>
@@ -619,27 +619,27 @@ function KanbanColumn({
   const getTitleColor = (status: Task["status"]) => {
     switch (status) {
       case "to-do":
-        return "text-gray-600";
+        return "text-gray-600 dark:text-gray-200";
       case "in-progress":
-        return "text-blue-600";
+        return "text-blue-600 dark:text-blue-300";
       case "review":
-        return "text-yellow-600";
+        return "text-yellow-600 dark:text-yellow-300";
       case "blocked":
-        return "text-red-600";
+        return "text-red-600 dark:text-red-300";
       case "resolved":
       case "closed":
-        return "text-green-600";
+        return "text-green-600 dark:text-green-300";
       default:
-        return "text-gray-600";
+        return "text-gray-600 dark:text-gray-200";
     }
   };
 
   return (
-    <div ref={setNodeRef} className="flex flex-col bg-gray-50 rounded-md transition-colors duration-200 h-full">
+    <div ref={setNodeRef} className="flex flex-col bg-gray-50 dark:bg-white/10 rounded-md transition-colors duration-200 h-full">
       <div className="flex items-center justify-between mb-4 px-2 h-8">
         <div className="flex items-center">
           <h2 className={`text-sm font-medium ${getTitleColor(status)}`}>{title}</h2>
-        <Badge variant="outline" className="ml-2 bg-gray-200 text-gray-700 hover:bg-gray-200">
+        <Badge variant="outline" className="ml-2 bg-gray-200 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700/50">
           {count}
         </Badge>
         </div>
@@ -648,7 +648,7 @@ function KanbanColumn({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 hover:bg-gray-200"
+              className="h-6 w-6 hover:bg-gray-200 dark:hover:bg-gray-700/30"
               onClick={onToggleVisibility}
             >
               <Minus className="h-4 w-4" />
@@ -714,12 +714,12 @@ function TaskCard({
   return (
     <Card className={`
       ${isDragging ? 'opacity-50' : ''}
-      hover:shadow-md transition-all duration-200
+      hover:shadow-md dark:hover:shadow-black/20 transition-all duration-200
       cursor-grab active:cursor-grabbing
-      w-full
+      w-full dark:border-white/10
     `}>
       <CardHeader className="p-3 pb-0">
-        <h3 className="text-sm font-medium line-clamp-2">{title}</h3>
+        <h3 className="text-sm font-medium line-clamp-2 dark:text-white">{title}</h3>
       </CardHeader>
       <CardContent className="p-3 pt-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -730,7 +730,7 @@ function TaskCard({
           )}
           <div className="flex items-center ml-auto gap-2">
             {!hideTaskId && taskId && (
-              <div className="flex items-center text-gray-500 min-w-[60px]">
+              <div className="flex items-center text-gray-500 dark:text-gray-400 min-w-[60px]">
                 <FileText className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
                 <span className="text-xs truncate">{taskId}</span>
               </div>
