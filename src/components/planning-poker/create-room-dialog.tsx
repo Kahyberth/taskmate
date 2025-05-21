@@ -25,6 +25,12 @@ import { Loader } from "@mantine/core";
 import { AuthContext } from "@/context/AuthContext";
 import { apiClient } from "@/api/client-gateway";
 
+// Interfaz para equipos
+interface Team {
+  id: number;
+  name: string;
+}
+
 // Interfaz para proyectos
 interface Project {
   id: number;
@@ -46,6 +52,8 @@ export function CreateRoomDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -60,40 +68,48 @@ export function CreateRoomDialog({
   const [loadAllStories, setLoadAllStories] = useState(true);
   const [selectedStories, setSelectedStories] = useState<UserStory[]>([]);
 
-
- 
-
-  // 2. Cargar proyectos al montar el componente
+  // Fetch teams when modal opens
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        // const response = await axios.get(`${import.meta.env.VITE_API_URL}/projects/`);
-        // setProjects(response.data);
-        // if (response.data.length > 0) {
-        //   setSelectedProjectId(response.data[0].id);
-        // }
+    if (open) {
+      // Replace with API call if available
+      setTeams([
+        { id: 1, name: "Team Alpha" },
+        { id: 2, name: "Team Beta" },
+        { id: 3, name: "Team Gamma" },
+      ]);
+      setSelectedTeamId("");
+      setProjects([]);
+      setSelectedProjectId("");
+    }
+  }, [open]);
 
+  // Fetch projects when a team is selected
+  useEffect(() => {
+    if (selectedTeamId) {
+      // Replace with API call: `/teams/${selectedTeamId}/projects`
+      if (selectedTeamId === "1") {
         setProjects([
           { id: 1, name: "Proyecto Alfa" },
           { id: 2, name: "Proyecto Beta" },
+        ]);
+      } else if (selectedTeamId === "2") {
+        setProjects([
           { id: 3, name: "Proyecto Gamma" },
           { id: 4, name: "Proyecto Delta" },
-          { id: 5, name: "Proyecto Epsilon" },
-          { id: 6, name: "Proyecto Zeta" },
-          { id: 7, name: "Proyecto Eta" },
-          { id: 8, name: "Proyecto Theta" },
-          { id: 9, name: "Proyecto Iota" },
-          { id: 10, name: "Proyecto Kappa" },
         ]);
-
-        setSelectedProjectId("1");
-      } catch (error) {
-        console.error("Error al cargar proyectos:", error);
+      } else if (selectedTeamId === "3") {
+        setProjects([
+          { id: 5, name: "Proyecto Epsilon" },
+        ]);
+      } else {
+        setProjects([]);
       }
-    };
-
-    fetchProjects();
-  }, []);
+      setSelectedProjectId("");
+    } else {
+      setProjects([]);
+      setSelectedProjectId("");
+    }
+  }, [selectedTeamId]);
 
   // 3. Cargar historias de usuario según el proyecto seleccionado
   const [userStories, setUserStories] = useState<UserStory[]>([]);
@@ -175,7 +191,7 @@ export function CreateRoomDialog({
             id: "10",
             title: "Integrate social media login",
             description:
-              "As a user, I want to log in using my social media accounts so that I don’t have to remember another username or password.",
+              "As a user, I want to log in using my social media accounts so that I don't have to remember another username or password.",
             priority: "High",
           },
           {
@@ -231,7 +247,7 @@ export function CreateRoomDialog({
             id: "18",
             title: "Include a 'Remember Me' option on the login page",
             description:
-              "As a user, I want the option to be remembered on the login page so that I don’t have to log in every time.",
+              "As a user, I want the option to be remembered on the login page so that I don't have to log in every time.",
             priority: "Low",
           },
           {
@@ -366,35 +382,63 @@ export function CreateRoomDialog({
                 />
               </div>
               <div>
+                <Label className="font-medium">Equipo</Label>
+                <Select
+                  value={selectedTeamId}
+                  onValueChange={(val) => {
+                    setSelectedTeamId(val);
+                  }}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un equipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teams.length > 0 &&
+                      teams.map((team) => (
+                        <SelectItem key={team.id} value={team.id.toString()}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                {teams.length === 0 && (
+                  <div className="text-xs text-muted-foreground mt-1">(No hay equipos disponibles)</div>
+                )}
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
                 <Label className="font-medium">Proyecto</Label>
                 <Select
                   value={selectedProjectId}
                   onValueChange={(val) => {
                     setSelectedProjectId(val);
-                    setSelectedStories([]); 
+                    setSelectedStories([]);
                   }}
                   required
+                  disabled={!selectedTeamId}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona un proyecto" />
                   </SelectTrigger>
                   <SelectContent>
-                    {projects.length > 0 ? (
+                    {projects.length > 0 &&
                       projects.map((proj) => (
                         <SelectItem key={proj.id} value={proj.id.toString()}>
                           {proj.name}
                         </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="" disabled>
-                        (No hay proyectos disponibles)
-                      </SelectItem>
-                    )}
+                      ))}
                   </SelectContent>
                 </Select>
+                {selectedTeamId && projects.length === 0 && (
+                  <div className="text-xs text-muted-foreground mt-1">(No hay proyectos disponibles)</div>
+                )}
+                {!selectedTeamId && (
+                  <div className="text-xs text-muted-foreground mt-1">Selecciona un equipo primero</div>
+                )}
               </div>
             </div>
-
             <div>
               <Label htmlFor="description" className="font-medium">
                 Descripción
