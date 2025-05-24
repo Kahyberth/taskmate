@@ -17,8 +17,10 @@ import { EditSprintModal } from "./edit-sprint-modal"
 import { CreateSprintModal } from "./create-sprint-modal"
 import { ProjectHeader } from "./project-header"
 import { SearchFilters } from "./search-filters"
-import { useUpdateIssue, invalidateProjectIssues } from "@/api/queries"
+import { useUpdateIssue, invalidateProjectIssues, useCreateIssue } from "@/api/queries"
 import { useQueryClient } from "@tanstack/react-query"
+import { EpicIssuesDialog } from "./epic-issues-dialog"
+import { notifications } from "@mantine/notifications"
 
 // Define sprint interface
 interface Sprint {
@@ -33,43 +35,18 @@ interface Sprint {
   updatedAt?: Date;
 }
 
-// Mock team members for assignment
-const teamMembers = [
-  { id: "user-1", name: "Alex Johnson", initials: "AJ" },
-  { id: "user-2", name: "Sam Taylor", initials: "ST" },
-  { id: "user-3", name: "Jordan Lee", initials: "JL" },
-  { id: "user-4", name: "Casey Morgan", initials: "CM" },
-]
-
-// Mock sprints for fallback
-const mockSprints: Sprint[] = [
-  {
-    id: "sprint-1",
-    name: "Tablero Sprint 1",
-    isActive: true,
-    tasks: [],
-    startDate: new Date(),
-    endDate: new Date(new Date().setDate(new Date().getDate() + 14)),
-    goal: "Completar las funcionalidades principales",
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: "sprint-2",
-    name: "Tablero Sprint 2",
-    isActive: false,
-    tasks: [],
-    startDate: new Date(new Date().setDate(new Date().getDate() + 15)),
-    endDate: new Date(new Date().setDate(new Date().getDate() + 28)),
-    goal: "Mejorar la experiencia de usuario",
-    createdAt: new Date(),
-    updatedAt: new Date()
-  }
-]
+interface AssignedUser {
+  initials: string;
+  name: string;
+  lastName: string;
+}
 
 export default function ProjectManagement() {
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
+  const [allBacklogTasks, setAllBacklogTasks] = useState<Task[]>([]);
+  const [totalBacklogTasks, setTotalBacklogTasks] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const { project_id } = useParams();
   const location = useLocation();
@@ -89,6 +66,9 @@ export default function ProjectManagement() {
   const [epics, setEpics] = useState<Epic[]>([]);
   const [isEpicDialogOpen, setIsEpicDialogOpen] = useState(false);
   const [newUserStoryEpicId, setNewUserStoryEpicId] = useState<string | undefined>(undefined);
+  const [selectedEpic, setSelectedEpic] = useState<Epic | null>(null);
+  const [isEpicIssuesDialogOpen, setIsEpicIssuesDialogOpen] = useState(false);
+  const [epicIssues, setEpicIssues] = useState<Task[]>([]);
 
   const { user } = useContext(AuthContext);
   // Use the teams hook to access teams data
@@ -117,6 +97,7 @@ export default function ProjectManagement() {
 
   // Add the mutation hook
   const { mutate: updateIssue } = useUpdateIssue();
+  const createIssue = useCreateIssue();
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
@@ -178,10 +159,12 @@ export default function ProjectManagement() {
   };
 
   const fetchBacklogId = async () => {
+    console.log("Fetching backlog ID for project:", project_id);
     try {
       const response = await apiClient.get(`/backlog/get-backlog-by-project/${project_id}`);
+      console.log("Backlog ID response:", response.data);
       if (response.data && response.data.id) {
-        console.log("Backlog ID fetched:", response.data.id);
+        console.log("Backlog ID fetched successfully:", response.data.id);
         setBacklogId(response.data.id);
         return response.data.id;
       } else {
@@ -204,96 +187,18 @@ export default function ProjectManagement() {
     }
   };
 
-  const fetchEpics = async () => {
-    if (!project_id) return;
-    
-    try {
-      const response = await apiClient.get(`/projects/epics/${project_id}`);
-      
-      if (response.data) {
-        console.log("Epics fetched:", response.data);
-        setEpics(response.data);
-      }
-    } catch (error) {
-      console.error("Error fetching epics:", error);
-      // Set empty array as fallback
-      setEpics([]);
-    }
-  };
-
-  const handleCreateUserStory = async () => {
-    if (!newUserStoryTitle.trim()) {
-      toast({
-        title: "Error",
-        description: "El título de la historia de usuario no puede estar vacío.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!backlogId) {
-      toast({
-        title: "Error",
-        description: "No se ha cargado el ID del backlog",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const newTask = {
-        title: newUserStoryTitle,
-        description: "descripcion de la historia de usuario",
-        type: newUserStoryType,
-        status: "to-do",
-        priority: newUserStoryPriority,
-        createdBy: user?.id,
-        acceptanceCriteria: "",
-        productBacklogId: backlogId,
-        epicId: newUserStoryEpicId,
-        // No incluimos storyPoints en la creación para evitar la validación @Min(1)
-        // El valor por defecto será 0 (sin estimar)
-      };
-
-      const response = await apiClient.post(`/issues/create`, newTask);
-      
-      if (response.data) {
-        // Cast to any to avoid TypeScript issues with the different model structures
-        // between the API response and our Task interface
-        setBacklogTasks([...backlogTasks, response.data as any]);
-        setNewUserStoryTitle("");
-        setNewUserStoryEpicId(undefined);
-        toast({
-          title: "Historia de usuario creada",
-          description: `Se ha añadido "${newTask.title}" al backlog.`,
-        });
-      }
-      
-    } catch (error) {
-      console.error("Error creating user story:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create user story",
-        variant: "destructive",
-      });
-      throw error; // Re-throw error to be caught by the loading state handler
-    }
-  };
-
   const fetchBacklogTasks = async () => {
-    console.log("fetching backlog tasks for project:", project_id);
+    console.log("Fetching backlog tasks with backlogId:", backlogId);
     try {
       setIsLoading(true);
       setError(null);
       const response = await apiClient.get(`/projects/issues/${project_id}`);
-      console.log("Raw backend response:", response.data);
+      console.log("Backlog tasks response:", response.data);
       
       if (response.data) {
-        // The response.data is already an array of issues
-        const tasks = Array.isArray(response.data) ? response.data : [];
-        console.log("Processed tasks:", tasks);
+        const tasks = Array.isArray(response.data.issues) ? response.data.issues : [];
+        console.log("Processing tasks:", tasks.length, "tasks found");
         
-        // Map the tasks to ensure they have all required fields
         const mappedTasks = tasks.map((task: any) => ({
           id: task.id,
           title: task.title,
@@ -309,12 +214,13 @@ export default function ProjectManagement() {
           assignedTo: task.assignedTo,
           createdAt: task.createdAt,
           updatedAt: task.updatedAt,
-          resolvedAt: task.resolvedAt,
+          doneAt: task.doneAt,
           finishedAt: task.finishedAt
         }));
         
-        console.log("Mapped tasks:", mappedTasks);
+        console.log("Tasks mapped successfully");
         setBacklogTasks(mappedTasks);
+        setAllBacklogTasks(mappedTasks);
       }
     } catch (error) {
       console.error("Error fetching backlog tasks:", error);
@@ -330,7 +236,7 @@ export default function ProjectManagement() {
   };
 
   const fetchSprints = async () => {
-    console.log("fetching sprints for project:", project_id);
+    console.log("Fetching sprints for project:", project_id);
     try {
       const response = await apiClient.get(`/backlog/sprints/${project_id}`);
       console.log("Sprints response:", response.data);
@@ -354,7 +260,7 @@ export default function ProjectManagement() {
             assignedTo: task.assignedTo,
             createdAt: task.createdAt,
             updatedAt: task.updatedAt,
-            resolvedAt: task.resolvedAt,
+            doneAt: task.doneAt,
             finishedAt: task.finishedAt
           })) : [],
           startDate: sprint.startDate ? new Date(sprint.startDate) : undefined,
@@ -364,7 +270,7 @@ export default function ProjectManagement() {
           updatedAt: sprint.updatedAt ? new Date(sprint.updatedAt) : undefined
         }));
         
-        console.log("Mapped sprints:", mappedSprints);
+        console.log("Sprints mapped successfully:", mappedSprints.length, "sprints found");
         setSprints(mappedSprints);
         
         // Actualizar el número del próximo sprint
@@ -374,24 +280,17 @@ export default function ProjectManagement() {
               const match = s.name.match(/Sprint\s+(\d+)/i);
               return match ? parseInt(match[1]) : 0;
             })
-            .filter(n => !isNaN(n));
+            .filter((n: number) => !isNaN(n));
             
           if (sprintNumbers.length > 0) {
             const maxNumber = Math.max(...sprintNumbers);
             setNextSprintNumber(maxNumber + 1);
+            console.log("Next sprint number set to:", maxNumber + 1);
           }
         }
       } else {
-        // Fallback to mock data if no sprints returned from API
-        console.log("Using mock sprints as fallback");
-        setSprints(mockSprints);
-        
-        // Set next sprint number based on mock data
-        const maxSprintNumber = Math.max(...mockSprints.map((s: Sprint) => {
-          const match = s.name.match(/Sprint\s+(\d+)/i);
-          return match ? parseInt(match[1]) : 0;
-        }));
-        setNextSprintNumber(maxSprintNumber + 1);
+        console.log("No sprints found");
+        setSprints([]);
       }
     } catch (error) {
       console.error("Error fetching sprints:", error);
@@ -400,33 +299,46 @@ export default function ProjectManagement() {
         description: "No se pudieron cargar los sprints",
         variant: "destructive",
       });
+      setSprints([]);
+    }
+  };
+
+  const fetchEpics = async () => {
+    console.log("Fetching epics for project:", project_id);
+    try {
+      const response = await apiClient.get(`/epics/get-by-backlog/${backlogId}`);
+      console.log("Epics response:", response.data);
       
-      // Fallback to mock data on error
-      console.log("Using mock sprints due to error");
-      setSprints(mockSprints);
-      
-      // Set next sprint number based on mock data
-      const maxSprintNumber = Math.max(...mockSprints.map((s: Sprint) => {
-        const match = s.name.match(/Sprint\s+(\d+)/i);
-        return match ? parseInt(match[1]) : 0;
-      }));
-      setNextSprintNumber(maxSprintNumber + 1);
+      if (response.data) {
+        console.log("Epics fetched successfully:", response.data.length, "epics found");
+        setEpics(response.data);
+      } else {
+        console.log("No epics found");
+        setEpics([]);
+      }
+    } catch (error) {
+      console.error("Error fetching epics:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar las épicas",
+        variant: "destructive",
+      });
+      setEpics([]);
     }
   };
 
   const fetchProjectMembers = async () => {
-    if (!project_id) return;
-    
+    console.log("Fetching project members for project:", project_id);
     try {
       setLoadingMembers(true);
       const response = await apiClient.get(`/projects/members/${project_id}`);
+      console.log("Project members response:", response.data);
       
       if (response.data && Array.isArray(response.data)) {
-        console.log("Project members fetched:", response.data);
+        console.log("Project members fetched successfully:", response.data.length, "members found");
         setProjectMembers(response.data);
       } else {
-        console.error("No members found in response:", response.data);
-        // Fallback to empty array
+        console.log("No project members found");
         setProjectMembers([]);
       }
     } catch (error) {
@@ -436,33 +348,26 @@ export default function ProjectManagement() {
         description: "No se pudieron cargar los miembros del proyecto",
         variant: "destructive",
       });
-      // Fallback to empty array  
       setProjectMembers([]);
     } finally {
       setLoadingMembers(false);
     }
   };
 
-  // Find the team associated with the current project
-  const currentTeam = useMemo(() => {
-    if (!project || !teams) return null;
-    return teams.find(team => team.id === project.team_id);
-  }, [project, teams]);
-  
   useEffect(() => {
-    console.log("project_id from params:", project_id);
-    if (project_id) {
-      fetchBacklogId().then(id => {
-        if (id) {
-          fetchBacklogTasks();
-          fetchSprints();
-          fetchEpics();
-        }
-      });
-      fetchProjectMembers();
-    }
-  }, [project_id]);
+    fetchBacklogId();
+    fetchProjectMembers();
+  }, []);
 
+  useEffect(() => {
+    if (backlogId !== null) {
+      fetchBacklogTasks();
+      fetchEpics();
+      fetchSprints();
+    }
+  }, [backlogId]);
+
+  // Efecto para manejar el proyecto desde location.state
   useEffect(() => {
     const project = location.state?.project;
     if (project) {
@@ -470,7 +375,7 @@ export default function ProjectManagement() {
     }
   }, [location.state]);
 
-  // Add effect to update members when members dialog opens
+  // Efecto para actualizar miembros cuando se abre el diálogo
   useEffect(() => {
     if (isMembersDialogOpen) {
       fetchProjectMembers();
@@ -493,7 +398,7 @@ export default function ProjectManagement() {
 
     // Filter tasks based on status
     const incompleteTasks = currentSprint.tasks.filter((task: Task) => 
-      task.status !== "resolved" && task.status !== "closed"
+      task.status !== "done" && task.status !== "closed"
     );
 
     if (incompleteTasks.length > 0) {
@@ -550,6 +455,7 @@ export default function ProjectManagement() {
   }
 
   const handleSaveTaskEdit = async (updatedTask: Partial<Task>) => {
+    console.log("Saving task edit:", updatedTask);
     if (!editingTask) return;
 
     try {
@@ -557,55 +463,128 @@ export default function ProjectManagement() {
       const taskData = {
         id: editingTask.id,
         userId: user?.id,
-        title: updatedTask.title,
-        description: updatedTask.description,
-        priority: updatedTask.priority,
-        status: updatedTask.status,
+        title: updatedTask.title || editingTask.title,
+        description: updatedTask.description || editingTask.description,
+        priority: updatedTask.priority || editingTask.priority,
+        status: updatedTask.status || editingTask.status,
         assignedTo: updatedTask.assignedTo,
-        type: updatedTask.type,
+        type: updatedTask.type || editingTask.type,
         acceptanceCriteria: editingTask.acceptanceCriteria || "",
-        storyPoints: updatedTask.storyPoints,
+        storyPoints: null as number | null, // Por defecto, sin estimar
         epicId: updatedTask.epicId,
       };
 
-      // Solo incluir storyPoints en la solicitud si es mayor que 0
-      // Esto evita la validación @Min(1) en el backend
+      // Solo incluir storyPoints si es mayor que 0
       if (updatedTask.storyPoints && updatedTask.storyPoints > 0) {
         taskData.storyPoints = updatedTask.storyPoints;
       }
 
-      const response = await apiClient.patch(`/issues/update`, taskData);
+      // Actualización optimista
+      const optimisticTask: Task = {
+        ...editingTask,
+        ...taskData,
+        title: taskData.title,
+        description: taskData.description || "",
+        priority: taskData.priority,
+        status: taskData.status,
+        type: taskData.type,
+        epicId: updatedTask.epicId,
+      };
 
-      if (response.data) {
-        // Actualizar el estado local según dónde estaba la tarea (sprint o backlog)
-        if (editingSprintId) {
-          setSprints(sprints.map(sprint =>
-            sprint.id === editingSprintId
-              ? {
-                  ...sprint,
-                  tasks: sprint.tasks.map((task: Task) =>
-                      task.id === editingTask.id ? { ...response.data, storyPoints: updatedTask.storyPoints, epicId: updatedTask.epicId } : task
-                  ),
-                }
-              : sprint
-          ));
-        } else {
-          setBacklogTasks(backlogTasks.map(task =>
-              task.id === editingTask.id ? { ...response.data, storyPoints: updatedTask.storyPoints, epicId: updatedTask.epicId } : task
-          ));
-        }
-
-        toast({
-          title: "Cambios guardados",
-          description: "Los cambios han sido guardados exitosamente.",
-        });
+      if (editingSprintId) {
+        setSprints(sprints.map(sprint =>
+          sprint.id === editingSprintId
+            ? {
+                ...sprint,
+                tasks: sprint.tasks.map((task: Task) =>
+                  task.id === editingTask.id ? optimisticTask : task
+                ),
+              }
+            : sprint
+        ));
+      } else {
+        setBacklogTasks(backlogTasks.map(task =>
+          task.id === editingTask.id ? optimisticTask : task
+        ));
+        setAllBacklogTasks(prev => prev.map(task =>
+          task.id === editingTask.id ? optimisticTask : task
+        ));
       }
+
+      // Usar el mutation hook para actualizar la tarea
+      console.log("Sending task update to API:", taskData);
+      updateIssue(taskData, {
+        onSuccess: (data) => {
+          console.log("API response data:", data);
+          notifications.show({
+            title: "Cambios guardados",
+            message: "Los cambios han sido guardados exitosamente.",
+            color: "green"
+          });
+
+          // Actualizar el estado con la respuesta del servidor
+          const taskModified: Task = {
+            ...data,
+            storyPoints: taskData.storyPoints,
+            epicId: updatedTask.epicId,
+            title: data.title || editingTask.title,
+            description: data.description || editingTask.description,
+            priority: data.priority || editingTask.priority,
+            status: data.status || editingTask.status,
+            type: data.type || editingTask.type,
+          };
+
+          if (editingSprintId) {
+            setSprints(sprints.map(sprint =>
+              sprint.id === editingSprintId
+                ? {
+                    ...sprint,
+                    tasks: sprint.tasks.map((task: Task) =>
+                      task.id === editingTask.id ? taskModified : task
+                    ),
+                  }
+                : sprint
+            ));
+          } else {
+            setBacklogTasks(backlogTasks.map(task =>
+              task.id === editingTask.id ? taskModified : task
+            ));
+          }
+        },
+        onError: (error) => {
+          console.error("Error updating task:", error);
+          
+          // Revertir cambios en caso de error
+          if (editingSprintId) {
+            setSprints(sprints.map(sprint =>
+              sprint.id === editingSprintId
+                ? {
+                    ...sprint,
+                    tasks: sprint.tasks.map((task: Task) =>
+                      task.id === editingTask.id ? editingTask : task
+                    ),
+                  }
+                : sprint
+            ));
+          } else {
+            setBacklogTasks(backlogTasks.map(task =>
+              task.id === editingTask.id ? editingTask : task
+            ));
+          }
+
+          notifications.show({
+            title: "Error",
+            message: "No se pudo actualizar la tarea. Inténtalo de nuevo.",
+            color: "red"
+          });
+        }
+      });
     } catch (error) {
-      console.error("Error updating task:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar la tarea. Inténtalo de nuevo.",
-        variant: "destructive",
+      console.error("Unexpected error in handleSaveTaskEdit:", error);
+      notifications.show({
+        title: "Error inesperado",
+        message: "Ocurrió un error al procesar la solicitud",
+        color: "red"
       });
     }
   };
@@ -632,7 +611,7 @@ export default function ProjectManagement() {
         task.id === taskId
           ? {
               ...task,
-              status: task.status === "to-do" || task.status === "in-progress" ? "resolved" : "to-do",
+              status: task.status === "to-do" || task.status === "in-progress" ? "done" : "to-do",
             } as Task
           : task
       )
@@ -656,7 +635,7 @@ export default function ProjectManagement() {
                 task.id === taskId
                   ? {
                       ...task,
-                      status: task.status === "to-do" || task.status === "in-progress" ? "resolved" : "to-do",
+                      status: task.status === "to-do" || task.status === "in-progress" ? "done" : "to-do",
                     } as Task
                   : task
               ),
@@ -855,7 +834,7 @@ export default function ProjectManagement() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "resolved":
+      case "done":
       case "closed":
         return "bg-green-100 text-green-800";
       case "in-progress":
@@ -874,8 +853,8 @@ export default function ProjectManagement() {
         return "POR HACER";
       case "in-progress":
         return "EN PROGRESO";
-      case "resolved":
-        return "RESUELTO";
+      case "done":
+        return "COMPLETADO";
       case "closed":
         return "CERRADO";
       case "review":
@@ -885,11 +864,11 @@ export default function ProjectManagement() {
     }
   }
 
-  const getAssignedUser = (userId?: string) => {
+  const getAssignedUser = (userId?: string): AssignedUser | null => {
     if (!userId) return null;
     
-    // Buscar en los miembros reales del proyecto
-    const projectMember = projectMembers.find(member => member.user_id === userId);
+    // Buscar en los miembros del proyecto
+    const projectMember = projectMembers.find((member: any) => member.user_id === userId);
     if (projectMember && projectMember.user) {
       return { 
         initials: projectMember.initials || 'U',
@@ -898,11 +877,7 @@ export default function ProjectManagement() {
       };
     }
     
-    // Fallback a miembros de ejemplo si no se encuentra en los miembros del proyecto
-    const mockMember = teamMembers.find((member) => member.id === userId);
-    return mockMember 
-      ? { initials: mockMember.initials, name: mockMember.name, lastName: '' } 
-      : { initials: 'U', name: 'Usuario', lastName: '' };
+    return { initials: 'U', name: 'Usuario', lastName: '' };
   }
 
   // Funciones para actualizar el estado de tareas
@@ -1027,75 +1002,113 @@ export default function ProjectManagement() {
    * @param status Nuevo estado
    */
   const handleBacklogTaskStatusChange = async (taskId: string, status: Task["status"]) => {
+    console.log("Starting status change for task:", taskId, "to status:", status);
+    
     try {
       // Encontrar la tarea en el backlog
       const task = backlogTasks.find((t: Task) => t.id === taskId);
       if (!task) {
         console.error("Task not found in backlog:", taskId);
+        notifications.show({
+          title: "Error",
+          message: "No se encontró la tarea en el backlog",
+          color: "red"
+        });
         return;
       }
       
       // Guardar el estado anterior para restaurarlo en caso de error
       const previousStatus = task.status;
+      console.log("Previous status:", previousStatus);
       
-      // Actualización optimista
+      // Actualización optimista - actualizar UI inmediatamente
       const updatedTask = { ...task, status } as Task;
-      setBacklogTasks(backlogTasks.map(t => t.id === taskId ? updatedTask : t));
+      setBacklogTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
+      setAllBacklogTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
       
-      try {
+      console.log("Attempting to update task status via mutation...");
+      
         // Use the mutation hook instead of direct API call
-        updateIssue({
+      updateIssue(
+        {
           id: taskId,
           status,
           userId: user?.id,
-          projectId: project_id // Needed for client-side cache invalidation, will be removed before API call
-        }, {
-          onSuccess: () => {
-            toast({
+          projectId: project_id
+        },
+        {
+          onSuccess: (data) => {
+            console.log("Status update successful:", data);
+            notifications.show({
               title: "Estado actualizado",
-              description: `El estado de "${task.title}" ha sido actualizado a ${getStatusDisplayText(status).toLowerCase()}.`,
+              message: `El estado de "${task.title}" ha sido actualizado a ${getStatusDisplayText(status).toLowerCase()}.`,
+              color: "green"
             });
-            
-            // Force refresh of project issues data with queryClient
-            if (project_id) {
-              invalidateProjectIssues(queryClient, project_id as string);
-            }
           },
-          onError: (error) => {
-            console.error("Error updating task status:", error);
+          onError: (error: any) => {
+            console.error("Error in mutation onError callback:", error);
             
             // Restaurar el estado anterior
-            setBacklogTasks(backlogTasks.map(t => 
+            console.log("Rolling back to previous status:", previousStatus);
+            setBacklogTasks(prev => prev.map(t => 
+              t.id === taskId ? { ...t, status: previousStatus } as Task : t
+            ));
+            setAllBacklogTasks(prev => prev.map(t => 
               t.id === taskId ? { ...t, status: previousStatus } as Task : t
             ));
             
-            toast({
+            // Mostrar mensaje de error específico según el tipo de error
+            if (!error.response || error.message?.includes('Network Error') || error.message?.includes('Failed to fetch')) {
+              console.error("Network error detected");
+              notifications.show({
+                title: "Error de conexión",
+                message: "No se pudo conectar con el servidor. El servicio de proyectos no está disponible.",
+                color: "red"
+              });
+            } else if (error.response?.status === 404) {
+              console.error("404 error detected");
+              notifications.show({
               title: "Error",
-              description: "No se pudo actualizar el estado de la tarea",
-              variant: "destructive",
-            });
-          }
-        });
-      } catch (error) {
-        console.error("Error in mutation call:", error);
-        
-        // Restaurar el estado anterior
-        setBacklogTasks(backlogTasks.map(t => 
-          t.id === taskId ? { ...t, status: previousStatus } as Task : t
-        ));
-        
-        toast({
+                message: "No se encontró la tarea en el servidor",
+                color: "red"
+              });
+            } else if (error.response?.status === 500) {
+              console.error("500 error detected");
+              notifications.show({
+                title: "Error del servidor",
+                message: "El servidor no pudo procesar la solicitud",
+                color: "red"
+              });
+            } else {
+              console.error("Unknown error:", error);
+              notifications.show({
           title: "Error",
-          description: "No se pudo actualizar el estado de la tarea",
-          variant: "destructive",
-        });
+                message: "No se pudo actualizar el estado de la tarea",
+                color: "red"
+              });
+            }
+          }
+        }
+      );
+    } catch (error: any) {
+      console.error("Unexpected error in handleBacklogTaskStatusChange:", error);
+      
+      // Intentar restaurar el estado anterior si es posible
+      const task = backlogTasks.find((t: Task) => t.id === taskId);
+      if (task) {
+        console.log("Attempting to restore previous state after error");
+        setBacklogTasks(prev => prev.map(t => 
+          t.id === taskId ? { ...t, status: task.status } as Task : t
+        ));
+        setAllBacklogTasks(prev => prev.map(t => 
+          t.id === taskId ? { ...t, status: task.status } as Task : t
+        ));
       }
-    } catch (error) {
-      console.error("Unexpected error updating task status:", error);
-      toast({
+      
+      notifications.show({
         title: "Error inesperado",
-        description: "Ocurrió un error al actualizar el estado",
-        variant: "destructive",
+        message: "Ocurrió un error al actualizar el estado. Por favor, intenta de nuevo.",
+        color: "red"
       });
     }
   };
@@ -1152,39 +1165,142 @@ export default function ProjectManagement() {
     return epics.find(epic => epic.id === epicId) || null;
   };
 
-  // Función para filtrar tareas según el término de búsqueda
-  const filteredBacklogTasks = useMemo(() => {
-    if (!searchTerm.trim()) return backlogTasks;
-    
-    const searchLower = searchTerm.toLowerCase().trim();
-    
-    return backlogTasks.filter(task => {
-      // Función auxiliar que verifica si alguna palabra en un texto comienza con el término de búsqueda
-      const hasWordStartingWith = (text: string | undefined): boolean => {
-        if (!text) return false;
-        
-        // Dividir el texto en palabras y verificar cada una
-        return text.toLowerCase()
-          .split(/\s+/) // Dividir por espacios en blanco (incluye espacios, tabs, saltos de línea)
-          .some(word => word.startsWith(searchLower));
-      };
-      
-      // Comprobar si alguna palabra en el título comienza con el término de búsqueda
-      const titleMatches = hasWordStartingWith(task.title);
-      
-      // Comprobar si alguna palabra en el código comienza con el término de búsqueda
-      const codeMatches = hasWordStartingWith(task.code);
-      
-      // Comprobar si alguna palabra en la descripción comienza con el término de búsqueda
-      const descriptionMatches = hasWordStartingWith(task.description);
-      
-      return titleMatches || codeMatches || descriptionMatches;
-    });
-  }, [backlogTasks, searchTerm]);
-
   // Function to refetch project members
   const refetchProjectMembers = async () => {
     await fetchProjectMembers();
+  };
+
+  // Restore the project-related useEffect that was accidentally removed
+  // Find the team associated with the current project
+  const currentTeam = useMemo(() => {
+    if (!project || !teams) return null;
+    return teams.find(team => team.id === project.team_id);
+  }, [project, teams]);
+  
+  const handleEpicSelect = async (epicId: string) => {
+    const epic = epics.find(e => e.id === epicId);
+    if (!epic) return;
+
+    setSelectedEpic(epic);
+    setIsEpicIssuesDialogOpen(true);
+
+    try {
+      const response = await apiClient.get(`/issues/by-epic/${epicId}`);
+      if (response.data) {
+        setEpicIssues(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching epic issues:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar las tareas de la épica",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const itemsPerPage = 15;
+
+  // Calcular las tareas filtradas y paginadas
+  const filteredAndPaginatedTasks = useMemo(() => {
+    const filteredTasks = allBacklogTasks.filter(task => {
+      if (!searchTerm) return true;
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        task.title.toLowerCase().includes(searchLower) ||
+        task.description?.toLowerCase().includes(searchLower) ||
+        task.code?.toLowerCase().includes(searchLower)
+      );
+    });
+
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredTasks.slice(startIndex, endIndex);
+  }, [allBacklogTasks, searchTerm, currentPage]);
+
+  // Calcular el total de páginas
+  const totalPages = useMemo(() => {
+    const filteredTasks = allBacklogTasks.filter(task => {
+      if (!searchTerm) return true;
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        task.title.toLowerCase().includes(searchLower) ||
+        task.description?.toLowerCase().includes(searchLower) ||
+        task.code?.toLowerCase().includes(searchLower)
+      );
+    });
+    return Math.ceil(filteredTasks.length / itemsPerPage);
+  }, [allBacklogTasks, searchTerm]);
+
+  const handleSearchChange = (term: string) => {
+    console.log('Search term changed:', term);
+    setSearchTerm(term);
+    setCurrentPage(1); // Reset a la primera página cuando cambia la búsqueda
+  };
+
+  const handlePageChange = (page: number) => {
+    console.log('Setting page to:', page);
+    setCurrentPage(page);
+  };
+
+  const handleCreateUserStory = async () => {
+    if (!newUserStoryTitle.trim()) {
+      toast({
+        title: "Error",
+        description: "El título de la historia de usuario no puede estar vacío.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!backlogId) {
+      toast({
+        title: "Error",
+        description: "No se ha cargado el ID del backlog",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const newTask = {
+        title: newUserStoryTitle,
+        description: "descripcion de la historia de usuario",
+        type: newUserStoryType,
+        status: "to-do" as const,
+        priority: newUserStoryPriority,
+        createdBy: user?.id,
+        acceptanceCriteria: "",
+        productBacklogId: backlogId,
+        epicId: newUserStoryEpicId,
+      };
+
+      const response = await createIssue.mutateAsync(newTask);
+      
+      // Actualizar el estado local con el nuevo issue
+      if (response) {
+        const newIssue = {
+          ...response,
+          storyPoints: response.story_points || 0, // Asegurarnos de que storyPoints esté presente
+        };
+        setBacklogTasks(prev => [...prev, newIssue]);
+        setAllBacklogTasks(prev => [...prev, newIssue]);
+      }
+      
+      setNewUserStoryTitle("");
+      setNewUserStoryEpicId(undefined);
+      toast({
+        title: "Historia de usuario creada",
+        description: `Se ha añadido "${newTask.title}" al backlog.`,
+      });
+    } catch (error) {
+      console.error("Error creating user story:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create user story",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -1203,8 +1319,11 @@ export default function ProjectManagement() {
       {/* Search Bar */}
       <SearchFilters 
         searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        filteredResultsCount={filteredBacklogTasks.length}
+        onSearchChange={handleSearchChange}
+        filteredResultsCount={backlogTasks.length}
+        epics={epics}
+        onOpenEpicDialog={() => setIsEpicDialogOpen(true)}
+        onEpicSelect={handleEpicSelect}
       />
 
       {/* Main Content */}
@@ -1236,7 +1355,11 @@ export default function ProjectManagement() {
         <BacklogSection
           isExpanded={expandedSections["backlog"]}
           onToggleExpand={() => toggleSection("backlog")}
-          tasks={filteredBacklogTasks}
+          tasks={filteredAndPaginatedTasks}
+          totalTasks={allBacklogTasks.length}
+          totalPages={totalPages}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
           onToggleTaskCompletion={handleToggleBacklogTaskCompletion}
           onEditTask={(task) => openEditTaskModal(task)}
           onMoveTaskToSprint={moveTaskToSprint}
@@ -1280,7 +1403,6 @@ export default function ProjectManagement() {
         onSave={handleSaveTaskEdit}
         projectMembers={projectMembers}
         loadingMembers={loadingMembers}
-        teamMembers={teamMembers}
         epics={epics}
         onOpenEpicDialog={() => setIsEpicDialogOpen(true)}
       />
@@ -1295,11 +1417,24 @@ export default function ProjectManagement() {
       <EpicDialog
         open={isEpicDialogOpen}
         onOpenChange={setIsEpicDialogOpen}
-        projectId={project_id || ""}
+        backlogId={backlogId || ""}
         onEpicCreated={(epic) => {
           setEpics([...epics, epic]);
         }}
         selectedEpicId={null}
+      />
+
+      <EpicIssuesDialog
+        open={isEpicIssuesDialogOpen}
+        onOpenChange={setIsEpicIssuesDialogOpen}
+        epic={selectedEpic}
+        onEditTask={(task) => openEditTaskModal(task)}
+        onStatusChange={handleBacklogTaskStatusChange}
+        getPriorityColor={getPriorityColor}
+        getTypeColor={getTypeColor}
+        getStatusColor={getStatusColor}
+        getStatusDisplayText={getStatusDisplayText}
+        getAssignedUser={getAssignedUser}
       />
 
       <InviteMembersDialog
@@ -1314,3 +1449,4 @@ export default function ProjectManagement() {
     </div>
   )
 }
+

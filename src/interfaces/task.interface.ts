@@ -3,10 +3,10 @@ export interface Task {
   title: string;
   description: string;
   code?: string;
-  status: "to-do" | "in-progress" | "resolved" | "closed" | "review";
+  status: "to-do" | "in-progress" | "done" | "closed" | "review";
   priority: "low" | "medium" | "high" | "critical";
   type?: "bug" | "feature" | "task" | "refactor" | "user_story";
-  storyPoints?: number;
+  storyPoints?: number | null;
   assignedTo?: string;
   createdBy: string;
   acceptanceCriteria?: string;

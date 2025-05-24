@@ -165,7 +165,7 @@ export function TaskItem({
           <Checkbox
             className="mr-2"
             id={`checkbox-${task.id}`}
-            checked={task.status === "resolved"}
+            checked={task.status === "done"}
             disabled={true}
             onClick={(e) => e.stopPropagation()}
           />
@@ -189,7 +189,7 @@ export function TaskItem({
         </div>
         
         <div className="flex-1 min-w-[100px] mr-2">
-          <span className={`${task.status === "resolved" ? "line-through text-gray-400 dark:text-gray-500" : "dark:text-gray-200"}`}>
+          <span className={`${task.status === "done" ? "line-through text-gray-400 dark:text-gray-500" : "dark:text-gray-200"}`}>
               {task.title}
             </span>
         </div>
@@ -202,24 +202,24 @@ export function TaskItem({
                 </span>
               )}
               {epic && <EpicBadge epic={epic} />}
-              {task.storyPoints !== undefined ? (
-              <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-2 py-0.5 rounded-full">
+              {task.storyPoints !== undefined && task.storyPoints !== null ? (
+                <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-2 py-0.5 rounded-full">
                   {task.storyPoints > 0 ? 
                     `${task.storyPoints % 1 === 0 ? task.storyPoints : task.storyPoints.toFixed(1)} pts` : 
                     "Sin estimar"}
                 </span>
               ) : null}
-              {task.assignedTo && (
+              {task.assignedTo ? (
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                    <Avatar className="h-6 w-6 hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-700 transition-all">
-                      <AvatarFallback className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                      <Avatar className="h-6 w-6 hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-700 transition-all">
+                        <AvatarFallback className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
                           {getAssignedUser(task.assignedTo)?.initials || 'U'}
                         </AvatarFallback>
                       </Avatar>
                     </TooltipTrigger>
-                  <TooltipContent side="top" align="center" className="font-medium dark:bg-gray-800 dark:text-gray-200">
+                    <TooltipContent side="top" align="center" className="font-medium dark:bg-gray-800 dark:text-gray-200">
                       <p>
                         {getAssignedUser(task.assignedTo)?.name || 'Usuario'}
                         {getAssignedUser(task.assignedTo)?.lastName ? 
@@ -229,6 +229,10 @@ export function TaskItem({
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+              ) : (
+                <span className="text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 px-2 py-0.5 rounded-full">
+                  Sin asignar
+                </span>
               )}
         </div>
         
@@ -271,8 +275,8 @@ export function TaskItem({
                 <DropdownMenuItem onClick={() => onStatusChange(task.id, "review")} className="dark:text-gray-200 dark:hover:bg-gray-700">
                 En revisión
               </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onStatusChange(task.id, "resolved")} className="dark:text-gray-200 dark:hover:bg-gray-700">
-                Resuelto
+                <DropdownMenuItem onClick={() => onStatusChange(task.id, "done")} className="dark:text-gray-200 dark:hover:bg-gray-700">
+                Completado
               </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onStatusChange(task.id, "closed")} className="dark:text-gray-200 dark:hover:bg-gray-700">
                 Cerrado

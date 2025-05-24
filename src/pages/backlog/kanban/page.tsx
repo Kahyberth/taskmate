@@ -27,6 +27,7 @@ import { apiClient } from "@/api/client-gateway"
 import { notifications } from "@mantine/notifications"
 import { AuthContext } from "@/context/AuthContext"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useProjectById } from "@/api/queries"
 
 // Definición del tipo Task basado en la estructura de los issues del backend
 interface Task {
@@ -34,7 +35,7 @@ interface Task {
   title: string
   description?: string
   type: 'bug' | 'feature' | 'task' | 'refactor' | 'user_story'
-  status: 'to-do' | 'in-progress' | 'review' | 'resolved' | 'closed' | 'blocked'
+  status: 'to-do' | 'in-progress' | 'review' | 'done' | 'closed'
   code?: string
   priority: 'low' | 'medium' | 'high' | 'critical'
   createdBy: string
@@ -95,6 +96,7 @@ const teamMembers = [
 export default function KanbanBoard() {
   const { project_id } = useParams()
   const { user } = useContext(AuthContext)
+  const { data: project, isLoading: isLoadingProject } = useProjectById(project_id)
   const [tasks, setTasks] = useState<Task[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTask, setActiveTask] = useState<Task | null>(null)
@@ -103,7 +105,7 @@ export default function KanbanBoard() {
   // Estado para controlar las columnas visibles
   const [visibleColumns, setVisibleColumns] = useState({
     review: false,
-    blocked: false
+    closed: false
   })
   // Use a ref to track the target status during drag operations
   const targetStatusRef = useRef<{ id: string; status: Task["status"] } | null>(null)
@@ -125,33 +127,41 @@ export default function KanbanBoard() {
   // Cargar tareas del backlog
   useEffect(() => {
     const fetchTasks = async () => {
-      if (!project_id) return
+      if (!project_id || !project) return
       
       setIsLoading(true)
       try {
         const response = await apiClient.get(`/projects/issues/${project_id}`)
+        console.log('Response from API:', response.data);
         
-        if (response.data && Array.isArray(response.data)) {
-          const mappedTasks = response.data.map((task: any) => ({
-            id: task.id,
-            title: task.title,
-            description: task.description || "",
-            type: task.type || "user_story",
-            status: task.status || "to-do",
-            code: task.code || "",
-            priority: task.priority || "medium",
-            createdBy: task.createdBy || user?.id,
-            acceptanceCriteria: task.acceptanceCriteria || "",
-            productBacklogId: task.productBacklogId,
-            storyPoints: task.story_points || 0,
-            assignedTo: task.assignedTo,
-            createdAt: task.createdAt,
-            updatedAt: task.updatedAt,
-            resolvedAt: task.resolvedAt,
-            finishedAt: task.finishedAt
-          }))
+        if (response.data && response.data.issues && Array.isArray(response.data.issues)) {
+          const mappedTasks = response.data.issues.map((task: any) => {
+            console.log('Processing task:', task);
+            return {
+              id: task.id,
+              title: task.title,
+              description: task.description || "",
+              type: task.type || "user_story",
+              status: task.status || "to-do",
+              code: task.code || "",
+              priority: task.priority || "medium",
+              createdBy: task.createdBy || user?.id,
+              acceptanceCriteria: task.acceptanceCriteria || "",
+              productBacklogId: task.productBacklogId,
+              storyPoints: task.story_points || 0,
+              assignedTo: task.assignedTo,
+              createdAt: new Date(task.createdAt),
+              updatedAt: new Date(task.updatedAt),
+              resolvedAt: task.resolvedAt ? new Date(task.resolvedAt) : undefined,
+              finishedAt: task.finishedAt ? new Date(task.finishedAt) : undefined
+            };
+          });
           
-          setTasks(mappedTasks)
+          console.log('Mapped tasks:', mappedTasks);
+          setTasks(mappedTasks);
+        } else {
+          console.warn('Response data is not in the expected format:', response.data);
+          setTasks([]);
         }
       } catch (error) {
         console.error("Error fetching tasks:", error)
@@ -161,20 +171,21 @@ export default function KanbanBoard() {
           color: "red",
           autoClose: 2000,
         })
+        setTasks([]);
       } finally {
         setIsLoading(false)
       }
     }
     
     fetchTasks()
-  }, [project_id, user?.id])
+  }, [project_id, project, user?.id])
 
   // Obtener tareas por estado
   const getTodoTasks = () => tasks.filter((task) => task.status === "to-do")
   const getInProgressTasks = () => tasks.filter((task) => task.status === "in-progress")
-  const getDoneTasks = () => tasks.filter((task) => task.status === "resolved" || task.status === "closed")
+  const getDoneTasks = () => tasks.filter((task) => task.status === "done")
   const getReviewTasks = () => tasks.filter((task) => task.status === "review")
-  const getBlockedTasks = () => tasks.filter((task) => task.status === "blocked")
+  const getClosedTasks = () => tasks.filter((task) => task.status === "closed")
 
   // Manejar inicio de arrastre
   const handleDragStart = (event: DragStartEvent) => {
@@ -357,15 +368,26 @@ export default function KanbanBoard() {
   // Calculamos la cantidad de columnas visibles para aplicar el estilo dinámicamente
   const visibleColumnCount = 3 + 
     (visibleColumns.review ? 1 : 0) + 
-    (visibleColumns.blocked ? 1 : 0);
+    (visibleColumns.closed ? 1 : 0);
   
   // Generamos un string para grid-template-columns basado en el número de columnas
   const gridTemplateColumns = `repeat(${visibleColumnCount}, minmax(0, 1fr))`;
 
-  if (isLoading) {
+  if (isLoadingProject || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    )
+  }
+
+  if (!project) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Proyecto no encontrado</h2>
+          <p className="text-gray-600 dark:text-gray-400">El proyecto que estás buscando no existe o no tienes acceso a él.</p>
+        </div>
       </div>
     )
   }
@@ -402,14 +424,14 @@ export default function KanbanBoard() {
                 </Tooltip>
               </TooltipProvider>
             )}
-            {!visibleColumns.blocked && (
+            {!visibleColumns.closed && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setVisibleColumns(prev => ({ ...prev, blocked: true }))}
+                      onClick={() => setVisibleColumns(prev => ({ ...prev, closed: true }))}
                       className="h-8 px-2 gap-1"
                     >
                       <Plus className="h-4 w-4" />
@@ -429,7 +451,7 @@ export default function KanbanBoard() {
         <div className="grid grid-cols-1 md:hidden gap-4 h-full min-h-[600px] border border-black/10 dark:border-white/10 rounded-lg p-4 bg-white dark:bg-black/20 shadow-sm mb-8">
           {/* TO DO Column */}
           <KanbanColumn 
-            title="POR HACER" 
+            title="TO-DO" 
             count={getTodoTasks().length} 
             status="to-do" 
             tasks={getTodoTasks()} 
@@ -438,7 +460,7 @@ export default function KanbanBoard() {
 
           {/* IN PROGRESS Column */}
           <KanbanColumn
-            title="EN CURSO"
+            title="IN-PROGRESS"
             count={getInProgressTasks().length}
             status="in-progress"
             tasks={getInProgressTasks()}
@@ -448,7 +470,7 @@ export default function KanbanBoard() {
           {/* REVIEW Column (Optional) */}
           {visibleColumns.review && (
             <KanbanColumn
-              title="EN REVISIÓN"
+              title="REVIEW"
               count={getReviewTasks().length}
               status="review"
               tasks={getReviewTasks()}
@@ -458,13 +480,13 @@ export default function KanbanBoard() {
             />
           )}
 
-          {/* BLOCKED Column (Optional) */}
-          {visibleColumns.blocked && (
+          {/* closed Column (Optional) */}
+          {visibleColumns.closed && (
             <KanbanColumn
-              title="BLOQUEADO"
-              count={getBlockedTasks().length}
-              status="blocked"
-              tasks={getBlockedTasks()}
+              title="CLOSED"
+              count={getClosedTasks().length}
+              status="closed"
+              tasks={getClosedTasks()}
               getAssignedUser={getAssignedUser}
               isOptional={true}
               onToggleVisibility={() => setVisibleColumns(prev => ({ ...prev, blocked: false }))}
@@ -473,9 +495,9 @@ export default function KanbanBoard() {
 
           {/* DONE Column */}
           <KanbanColumn
-            title="LISTO"
+            title="DONE"
             count={getDoneTasks().length}
-            status="resolved"
+            status="done"
             tasks={getDoneTasks()}
             showCheckmark
             getAssignedUser={getAssignedUser}
@@ -487,7 +509,7 @@ export default function KanbanBoard() {
              style={{ gridTemplateColumns }}>
           {/* TO DO Column */}
           <KanbanColumn 
-            title="POR HACER" 
+            title="TO-DO" 
             count={getTodoTasks().length} 
             status="to-do" 
             tasks={getTodoTasks()} 
@@ -496,7 +518,7 @@ export default function KanbanBoard() {
 
           {/* IN PROGRESS Column */}
           <KanbanColumn
-            title="EN CURSO"
+            title="IN-PROGRESS"
             count={getInProgressTasks().length}
             status="in-progress"
             tasks={getInProgressTasks()}
@@ -506,7 +528,7 @@ export default function KanbanBoard() {
           {/* REVIEW Column (Optional) */}
           {visibleColumns.review && (
             <KanbanColumn
-              title="EN REVISIÓN"
+              title="REVIEW"
               count={getReviewTasks().length}
               status="review"
               tasks={getReviewTasks()}
@@ -517,12 +539,12 @@ export default function KanbanBoard() {
           )}
 
           {/* BLOCKED Column (Optional) */}
-          {visibleColumns.blocked && (
+          {visibleColumns.closed && (
             <KanbanColumn
-              title="BLOQUEADO"
-              count={getBlockedTasks().length}
-              status="blocked"
-              tasks={getBlockedTasks()}
+              title="CLOSED"
+              count={getClosedTasks().length}
+              status="closed"
+              tasks={getClosedTasks()}
               getAssignedUser={getAssignedUser}
               isOptional={true}
               onToggleVisibility={() => setVisibleColumns(prev => ({ ...prev, blocked: false }))}
@@ -531,9 +553,9 @@ export default function KanbanBoard() {
 
           {/* DONE Column */}
           <KanbanColumn
-            title="LISTO"
+            title="DONE"
             count={getDoneTasks().length}
-            status="resolved"
+            status="done"
             tasks={getDoneTasks()}
             showCheckmark
             getAssignedUser={getAssignedUser}
@@ -543,10 +565,10 @@ export default function KanbanBoard() {
         {/* Drag Overlay - muestra una vista previa del elemento arrastrado */}
         <DragOverlay adjustScale={false} zIndex={100}>
           {activeTask ? (
-            <div className="w-[350px] opacity-90">
+            <div className="w-full max-w-[350px] opacity-90">
               <Card className="shadow-lg dark:border-white/10">
                 <CardHeader className="p-3 pb-0">
-                  <h3 className="text-sm font-medium dark:text-white">{activeTask.title}</h3>
+                  <h3 className="text-sm font-medium dark:text-white line-clamp-2">{activeTask.title}</h3>
                 </CardHeader>
                 <CardContent className="p-3 pt-2">
                   <div className="flex items-center">
@@ -560,7 +582,7 @@ export default function KanbanBoard() {
                           <span className="text-xs">{activeTask.code}</span>
                         </div>
                       )}
-                      {(activeTask.status === "resolved" || activeTask.status === "closed") && (
+                      {(activeTask.status === "done" || activeTask.status === "closed") && (
                         <Check className="h-4 w-4 text-green-500 mr-1" />
                       )}
                       {activeTask.assignedTo && getAssignedUser(activeTask.assignedTo) && (
@@ -624,10 +646,9 @@ function KanbanColumn({
         return "text-blue-600 dark:text-blue-300";
       case "review":
         return "text-yellow-600 dark:text-yellow-300";
-      case "blocked":
-        return "text-red-600 dark:text-red-300";
-      case "resolved":
       case "closed":
+        return "text-red-600 dark:text-red-300";
+      case "done":
         return "text-green-600 dark:text-green-300";
       default:
         return "text-gray-600 dark:text-gray-200";
@@ -669,7 +690,7 @@ function KanbanColumn({
               tagColor={getTagColor(task.type)}
               taskId={task.code || ""}
               assignee={task.assignedTo || ""}
-              completed={task.status === "resolved" || task.status === "closed"}
+              completed={task.status === "done" || task.status === "closed"}
               hideTag={false}
               hideTaskId={!task.code}
               getAssignedUser={getAssignedUser}

@@ -15,7 +15,7 @@ export default function ProjectBoardPage() {
 
       try {
         setIsLoading(true);
-        const response = await apiClient.get(`/projects/${project_id}`);
+        const response = await apiClient.get(`/projects/find/${project_id}`);
         if (response.data) {
           setProject(response.data);
         }

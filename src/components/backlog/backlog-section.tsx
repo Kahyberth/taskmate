@@ -6,11 +6,17 @@ import { TaskItem } from "./task-item";
 import { Task } from "@/interfaces/task.interface";
 import { Epic } from "@/interfaces/epic.interface";
 import { useState, useMemo } from "react";
+import { Pagination } from '@mantine/core';
+import { CreateIssueForm } from "./create-issue-form";
 
 interface BacklogSectionProps {
   isExpanded: boolean;
   onToggleExpand: () => void;
   tasks: Task[];
+  totalTasks: number;
+  totalPages: number;
+  currentPage: number;
+  onPageChange: (page: number) => void;
   onToggleTaskCompletion: (taskId: string) => void;
   onEditTask: (task: Task) => void;
   onMoveTaskToSprint: (taskId: string, sprintId: string) => void;
@@ -43,6 +49,10 @@ export function BacklogSection({
   isExpanded,
   onToggleExpand,
   tasks,
+  totalTasks,
+  totalPages,
+  currentPage,
+  onPageChange,
   onToggleTaskCompletion,
   onEditTask,
   onMoveTaskToSprint,
@@ -70,8 +80,6 @@ export function BacklogSection({
   getEpicById,
   searchTerm,
 }: BacklogSectionProps) {
-  const [isCreatingStory, setIsCreatingStory] = useState(false);
-  
   // Calculate task counts by status
   const taskCounts = useMemo(() => {
     const todoCount = tasks.filter(task => task.status === "to-do").length;
@@ -79,30 +87,12 @@ export function BacklogSection({
       task.status === "in-progress" || task.status === "review"
     ).length;
     const doneCount = tasks.filter(task => 
-      task.status === "resolved" || task.status === "closed"
+      task.status === "done" || task.status === "closed"
     ).length;
     
     return { todoCount, inProgressCount, doneCount };
   }, [tasks]);
-  
-  const handleCreateUserStory = async () => {
-    if (!newUserStoryTitle.trim() || isCreatingStory) return;
-    
-    setIsCreatingStory(true);
-    try {
-      await onCreateUserStory();
-    } finally {
-      setIsCreatingStory(false);
-    }
-  };
-  
-  const handleKeyDown = async (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !isCreatingStory) {
-      e.preventDefault();
-      await handleCreateUserStory();
-    }
-  };
-  
+
   const handleToggleClick = (e: React.MouseEvent) => {
     // Only toggle if clicking on the header section elements
     if (e.target instanceof Element && 
@@ -112,6 +102,10 @@ export function BacklogSection({
     }
   };
   
+  const handlePageChange = (page: number) => {
+    onPageChange(page);
+  };
+
   return (
     <div className="border border-black/10 dark:border-white/10 rounded-md p-3 shadow-sm bg-white dark:bg-black/20 mb-6">
       <div className="flex items-center mb-2 backlog-header" onClick={handleToggleClick}>
@@ -123,27 +117,11 @@ export function BacklogSection({
           <span className="font-medium dark:text-white">Backlog</span>
           <span className="ml-2 text-gray-500 dark:text-gray-400 text-sm">
             {searchTerm ? (
-              <>Filtrando: {tasks.length} resultado{tasks.length !== 1 ? 's' : ''}</>
+              <>Filtrando: {totalTasks} resultado{totalTasks !== 1 ? 's' : ''}</>
             ) : (
-              `(${tasks.length} actividades)`
+              `(${totalTasks} actividades)`
             )}
           </span>
-          
-          {/* Epic management button */}
-          {onOpenEpicDialog && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="ml-2 h-7 text-xs flex items-center gap-1 dark:text-gray-200 dark:hover:bg-gray-800"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenEpicDialog();
-              }}
-            >
-              <Plus size={12} />
-              <span>Épicas</span>
-            </Button>
-          )}
         </div>
         <div className="ml-auto flex items-center gap-2">
           {/* To-do count */}
@@ -179,80 +157,18 @@ export function BacklogSection({
       {isExpanded && (
         <div className="pl-8">
           {/* Input for new user story */}
-          <div className="flex flex-nowrap items-center gap-2 my-4 w-full">
-              <Input
-                type="text"
-              placeholder="Título de la historia"
-                value={newUserStoryTitle}
-                onChange={(e) => onNewUserStoryTitleChange(e.target.value)}
-              className="flex-1 min-w-0 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:placeholder:text-gray-500"
-                onKeyDown={handleKeyDown}
-                disabled={isCreatingStory}
-              />
-                <Select value={newUserStoryType} onValueChange={onNewUserStoryTypeChange} disabled={isCreatingStory}>
-              <SelectTrigger className="w-[100px] min-w-[100px] text-xs dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200">
-                    <SelectValue placeholder="Tipo" />
-                  </SelectTrigger>
-              <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                <SelectItem value="user_story" className="dark:text-gray-200">User Story</SelectItem>
-                <SelectItem value="task" className="dark:text-gray-200">Task</SelectItem>
-                <SelectItem value="bug" className="dark:text-gray-200">Bug</SelectItem>
-                <SelectItem value="feature" className="dark:text-gray-200">Feature</SelectItem>
-                <SelectItem value="refactor" className="dark:text-gray-200">Refactor</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={newUserStoryPriority} onValueChange={onNewUserStoryPriorityChange} disabled={isCreatingStory}>
-              <SelectTrigger className="w-[90px] min-w-[90px] text-xs dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200">
-                    <SelectValue placeholder="Prioridad" />
-                  </SelectTrigger>
-              <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                <SelectItem value="low" className="text-green-600 dark:text-green-400">Baja</SelectItem>
-                <SelectItem value="medium" className="text-yellow-600 dark:text-yellow-400">Media</SelectItem>
-                <SelectItem value="high" className="text-red-600 dark:text-red-400">Alta</SelectItem>
-                <SelectItem value="critical" className="text-purple-600 dark:text-purple-400">Crítica</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select 
-                  value={newUserStoryEpicId || "none"} 
-                  onValueChange={(value) => {
-                    if (onNewUserStoryEpicIdChange) {
-                      onNewUserStoryEpicIdChange(value === "none" ? undefined : value);
-                    }
-                  }}
-                  disabled={isCreatingStory}
-                >
-              <SelectTrigger className="w-[100px] min-w-[100px] text-xs dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200">
-                    <SelectValue placeholder="Épica" />
-                  </SelectTrigger>
-              <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                <SelectItem value="none" className="dark:text-gray-200">Sin épica</SelectItem>
-                    {epics.map((epic) => (
-                  <SelectItem key={epic.id} value={epic.id} className="dark:text-gray-200">
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: epic.color || "#4b5563" }}
-                          />
-                          {epic.title}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-            <Button 
-              onClick={handleCreateUserStory} 
-              size="sm"
-              className="h-9 px-3 text-xs whitespace-nowrap dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-700"
-              disabled={isCreatingStory || !newUserStoryTitle.trim()}
-            >
-              {isCreatingStory ? (
-                <>
-                  <Loader2 size={14} className="mr-1 animate-spin" />
-                  Añadiendo...
-                </>
-              ) : 'Añadir'}
-            </Button>
-          </div>
+          <CreateIssueForm
+            onCreateUserStory={onCreateUserStory}
+            newUserStoryTitle={newUserStoryTitle}
+            onNewUserStoryTitleChange={onNewUserStoryTitleChange}
+            newUserStoryType={newUserStoryType}
+            onNewUserStoryTypeChange={onNewUserStoryTypeChange}
+            newUserStoryPriority={newUserStoryPriority}
+            onNewUserStoryPriorityChange={onNewUserStoryPriorityChange}
+            newUserStoryEpicId={newUserStoryEpicId}
+            onNewUserStoryEpicIdChange={onNewUserStoryEpicIdChange}
+            epics={epics}
+          />
 
           {tasks.length === 0 ? (
             <div className="text-center text-gray-500 dark:text-gray-400 py-4">
@@ -266,25 +182,49 @@ export function BacklogSection({
               )}
             </div>
           ) : (
-            tasks.map((task) => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                onToggleCompletion={onToggleTaskCompletion}
-                onEdit={onEditTask}
-                onMoveToSprint={onMoveTaskToSprint}
-                availableSprints={availableSprints}
-                getPriorityColor={getPriorityColor}
-                getTypeColor={getTypeColor}
-                getStatusColor={getStatusColor}
-                getStatusDisplayText={getStatusDisplayText}
-                getAssignedUser={getAssignedUser}
-                onStatusChange={onStatusChange}
-                onAssignUser={onAssignUser}
-                onDeleteTask={onDeleteTask}
-                getEpicById={getEpicById}
-              />
-            ))
+            <>
+              {tasks.map((task) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  onToggleCompletion={onToggleTaskCompletion}
+                  onEdit={onEditTask}
+                  onMoveToSprint={onMoveTaskToSprint}
+                  availableSprints={availableSprints}
+                  getPriorityColor={getPriorityColor}
+                  getTypeColor={getTypeColor}
+                  getStatusColor={getStatusColor}
+                  getStatusDisplayText={getStatusDisplayText}
+                  getAssignedUser={getAssignedUser}
+                  onStatusChange={onStatusChange}
+                  onAssignUser={onAssignUser}
+                  onDeleteTask={onDeleteTask}
+                  getEpicById={getEpicById}
+                />
+              ))}
+
+              {totalPages > 1 && (
+                <div className="flex justify-center mt-4">
+                  <Pagination 
+                    total={totalPages}
+                    value={currentPage} 
+                    onChange={handlePageChange}
+                    size="sm"
+                    radius="md"
+                    withEdges
+                    getItemProps={(page) => ({
+                      style: {
+                        backgroundColor: page === currentPage ? '#4263EB' : '',
+                        color: page === currentPage ? 'white' : '',
+                      }
+                    })}
+                  />
+                  <div className="ml-4 text-sm text-gray-500">
+                    Página {currentPage} de {totalPages}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -293,7 +233,7 @@ export function BacklogSection({
         <div className="flex items-center justify-center py-4 text-gray-400 dark:text-gray-500">
           <CheckSquare size={16} className="mr-2" />
           <span className="text-sm">
-            {tasks.length} actividades | Estimación:{" "}
+            {totalTasks} actividades | Estimación:{" "}
             {tasks.reduce((sum, task) => sum + (task.storyPoints || 0), 0).toFixed(1).replace(/\.0$/, '')} puntos
             {tasks.some(task => task.storyPoints === 0 || task.storyPoints === undefined) && 
               " (algunas tareas sin estimar)"}

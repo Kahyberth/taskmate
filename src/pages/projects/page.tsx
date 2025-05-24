@@ -1,9 +1,10 @@
-import { useState, useContext, useCallback, useMemo } from "react";
+import { useState, useContext, useCallback, useMemo, useEffect } from "react";
 import { Plus, Search, Filter, AlertCircle, ChevronDown, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Badge } from "@/components/ui/badge";
+import { Pagination } from '@mantine/core';
 
 import {
   Dialog,
@@ -53,13 +54,36 @@ export default function ProjectsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
   
   // Debounce search input to prevent excessive re-renders
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   // Usar React Query para obtener los proyectos donde el usuario es miembro (creados por el usuario o invitado)
-  const { data: projects = [], isLoading, refetch } = useProjectsByUser(user?.id);
- 
+  const { 
+    data: projectsData = { projects: [], totalPages: 0, total: 0 }, 
+    isLoading, 
+    refetch 
+  } = useProjectsByUser(user?.id, currentPage, itemsPerPage);
+  
+  const projects = projectsData.projects || [];
+  const totalPages = projectsData.totalPages || 1;
+
+  // Reset to first page when search, filter, or tab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery, statusFilter, activeTab]);
+
+  // Debug pagination info
+  useEffect(() => {
+    console.log("Pagination info:", {
+      currentPage,
+      totalPages,
+      projectsCount: projects.length,
+      itemsPerPage
+    });
+  }, [currentPage, totalPages, projects, itemsPerPage]);
 
   const handleCreateProjectSuccess = useCallback(() => {
     setCreateDialogOpen(false);
@@ -94,6 +118,11 @@ export default function ProjectsPage() {
 
   const handleStatusFilter = useCallback((status: string) => {
     setStatusFilter(status);
+  }, []);
+
+  const handlePageChange = useCallback((newPage: number) => {
+    console.log("Changing to page:", newPage);
+    setCurrentPage(newPage);
   }, []);
 
   const getStatusColor = (status: string) => {
@@ -239,14 +268,26 @@ export default function ProjectsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProjects.map((project: Project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredProjects.map((project: Project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                  />
+                ))}
+              </div>
+              
+              {totalPages > 1 && (
+                <div className="flex justify-center mt-8">
+                  <Pagination 
+                    total={totalPages}
+                    value={currentPage} 
+                    onChange={handlePageChange} 
+                  />
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
 
@@ -278,14 +319,26 @@ export default function ProjectsPage() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProjects.map((project: Project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredProjects.map((project: Project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                  />
+                ))}
+              </div>
+              
+              {totalPages > 1 && (
+                <div className="flex justify-center mt-8">
+                  <Pagination 
+                    total={totalPages}
+                    value={currentPage} 
+                    onChange={handlePageChange} 
+                  />
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
       </Tabs>

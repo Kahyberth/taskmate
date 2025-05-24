@@ -61,7 +61,7 @@ export function SprintSection({
       task.status === "in-progress" || task.status === "review"
     ).length;
     const doneCount = sprint.tasks.filter(task => 
-      task.status === "resolved" || task.status === "closed"
+      task.status === "done" || task.status === "closed"
     ).length;
     
     return { todoCount, inProgressCount, doneCount };

@@ -31,7 +31,7 @@ const epicColors = [
 interface EpicDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  projectId: string;
+  backlogId: string;
   onEpicCreated?: (epic: Epic) => void;
   onEpicSelected?: (epic: Epic | null) => void;
   selectedEpicId?: string | null;
@@ -40,7 +40,7 @@ interface EpicDialogProps {
 export function EpicDialog({ 
   open, 
   onOpenChange, 
-  projectId,
+  backlogId,
   onEpicCreated,
   onEpicSelected,
   selectedEpicId 
@@ -53,22 +53,26 @@ export function EpicDialog({
   const [editingEpic, setEditingEpic] = useState<Epic | null>(null);
   
   // Form state
-  const [epicTitle, setEpicTitle] = useState("");
+  const [epicName, setEpicName] = useState("");
   const [epicDescription, setEpicDescription] = useState("");
-  const [epicColor, setEpicColor] = useState(epicColors[0].value);
   
   useEffect(() => {
     if (open) {
       fetchEpics();
     }
-  }, [open, projectId]);
+  }, [open, backlogId]);
   
   const fetchEpics = async () => {
-    if (!projectId) return;
+    if (!backlogId) {
+      console.log("No backlogId available for fetching epics");
+      return;
+    }
     
     try {
       setIsLoading(true);
-      const response = await apiClient.get(`/projects/epics/${projectId}`);
+      console.log("Fetching epics with backlogId:", backlogId);
+      const response = await apiClient.get(`/epics/get-by-backlog/${backlogId}`);
+      console.log("Epics response:", response.data);
       
       if (response.data) {
         setEpics(response.data);
@@ -86,7 +90,7 @@ export function EpicDialog({
   };
   
   const handleCreateEpic = async () => {
-    if (!epicTitle.trim()) {
+    if (!epicName.trim()) {
       toast({
         title: "Error",
         description: "El título de la épica no puede estar vacío",
@@ -98,13 +102,12 @@ export function EpicDialog({
     try {
       setIsCreating(true);
       const newEpic = {
-        title: epicTitle,
+        name: epicName,
         description: epicDescription,
-        color: epicColor,
-        projectId,
+        productBacklogId: backlogId,
       };
       
-      const response = await apiClient.post(`/projects/epics/create`, newEpic);
+      const response = await apiClient.post(`/epics/create`, newEpic);
       
       if (response.data) {
         const createdEpic = response.data;
@@ -134,7 +137,7 @@ export function EpicDialog({
   };
   
   const handleUpdateEpic = async () => {
-    if (!editingEpic || !epicTitle.trim()) {
+    if (!editingEpic || !epicName.trim()) {
       toast({
         title: "Error",
         description: "El título de la épica no puede estar vacío",
@@ -147,9 +150,8 @@ export function EpicDialog({
       setIsCreating(true);
       const updatedEpic = {
         id: editingEpic.id,
-        title: epicTitle,
+        title: epicName,
         description: epicDescription,
-        color: epicColor,
       };
       
       const response = await apiClient.patch(`/projects/epics/update`, updatedEpic);
@@ -207,16 +209,14 @@ export function EpicDialog({
   
   const handleEditEpic = (epic: Epic) => {
     setEditingEpic(epic);
-    setEpicTitle(epic.title);
+    setEpicName(epic.name);
     setEpicDescription(epic.description || "");
-    setEpicColor(epic.color || epicColors[0].value);
     setShowCreateForm(true);
   };
   
   const resetForm = () => {
-    setEpicTitle("");
+    setEpicName("");
     setEpicDescription("");
-    setEpicColor(epicColors[0].value);
   };
   
   const handleCancel = () => {
@@ -230,11 +230,6 @@ export function EpicDialog({
       onEpicSelected(epic);
       onOpenChange(false);
     }
-  };
-  
-  const getEpicColorClasses = (color: string) => {
-    const epicColor = epicColors.find(c => c.value === color);
-    return epicColor ? `${epicColor.bg} ${epicColor.text}` : "bg-gray-100 text-gray-800";
   };
   
   return (
@@ -271,19 +266,15 @@ export function EpicDialog({
                 {epics.map(epic => (
                   <div 
                     key={epic.id} 
-                    className={`p-3 border rounded-md flex items-center justify-between hover:bg-gray-50 cursor-pointer ${
+                    className={`p-3 border rounded-md flex items-center justify-between dark:hover:bg-white/5 hover:bg-gray-50 cursor-pointer ${
                       selectedEpicId === epic.id ? "border-blue-500 bg-blue-50" : ""
                     }`}
                     onClick={() => handleSelectEpic(epic)}
                   >
-                    <div className="flex items-center space-x-3">
-                      <Circle 
-                        size={14} 
-                        className="fill-current" 
-                        style={{ color: epic.color || epicColors[0].value }} 
-                      />
+                    <div className="flex items-center space-x-3 ">
+                    <div className="w-4 h-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600" />
                       <div>
-                        <h4 className="font-medium">{epic.title}</h4>
+                        <h4 className="font-medium">{epic.name}</h4>
                         {epic.description && (
                           <p className="text-sm text-gray-500 line-clamp-1">{epic.description}</p>
                         )}
@@ -323,12 +314,12 @@ export function EpicDialog({
             <div className="grid gap-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="epic-title" className="text-right">
-                  Título
+                  Nombre
                 </Label>
                 <Input
                   id="epic-title"
-                  value={epicTitle}
-                  onChange={(e) => setEpicTitle(e.target.value)}
+                  value={epicName}
+                  onChange={(e) => setEpicName(e.target.value)}
                   className="col-span-3"
                   placeholder="Nombre de la épica"
                 />
@@ -347,26 +338,6 @@ export function EpicDialog({
                   rows={3}
                 />
               </div>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">
-                  Color
-                </Label>
-                <div className="col-span-3 flex flex-wrap gap-2">
-                  {epicColors.map((color) => (
-                    <button
-                      key={color.value}
-                      type="button"
-                      className={`w-6 h-6 rounded-full ${
-                        epicColor === color.value ? "ring-2 ring-offset-2 ring-blue-500" : ""
-                      }`}
-                      style={{ backgroundColor: color.value }}
-                      onClick={() => setEpicColor(color.value)}
-                      aria-label={`Color ${color.name}`}
-                    />
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         )}
@@ -379,7 +350,7 @@ export function EpicDialog({
               </Button>
               <Button 
                 onClick={editingEpic ? handleUpdateEpic : handleCreateEpic} 
-                disabled={isCreating || !epicTitle.trim()}
+                disabled={isCreating || !epicName.trim()}
               >
                 {isCreating ? (
                   <>
@@ -395,7 +366,7 @@ export function EpicDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cerrar
             </Button>
-          )}
+          )} 
         </DialogFooter>
       </DialogContent>
     </Dialog>

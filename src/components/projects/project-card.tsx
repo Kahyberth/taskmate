@@ -14,17 +14,20 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/api/client-gateway";
-import { useProjectIssues, invalidateProjectIssues } from "@/api/queries";
+import { useProjectIssues, invalidateProjectIssues, useUpdateProject, useProjectStats, invalidateProjectStats } from "@/api/queries";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-import { Calendar, MoreHorizontal } from "lucide-react";
+import { Calendar, MoreHorizontal, Check } from "lucide-react";
 import { DeleteProjectDialog } from "./delete-project-dialog";
 import { EditProjectDialog } from "./edit-project-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const ProjectCard = ({
   project,
@@ -38,50 +41,21 @@ export const ProjectCard = ({
   const navigate = useNavigate();
   const [creator, setCreator] = useState<{name: string; lastName: string} | null>(null);
   const [loading, setLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
+  const [currentStatus, setCurrentStatus] = useState(project.status);
   const queryClient = useQueryClient();
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  
+  // Project update mutation
+  const updateProjectMutation = useUpdateProject();
 
-  // Fetch project issues to calculate progress
-  const { data: issues = [], isLoading: loadingIssues, refetch } = useProjectIssues(project.id);
+  // Obtener las estadísticas del proyecto (total, completados, progreso)
+  const { 
+    data: projectStats = { total: 0, completed: 0, progress: 0 }, 
+    isLoading: loadingStats
+  } = useProjectStats(project.id);
 
-  // Force refetch when component is visible/mounted
-  useEffect(() => {
-    // Invalidate the cache and refetch when the component mounts
-    if (project.id) {
-      invalidateProjectIssues(queryClient, project.id);
-      refetch();
-    }
-    
-    // Setup visibility change listener to refresh data when user returns to this page
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && project.id) {
-        invalidateProjectIssues(queryClient, project.id);
-        refetch();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [project.id, refetch, queryClient]);
-
-  // Calculate progress when issues are loaded
-  useEffect(() => {
-    if (issues.length > 0) {
-      const completedIssues = issues.filter(
-        (issue: any) => issue.status === "resolved" || issue.status === "closed"
-      );
-      const progressPercentage = Math.round((completedIssues.length / issues.length) * 100);
-      setProgress(progressPercentage);
-    } else {
-      setProgress(0);
-    }
-  }, [issues]);
-
+  // Solo cargar el creador del proyecto cuando el componente se monta
   useEffect(() => {
     const fetchCreator = async () => {
       if (project.createdBy) {
@@ -92,19 +66,26 @@ export const ProjectCard = ({
             setCreator(response.data);
           }
         } catch (error) {
-          console.error("Error fetching creator:", error);
+          console.error("Error fetching project creator:", error);
         } finally {
           setLoading(false);
         }
+      } else {
+        setLoading(false);
       }
     };
 
     fetchCreator();
   }, [project.createdBy]);
 
+  // Update local status when project prop changes
+  useEffect(() => {
+    setCurrentStatus(project.status);
+  }, [project.status]);
+
   // Obtener las iniciales del nombre completo del creador
   const getInitials = () => {
-    if (!creator) return project.createdBy?.slice(0, 1) || "?";
+    if (!creator) return loading ? "" : "?";
     
     const firstInitial = creator.name ? creator.name.charAt(0) : "";
     const lastInitial = creator.lastName ? creator.lastName.charAt(0) : "";
@@ -114,7 +95,8 @@ export const ProjectCard = ({
 
   // Obtener el nombre completo del creador
   const getCreatorName = () => {
-    if (!creator) return project.createdBy;
+    if (loading) return <Skeleton className="h-4 w-24" />;
+    if (!creator) return "Unknown user";
     return `${creator.name} ${creator.lastName}`;
   };
   
@@ -130,6 +112,35 @@ export const ProjectCard = ({
   const handleDeleteProject = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowDeleteConfirmation(true);
+  };
+
+  const handleMarkAsCompleted = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const isCompleted = currentStatus === "completed";
+    const newStatus = isCompleted ? "in-progress" : "completed";
+    
+    // Update local state immediately
+    setCurrentStatus(newStatus);
+    
+    updateProjectMutation.mutate(
+      {
+        id: project.id,
+        status: newStatus,
+        createdBy: project.createdBy
+      },
+      {
+        onSuccess: () => {
+          toast.success(`Project marked as ${isCompleted ? "in progress" : "completed"} successfully`);
+          if (onProjectUpdated) onProjectUpdated();
+        },
+        onError: (error) => {
+          // Revert local state if mutation fails
+          setCurrentStatus(currentStatus);
+          console.error("Error updating project status:", error);
+          toast.error(`Failed to update project status`);
+        }
+      }
+    );
   };
 
   if (!project) return null;
@@ -161,7 +172,16 @@ export const ProjectCard = ({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenuItem onClick={handleEditProject}>Edit Project</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDeleteProject}>Delete Project</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleMarkAsCompleted} 
+                  className="flex items-center gap-2"
+                >
+                  <Check className="h-4 w-4" />
+                  {currentStatus === "completed" ? "Mark as In Progress" : "Mark as Completed"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleDeleteProject} className="text-red-600">
+                  Delete Project
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -169,16 +189,25 @@ export const ProjectCard = ({
         <CardContent className="pb-2">
           <div className="flex justify-between items-center mb-3">
             <div></div>
-            <StatusBadge status={project.status} />
+            <StatusBadge status={currentStatus} />
           </div>
 
           <div className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-card-foreground">Progress</span>
-                <span className="text-card-foreground">{progress}%</span>
+                <span className="text-card-foreground">{projectStats.progress}%</span>
               </div>
-              <Progress value={progress} className="h-2" />
+              <Progress value={projectStats.progress} className="h-2" />
+              <div className="text-xs text-muted-foreground mt-1">
+                {loadingStats ? (
+                  "Loading stats..."
+                ) : (
+                  projectStats.total === 0 ? 
+                  "No issues found" : 
+                  `${projectStats.completed} of ${projectStats.total} issues completed`
+                )}
+              </div>
             </div>
 
             <div className="flex justify-between items-center text-sm">
@@ -193,9 +222,17 @@ export const ProjectCard = ({
           <div className="flex justify-between items-center w-full">
             <div className="flex items-center gap-2">
               <Avatar className="h-6 w-6">
-                <AvatarFallback>{getInitials()}</AvatarFallback>
+                <AvatarFallback>
+                  {loading ? (
+                    <Skeleton className="h-4 w-4 rounded-full" />
+                  ) : (
+                    getInitials()
+                  )}
+                </AvatarFallback>
               </Avatar>
-              <span className="text-xs text-muted-foreground">Created by: {getCreatorName()}</span>
+              <span className="text-xs text-muted-foreground">
+                Created by: {getCreatorName()}
+              </span>
             </div>
           </div>
         </CardFooter>

@@ -1,9 +1,8 @@
 export interface Epic {
   id: string;
-  title: string;
+  name: string;
   description?: string;
-  color?: string;
-  projectId: string;
+  backlogId: string;
   createdAt?: Date;
   updatedAt?: Date;
 } 

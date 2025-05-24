@@ -16,7 +16,6 @@ interface EditTaskModalProps {
   onSave: (updatedTask: Partial<Task>) => void;
   projectMembers: any[];
   loadingMembers: boolean;
-  teamMembers: any[];
   epics: Epic[];
   onOpenEpicDialog: () => void;
 }
@@ -28,7 +27,6 @@ export function EditTaskModal({
   onSave,
   projectMembers,
   loadingMembers,
-  teamMembers,
   epics,
   onOpenEpicDialog
 }: EditTaskModalProps) {
@@ -39,7 +37,7 @@ export function EditTaskModal({
   const [editTaskStatus, setEditTaskStatus] = useState<Task["status"]>("to-do");
   const [editTaskStoryPoints, setEditTaskStoryPoints] = useState<number>(0);
   const [editTaskAssignedTo, setEditTaskAssignedTo] = useState<string | undefined>("unassigned");
-  const [editTaskType, setEditTaskType] = useState<'bug' | 'feature' | 'task' | 'refactor' | 'user_story'>('user_story');
+  const [editTaskType, setEditTaskType] = useState<Task["type"]>('user_story');
   const [editTaskEpicId, setEditTaskEpicId] = useState<string | undefined>(undefined);
   const [editTaskAcceptanceCriteria, setEditTaskAcceptanceCriteria] = useState("");
 
@@ -77,6 +75,14 @@ export function EditTaskModal({
     onSave(updatedTask);
     onOpenChange(false);
   };
+
+
+  const handleStoryPointsChange = (value: string) => {
+    const parsedValue = Number.parseFloat(value);
+    if (!isNaN(parsedValue)) {
+      setEditTaskStoryPoints(parsedValue);
+    }
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -152,7 +158,7 @@ export function EditTaskModal({
             <Label className="text-right dark:text-gray-200">Estado</Label>
             <Select
               value={editTaskStatus}
-              onValueChange={(value) => setEditTaskStatus(value as "to-do" | "in-progress" | "resolved" | "closed" | "review")}
+              onValueChange={(value) => setEditTaskStatus(value as Task["status"])}
             >
               <SelectTrigger className="col-span-3 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200">
                 <SelectValue placeholder="Seleccionar estado" />
@@ -160,9 +166,9 @@ export function EditTaskModal({
               <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                 <SelectItem value="to-do" className="dark:text-gray-200">Por hacer</SelectItem>
                 <SelectItem value="in-progress" className="dark:text-gray-200">En progreso</SelectItem>
-                <SelectItem value="resolved" className="dark:text-gray-200">Resuelto</SelectItem>
-                <SelectItem value="closed" className="dark:text-gray-200">Cerrado</SelectItem>
                 <SelectItem value="review" className="dark:text-gray-200">En revisión</SelectItem>
+                <SelectItem value="done" className="dark:text-gray-200">Completado</SelectItem>
+                <SelectItem value="closed" className="dark:text-gray-200">Cerrado</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -190,14 +196,13 @@ export function EditTaskModal({
             </Label>
             <Select
               value={editTaskStoryPoints.toString()}
-              onValueChange={(value) => setEditTaskStoryPoints(Number.parseFloat(value))}
+              onValueChange={(value) => handleStoryPointsChange(value)}
             >
               <SelectTrigger className="col-span-3 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200">
                 <SelectValue placeholder="Seleccionar puntos" />
               </SelectTrigger>
               <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                 <SelectItem value="0" className="dark:text-gray-200">Sin estimar (0 puntos)</SelectItem>
-                <SelectItem value="0.5" className="dark:text-gray-200">0.5 puntos</SelectItem>
                 <SelectItem value="1" className="dark:text-gray-200">1 punto</SelectItem>
                 <SelectItem value="2" className="dark:text-gray-200">2 puntos</SelectItem>
                 <SelectItem value="3" className="dark:text-gray-200">3 puntos</SelectItem>
@@ -225,10 +230,8 @@ export function EditTaskModal({
                     <SelectItem key={epic.id} value={epic.id} className="dark:text-gray-200">
                       <div className="flex items-center gap-2">
                         <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: epic.color || "#4b5563" }}
-                        />
-                        {epic.title}
+                          className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-600"/>
+                        {epic.name}
                       </div>
                     </SelectItem>
                   ))}
@@ -264,12 +267,7 @@ export function EditTaskModal({
                     </SelectItem>
                   ))
                 ) : (
-                  // Fallback a miembros de ejemplo si no hay miembros reales
-                  teamMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id} className="dark:text-gray-200">
-                      {member.name}
-                    </SelectItem>
-                  ))
+                  <SelectItem value="no-members" disabled className="dark:text-gray-400">No hay miembros disponibles</SelectItem>
                 )}
               </SelectContent>
             </Select>
