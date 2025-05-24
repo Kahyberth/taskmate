@@ -212,7 +212,7 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{member.member.name}</p>
+                      <p className="text-sm font-medium truncate">{member.member.name} {member.member.lastName}</p>
                       <p className="text-xs text-black/60 dark:text-white/60 truncate">{member.member.email}</p>
                     </div>
                     <Badge variant="outline" className="ml-auto border-black/30 dark:border-white/20 text-black/80 dark:text-white/80">

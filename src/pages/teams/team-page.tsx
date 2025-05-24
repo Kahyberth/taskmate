@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Users } from "lucide-react";
 import { TeamsHeader } from "@/components/teams/TeamHeader";
@@ -9,6 +9,7 @@ import { EditTeamComponent } from "@/components/teams/EditTeam";
 import { LoadingSkeleton } from "@/components/teams/TeamSkeleton";
 import { useTeams } from "@/context/TeamsContext";
 import { useNavigate } from "react-router-dom";
+import { Pagination } from '@mantine/core';
 
 export default function TeamsPage() {
   // Estados para búsqueda, filtros y ordenamiento
@@ -16,10 +17,25 @@ export default function TeamsPage() {
   const [filterValue, setFilterValue] = useState("all");
   const [sortBy, setSortBy] = useState("name");
   const [teamToEdit, setTeamToEdit] = useState<Team | null>(null);
-
-  const { teams, loading } = useTeams();
+  
+  // Get the pagination functionality from context
+  const { teams, loading, currentPage, setCurrentPage, totalPages } = useTeams();
   const navigate = useNavigate();
-
+ 
+  // Debug info on each render
+  useEffect(() => {
+    console.log("TeamPage rendered with:", {
+      currentPage,
+      totalPages,
+      teamsCount: teams?.length || 0
+    });
+  }, [currentPage, totalPages, teams]);
+  
+  // Wrap setCurrentPage with debugging
+  const handlePageChange = useCallback((newPage: number) => {
+    console.log("Pagination clicked on TeamPage, changing to page:", newPage);
+    setCurrentPage(newPage);
+  }, [setCurrentPage]);
   
   // useMemo para filtrar y ordenar equipos
   const filteredTeams = useMemo(() => {
@@ -42,30 +58,6 @@ export default function TeamsPage() {
         return 0;
       });
   }, [teams, searchQuery, filterValue, sortBy]);
-
-  // console.log("Equipos en estado:", teams);
-  
-  // console.log('filter', filterValue)
-  // const filteredTeams = (teams ?? [])
-  //   .filter(
-  //     (team) => {
-  //       const query = searchQuery.toLowerCase()
-  //       const matchesTeamName = team.name.toLowerCase().includes(query)
-  //       const matchesMember = team.members?.some((member: TeamMember) =>
-  //         member.member.name.toLowerCase().includes(query)
-  //       )
-
-  //       return (matchesTeamName || matchesMember) && 
-  //             (filterValue === "all" || team.role.toLowerCase() === filterValue || (filterValue === "member" && team.role.toLowerCase() !== "leader"))
-  //       // (filterValue === "all" || team.role === filterValue),
-  //     }
-  //   )
-  //   .sort((a, b) => {
-  //     if (sortBy === "name") return a.name.localeCompare(b.name)
-  //     if (sortBy === "members") return b.members.length - a.members.length
-  //     //if (sortBy === "activity") return a.lastActive.localeCompare(b.lastActive)
-  //     return 0
-  //   })
 
   return (
     <div className="min-h-screen text-black dark:text-white dark:bg-slate-950">
@@ -95,18 +87,30 @@ export default function TeamsPage() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredTeams.map((team) => (
-              <TeamCard
-                key={team.id}
-                team={team}
-                setTeamToEdit={setTeamToEdit}
-                onClick={(team) => {
-                  navigate(`/teams/dashboard/${team.id}`);
-                }}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredTeams.map((team) => (
+                <TeamCard
+                  key={team.id}
+                  team={team}
+                  setTeamToEdit={setTeamToEdit}
+                  onClick={(team) => {
+                    navigate(`/teams/dashboard/${team.id}`);
+                  }}
+                />
+              ))}
+            </div>
+            
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-8">
+                <Pagination 
+                  total={totalPages}
+                  value={currentPage} 
+                  onChange={handlePageChange} 
+                />
+              </div>
+            )}
+          </>
         )}
         <EditTeamComponent teamToEdit={teamToEdit} setTeamToEdit={setTeamToEdit} />
         <Toaster />

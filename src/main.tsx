@@ -10,6 +10,7 @@ import { SocketProvider } from "./context/SocketContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { NotificationsProvider } from './context/NotificationsContext'
 
 // Crear una instancia del cliente de React Query con configuración optimizada
 const queryClient = new QueryClient({
@@ -36,10 +37,12 @@ createRoot(document.getElementById("root")!).render(
       <ThemeProvider>
         <MantineProvider>
           <AuthProvider>
-            {/* <SocketProvider> */}
-            <Notifications />
-            {/* </SocketProvider> */}
-            <AppRoutes />
+            <NotificationsProvider>
+              {/* <SocketProvider> */}
+              <Notifications />
+              {/* </SocketProvider> */}
+              <AppRoutes />
+            </NotificationsProvider>
           </AuthProvider>
         </MantineProvider>
       </ThemeProvider>

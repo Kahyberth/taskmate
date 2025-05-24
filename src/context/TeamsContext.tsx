@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { Team } from "@/lib/store";
 import { AuthContext } from "@/context/AuthContext";
 import { useTeamsByUser } from "@/api/queries";
@@ -7,6 +7,9 @@ interface TeamsContextType {
   teams: Team[] | null;
   loading: boolean;
   error: string | null;
+  currentPage: number;
+  totalPages: number;
+  setCurrentPage: (page: number) => void;
   setTeams: (teams: Team[] | null) => void;
   fetchTeams: () => void;
   addTeam: (newTeam: Team) => void;
@@ -19,22 +22,47 @@ const TeamsContext = createContext<TeamsContextType | undefined>(undefined);
 export const TeamsProvider = ({ children }: { children: React.ReactNode }) => {
   const { user: user_data } = useContext(AuthContext);
   const [teams, setTeams] = useState<Team[] | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
 
-  // Usar React Query para obtener los equipos
+  // Debug current page changes
+  useEffect(() => {
+    console.log("Current page changed to:", currentPage);
+  }, [currentPage]);
+
+  // Handle page change with explicit page parameter
+  const handlePageChange = useCallback((page: number) => {
+    console.log("Setting page to:", page);
+    setCurrentPage(page);
+  }, []);
+
+  // Usar React Query para obtener los equipos con paginación
   const { 
     data: teamsData, 
     isLoading: loading, 
     error: queryError,
     refetch
-  } = useTeamsByUser(user_data?.id);
+  } = useTeamsByUser(user_data?.id, currentPage);
+
+  // Log when query data changes
+  useEffect(() => {
+    console.log("Query data updated:", teamsData);
+  }, [teamsData]);
 
   // Actualizar el estado local cuando cambian los datos de React Query
   const error = queryError ? (queryError as Error).message : null;
 
   // Sincronizar el estado local con los datos de la consulta
-  if (teamsData && JSON.stringify(teamsData) !== JSON.stringify(teams)) {
-        setTeams(teamsData);
+  useEffect(() => {
+    if (teamsData) {
+      if (teamsData.teams && JSON.stringify(teamsData.teams) !== JSON.stringify(teams)) {
+        setTeams(teamsData.teams);
+      }
+      if (teamsData.totalPages !== totalPages) {
+        setTotalPages(teamsData.totalPages);
   }
+    }
+  }, [teamsData, teams, totalPages]);
 
   // Función para obtener los equipos del usuario (ahora usa refetch de React Query)
   const fetchTeams = useCallback(() => {
@@ -64,6 +92,9 @@ export const TeamsProvider = ({ children }: { children: React.ReactNode }) => {
         teams,
         loading,
         error,
+        currentPage,
+        totalPages,
+        setCurrentPage: handlePageChange, // Use the wrapped handler
         setTeams,
         fetchTeams,
         addTeam,

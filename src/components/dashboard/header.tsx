@@ -20,19 +20,17 @@ import { Link } from "react-router-dom";
 import { useContext, useEffect } from "react";
 import { AuthContext } from "@/context/AuthContext";
 import { ThemeToggle } from "../ui/theme-toggle";
+import { NotificationsComponent } from "../notifications/notifications.component";
 
 interface HeaderProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-  notificationCount?: number;
 }
 
 export function DashboardHeader({
   sidebarOpen,
   setSidebarOpen,
-  notificationCount = 3,
 }: HeaderProps) {
-
   const { userProfile, logout } = useContext(AuthContext);
   const handleLogout = () => {
     logout();
@@ -66,28 +64,7 @@ export function DashboardHeader({
       </div>
 
       <div className="flex items-center gap-2">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hover:bg-black/10 dark:hover:bg-white/10 relative dark:text-white text-black"
-              >
-                <Bell className="h-5 w-5 " />
-                {notificationCount > 0 && (
-                  <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] flex items-center justify-center">
-                    {notificationCount}
-                  </span>
-                )}
-                <span className="sr-only">Notifications</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>You have {notificationCount} unread notifications</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <NotificationsComponent />
 
         <ThemeToggle />
 
