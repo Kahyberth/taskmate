@@ -339,7 +339,9 @@ export const useCreateIssue = () => {
   
   return useMutation({
     mutationFn: async (issueData: any) => {
-      const response = await apiClient.post("/issues/create", issueData);
+      const { productBacklogId, ...issueDataWithoutProductBacklogId } = issueData;
+      console.log(issueDataWithoutProductBacklogId);
+      const response = await apiClient.post(`/backlog/add-issue/${productBacklogId}`, issueDataWithoutProductBacklogId);
       return response.data;
     },
     onMutate: async (newIssue) => {
@@ -409,7 +411,8 @@ export const useUpdateIssue = () => {
   return useMutation({
     mutationFn: async (updateData: any) => {
       const { projectId, ...apiUpdateData } = updateData;
-      const response = await apiClient.patch(`/issues/update`, apiUpdateData);
+      console.log("updateData", updateData);
+      const response = await apiClient.patch(`/issues/update?id=${updateData.id}`, apiUpdateData);
       return response.data;
     },
     onSuccess: (_, variables: any) => {

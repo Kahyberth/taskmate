@@ -187,19 +187,22 @@ export default function ProjectManagement() {
     }
   };
 
+
+
+  //TODO: Mover a queries
   const fetchBacklogTasks = async () => {
     console.log("Fetching backlog tasks with backlogId:", backlogId);
     try {
       setIsLoading(true);
       setError(null);
-      const response = await apiClient.get(`/projects/issues/${project_id}`);
+      const response = await apiClient.get(`/backlog/get-all-issues/${backlogId}`);
       console.log("Backlog tasks response:", response.data);
       
       if (response.data) {
-        const tasks = Array.isArray(response.data.issues) ? response.data.issues : [];
-        console.log("Processing tasks:", tasks.length, "tasks found");
+
+        console.log("Processing tasks:", response.data.length, "tasks found");
         
-        const mappedTasks = tasks.map((task: any) => ({
+        const mappedTasks = response.data.map((task: any) => ({
           id: task.id,
           title: task.title,
           description: task.description || "",
@@ -459,24 +462,21 @@ export default function ProjectManagement() {
     if (!editingTask) return;
 
     try {
-      // Preparar los datos de actualización según lo requerido por la API
       const taskData = {
         id: editingTask.id,
-        userId: user?.id,
         title: updatedTask.title || editingTask.title,
         description: updatedTask.description || editingTask.description,
         priority: updatedTask.priority || editingTask.priority,
         status: updatedTask.status || editingTask.status,
-        assignedTo: updatedTask.assignedTo,
+        assignedTo: updatedTask.assignedTo || user?.id,
         type: updatedTask.type || editingTask.type,
         acceptanceCriteria: editingTask.acceptanceCriteria || "",
-        storyPoints: null as number | null, // Por defecto, sin estimar
+        story_points: null as number | null, 
         epicId: updatedTask.epicId,
       };
 
-      // Solo incluir storyPoints si es mayor que 0
       if (updatedTask.storyPoints && updatedTask.storyPoints > 0) {
-        taskData.storyPoints = updatedTask.storyPoints;
+        taskData.story_points = updatedTask.storyPoints;
       }
 
       // Actualización optimista
@@ -525,7 +525,7 @@ export default function ProjectManagement() {
           // Actualizar el estado con la respuesta del servidor
           const taskModified: Task = {
             ...data,
-            storyPoints: taskData.storyPoints,
+            storyPoints: taskData.story_points,
             epicId: updatedTask.epicId,
             title: data.title || editingTask.title,
             description: data.description || editingTask.description,
@@ -869,6 +869,7 @@ export default function ProjectManagement() {
     
     // Buscar en los miembros del proyecto
     const projectMember = projectMembers.find((member: any) => member.user_id === userId);
+
     if (projectMember && projectMember.user) {
       return { 
         initials: projectMember.initials || 'U',
@@ -1267,11 +1268,11 @@ export default function ProjectManagement() {
         title: newUserStoryTitle,
         description: "descripcion de la historia de usuario",
         type: newUserStoryType,
-        status: "to-do" as const,
         priority: newUserStoryPriority,
         createdBy: user?.id,
         acceptanceCriteria: "",
         productBacklogId: backlogId,
+        assignedTo: user?.id,
         epicId: newUserStoryEpicId,
       };
 

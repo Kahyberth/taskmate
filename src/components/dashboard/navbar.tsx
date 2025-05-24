@@ -60,7 +60,7 @@ export function Sidebar({
       
       setIsLoading(true);
       try {
-        const response = await apiClient.get(`/projects/findByUser/${user.id}`);
+        const response = await apiClient.get(`/projects/findAllByUser?userId=${user.id}`);
         
         if (response.data && Array.isArray(response.data)) {
           // Ordenar por fecha de actualización (los más recientes primero)
