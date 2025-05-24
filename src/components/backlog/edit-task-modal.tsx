@@ -262,8 +262,8 @@ export function EditTaskModal({
                   <SelectItem value="loading" disabled className="dark:text-gray-400">Cargando miembros...</SelectItem>
                 ) : projectMembers.length > 0 ? (
                   projectMembers.map((member) => (
-                    <SelectItem key={member.user_id} value={member.user_id} className="dark:text-gray-200">
-                      {member.user ? `${member.user.name} ${member.user.lastName || ''}` : member.user_id}
+                    <SelectItem key={member.userId} value={member.userId} className="dark:text-gray-200">
+                      {member.name ? `${member.name} ${member.lastName || ''}` : member.userId}
                     </SelectItem>
                   ))
                 ) : (

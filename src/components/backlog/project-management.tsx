@@ -45,7 +45,6 @@ export default function ProjectManagement() {
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
   const [allBacklogTasks, setAllBacklogTasks] = useState<Task[]>([]);
-  const [totalBacklogTasks, setTotalBacklogTasks] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const { project_id } = useParams();
@@ -58,7 +57,7 @@ export default function ProjectManagement() {
   const [error, setError] = useState<any> (null)
   const [backlogId, setBacklogId] = useState<string | null>(null);
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
-  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [loadingMembers, setLoadingMembers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isMembersDialogOpen, setIsMembersDialogOpen] = useState(false);
 
@@ -331,31 +330,21 @@ export default function ProjectManagement() {
   };
 
   const fetchProjectMembers = async () => {
-    console.log("Fetching project members for project:", project_id);
-    try {
-      setLoadingMembers(true);
-      const response = await apiClient.get(`/projects/members/${project_id}`);
-      console.log("Project members response:", response.data);
-      
-      if (response.data && Array.isArray(response.data)) {
-        console.log("Project members fetched successfully:", response.data.length, "members found");
-        setProjectMembers(response.data);
-      } else {
-        console.log("No project members found");
-        setProjectMembers([]);
-      }
-    } catch (error) {
-      console.error("Error fetching project members:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los miembros del proyecto",
-        variant: "destructive",
-      });
-      setProjectMembers([]);
-    } finally {
-      setLoadingMembers(false);
-    }
-  };
+      await apiClient.get(`/projects/members/${project_id}`)
+      .then((response) => {
+        setProjectMembers(response.data.users);
+      })
+      .catch((error) => {
+        notifications.show({
+          title: "Error",
+          message: `Error fetching project members: ${error}`,
+          color: "red"
+        })
+      })
+      .finally(() => {
+        setLoadingMembers(false);
+      })
+};
 
   useEffect(() => {
     fetchBacklogId();

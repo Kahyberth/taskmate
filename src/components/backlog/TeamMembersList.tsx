@@ -1,3 +1,4 @@
+import { apiClient } from '@/api/client-gateway';
 import React, { useEffect, useState } from 'react';
 
 
@@ -25,6 +26,9 @@ type Props = {
   teamId: string;
 };
 
+
+
+//TODO: Revisar
 const TeamMembersList: React.FC<Props> = ({ teamId }) => {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,16 +36,18 @@ const TeamMembersList: React.FC<Props> = ({ teamId }) => {
 
   useEffect(() => {
     const fetchMembers = async () => {
-      try {
-        const response = await fetch(`/get-members-by-team/${teamId}`);
-        if (!response.ok) throw new Error('Failed to fetch team members');
-        const data: TeamMember[] = await response.json();
-        setMembers(data);
-      } catch (err: any) {
-        setError(err.message || 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
+
+        await apiClient.get(`/get-members-by-team/${teamId}`)
+        .then((response) => {
+            console.log("response.data desde teamMembersList", response.data);
+            setMembers(response.data);
+        })
+        .catch((error) => {
+            setError(error.message);
+        })
+        .finally(() => {
+            setLoading(false);
+        })
     };
 
     fetchMembers();
@@ -56,18 +62,18 @@ const TeamMembersList: React.FC<Props> = ({ teamId }) => {
       <h2>Team Members</h2>
       <ul>
         {members.map((member) => (
-          <li key={member.userId} style={{ marginBottom: '1rem' }}>
+          <li key={member.member.id} style={{ marginBottom: '1rem' }}>
             <strong>
-              {member.user.name} {member.user.lastName}
+              {member.member.name} {member.member.lastName}
             </strong>{' '}
             - <em>{member.roleInTeam}</em>
             <br />
-            Email: {member.user.email}
+            Email: {member.member.email}
             <br />
-            Company: {member.user.company}
+            Company: {member.member.company}
             <br />
-            Status: {member.user.isActive ? 'Active' : 'Inactive'}, Available:{' '}
-            {member.user.isAvailable ? 'Yes' : 'No'}
+            Status: {member.member.isActive ? 'Active' : 'Inactive'}, Available:{' '}
+            {member.member.isAvailable ? 'Yes' : 'No'}
           </li>
         ))}
       </ul>
