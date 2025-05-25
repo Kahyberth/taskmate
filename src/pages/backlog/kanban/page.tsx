@@ -36,17 +36,26 @@ interface Task {
   description?: string
   type: 'bug' | 'feature' | 'task' | 'refactor' | 'user_story'
   status: 'to-do' | 'in-progress' | 'review' | 'done' | 'closed'
-  code?: string
+  code: string
   priority: 'low' | 'medium' | 'high' | 'critical'
   createdBy: string
   acceptanceCriteria?: string
   productBacklogId?: string
-  storyPoints?: number
+  storyPoints?: number | null
   assignedTo?: string
   createdAt: Date
   updatedAt: Date
-  resolvedAt?: Date
-  finishedAt?: Date
+  resolvedAt?: Date | null
+  finishedAt?: Date | null
+  inSprint: boolean
+  inProductBacklog: boolean
+  isDeleted: boolean
+}
+
+interface AssignedUser {
+  initials: string;
+  name: string;
+  lastName: string;
 }
 
 // Función para obtener el color de la etiqueta según el tipo de tarea
@@ -102,6 +111,7 @@ export default function KanbanBoard() {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [projectMembers, setProjectMembers] = useState<any[]>([])
   const [loadingMembers, setLoadingMembers] = useState(false)
+  const [backlogId, setBacklogId] = useState<string | null>(null)
   // Estado para controlar las columnas visibles
   const [visibleColumns, setVisibleColumns] = useState({
     review: false,
@@ -124,61 +134,71 @@ export default function KanbanBoard() {
     }),
   )
 
-  // Cargar tareas del backlog
+  // Fetch backlog ID first
+  const fetchBacklogId = async () => {
+    if (!project_id) return null;
+    
+    try {
+      const response = await apiClient.get(`/backlog/get-backlog-by-project/${project_id}`);
+      if (response.data && response.data.id) {
+        setBacklogId(response.data.id);
+        return response.data.id;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching backlog ID:", error);
+      notifications.show({
+        title: "Error",
+        message: "No se pudo obtener el ID del backlog",
+        color: "red",
+        autoClose: 2000,
+      });
+      return null;
+    }
+  };
+
+  // Modified useEffect to fetch backlogId first
+  useEffect(() => {
+    const init = async () => {
+      await fetchBacklogId();
+    };
+    init();
+  }, [project_id]);
+
+  // Modified useEffect to fetch tasks after backlogId is available
   useEffect(() => {
     const fetchTasks = async () => {
-      if (!project_id || !project) return
+      if (!project_id || !project || !backlogId) return;
       
-      setIsLoading(true)
+      setIsLoading(true);
       try {
-        const response = await apiClient.get(`/projects/issues/${project_id}`)
+        const response = await apiClient.get(`/backlog/get-all-issues/${backlogId}`);
         console.log('Response from API:', response.data);
         
-        if (response.data && response.data.issues && Array.isArray(response.data.issues)) {
-          const mappedTasks = response.data.issues.map((task: any) => {
-            console.log('Processing task:', task);
-            return {
-              id: task.id,
-              title: task.title,
-              description: task.description || "",
-              type: task.type || "user_story",
-              status: task.status || "to-do",
-              code: task.code || "",
-              priority: task.priority || "medium",
-              createdBy: task.createdBy || user?.id,
-              acceptanceCriteria: task.acceptanceCriteria || "",
-              productBacklogId: task.productBacklogId,
-              storyPoints: task.story_points || 0,
-              assignedTo: task.assignedTo,
-              createdAt: new Date(task.createdAt),
-              updatedAt: new Date(task.updatedAt),
-              resolvedAt: task.resolvedAt ? new Date(task.resolvedAt) : undefined,
-              finishedAt: task.finishedAt ? new Date(task.finishedAt) : undefined
-            };
-          });
-          
-          console.log('Mapped tasks:', mappedTasks);
-          setTasks(mappedTasks);
+        if (response.data && Array.isArray(response.data)) {
+          setTasks(response.data);
         } else {
           console.warn('Response data is not in the expected format:', response.data);
           setTasks([]);
         }
       } catch (error) {
-        console.error("Error fetching tasks:", error)
+        console.error("Error fetching tasks:", error);
         notifications.show({
           title: "Error",
           message: "No se pudieron cargar las tareas del backlog",
           color: "red",
           autoClose: 2000,
-        })
+        });
         setTasks([]);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
+    };
+
+    if (backlogId) {
+      fetchTasks();
     }
-    
-    fetchTasks()
-  }, [project_id, project, user?.id])
+  }, [backlogId, project_id, project, user?.id]);
 
   // Obtener tareas por estado
   const getTodoTasks = () => tasks.filter((task) => task.status === "to-do")
@@ -209,7 +229,6 @@ export default function KanbanBoard() {
       const response = await apiClient.patch(`/issues/update`, {
         id: taskId,
         status: newStatus,
-        userId: user?.id,
       })
       
       if (response.data) {
@@ -305,58 +324,42 @@ export default function KanbanBoard() {
     }
   }
 
-  // Función para obtener el usuario asignado
-  const getAssignedUser = (userId?: string) => {
+  const getAssignedUser = (userId?: string): AssignedUser | null => {
     if (!userId) return null;
     
     // Buscar en los miembros del proyecto
-    const projectMember = projectMembers.find((member: any) => member.user_id === userId);
-    if (projectMember && projectMember.user) {
+    const projectMember = projectMembers.find((member) => member.userId === userId);
+
+    if (projectMember) {
+      const initials = `${projectMember.name?.charAt(0) || ''}${projectMember.lastName?.charAt(0) || ''}`.toUpperCase() || 'U';
       return { 
-        initials: projectMember.initials || 'U',
-        name: projectMember.user.name,
-        lastName: projectMember.user.lastName || ''
+        initials,
+        name: projectMember.name || '',
+        lastName: projectMember.lastName || ''
       };
     }
     
-    
-    // Fallback a miembros de ejemplo si no se encuentra en los miembros del proyecto
-    const mockMember = teamMembers.find((member) => member.id === userId);
-    return mockMember 
-      ? { initials: mockMember.initials, name: mockMember.name, lastName: '' } 
-      : { initials: 'U', name: 'Usuario', lastName: '' };
+    return { initials: 'U', name: 'Usuario', lastName: '' };
   }
 
   // Función para cargar los miembros del proyecto
   const fetchProjectMembers = async () => {
-    if (!project_id) return;
-    
-    try {
-      setLoadingMembers(true);
-      const response = await apiClient.get(`/projects/members/${project_id}`);
-      
-      if (response.data && Array.isArray(response.data)) {
-        console.log("Project members fetched:", response.data);
-        setProjectMembers(response.data);
-      } else {
-        console.error("No members found in response:", response.data);
-        // Fallback to empty array
-        setProjectMembers([]);
-      }
-    } catch (error) {
-      console.error("Error fetching project members:", error);
-      notifications.show({
-        title: "Error",
-        message: "No se pudieron cargar los miembros del proyecto",
-        color: "red",
-        autoClose: 2000,
-      });
-      // Fallback to empty array
-      setProjectMembers([]);
-    } finally {
-      setLoadingMembers(false);
-    }
+    await apiClient.get(`/projects/members/${project_id}`)
+      .then((response) => {
+        setProjectMembers(response.data.users);
+      })
+      .catch((error) => {
+        notifications.show({
+          title: "Error",
+          message: `Error fetching project members: ${error}`,
+          color: "red"
+        })
+      })
+      .finally(() => {
+        setLoadingMembers(false);
+      })
   };
+
 
   // Cargar miembros del proyecto cuando se carga el componente
   useEffect(() => {

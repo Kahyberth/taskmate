@@ -61,18 +61,22 @@ export function Sidebar({
       setIsLoading(true);
       try {
         const response = await apiClient.get(`/projects/findAllByUser?userId=${user.id}`);
-        
-        if (response.data && Array.isArray(response.data)) {
-          // Ordenar por fecha de actualización (los más recientes primero)
-          const sortedProjects = response.data.sort((a: Projects, b: Projects) => {
+        console.log("proyectos mas recientes", response.data);
+
+        if (response.data && response.data.data && Array.isArray(response.data.data)) {
+          const sortedProjects = response.data.data.sort((a: Projects, b: Projects) => {
             return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
           });
-          
+
           // Tomar solo los 3 más recientes
           setRecentProjects(sortedProjects.slice(0, 3));
+        } else {
+          console.warn('No projects found in response:', response.data);
+          setRecentProjects([]);
         }
       } catch (error) {
         console.error("Error fetching recent projects:", error);
+        setRecentProjects([]);
       } finally {
         setIsLoading(false);
       }
