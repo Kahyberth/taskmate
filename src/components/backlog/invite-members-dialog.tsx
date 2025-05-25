@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/api/client-gateway";
 import { AuthContext } from "@/context/AuthContext";
 import { Team } from "@/lib/store";
+import { notifications } from "@mantine/notifications";
 
 interface InviteMembersDialogProps {
   open: boolean;
@@ -31,6 +32,7 @@ export function InviteMembersDialog({
 }: InviteMembersDialogProps) {
   const { toast } = useToast();
   const { user } = useContext(AuthContext);
+  const [availableTeamMembers, setAvailableTeamMembers] = useState<any[]>([]);
   
   // Estado para el formulario
   const [isAddingMember, setIsAddingMember] = useState(false);
@@ -44,110 +46,76 @@ export function InviteMembersDialog({
     if (!open) {
       setSelectedTeamMember('');
       setRecentlyAddedMembers([]);
+    } else if (open) {
+      fetchAvailableTeamMembers();
     }
-  }, [open]);
+  }, [open, currentTeam?.id]);
 
-  // Filtrar los miembros del equipo que no están ya en el proyecto
-  const availableTeamMembers = useMemo(() => {
-    if (!currentTeam || !currentTeam.members) {
-      console.log("No hay miembros del equipo disponibles: equipo no definido o sin miembros");
-      return [];
+  const fetchAvailableTeamMembers = async () => {
+    console.log("currentTeam",currentTeam);
+    if (!currentTeam?.id) {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo obtener el ID del equipo",
+        color: "red"
+      });
+      return;
     }
-    
-    // Obtener los IDs de los miembros actuales del proyecto
-    const projectMemberIds = projectMembers.map(pm => pm.user_id);
-    
-    // También excluir los miembros que acabamos de añadir pero que quizás aún no aparecen en projectMembers
-    const excludedIds = [...projectMemberIds, ...recentlyAddedMembers];
-    
-    // Filtrar los miembros del equipo que no están en el proyecto
-    const availableMembers = currentTeam.members.filter(teamMember => {
-      const memberId = teamMember.member.id;
-      return !excludedIds.includes(memberId);
-    });
-    
-    return availableMembers;
-  }, [currentTeam, projectMembers, recentlyAddedMembers]);
+
+    await apiClient.get(`/projects/team-members/unassigned?teamId=${currentTeam.id}&projectId=${project.id}`)
+    .then((response) => {
+      setAvailableTeamMembers(response.data);
+      console.log("availableTeamMembers",availableTeamMembers);
+    })
+    .catch((error) => {
+      notifications.show({
+        title: "Error",
+        message: `Error al cargar los miembros disponibles: ${error}`,
+        color: "red"
+      })
+    })
+    .finally(() => {
+      setLoadingMembers(false);
+    })
+  }
 
   // Función para añadir un miembro existente del equipo
   const handleAddTeamMember = async () => {
-    if (!selectedTeamMember || isAddingMember || !project?.id) return;
+    if (!selectedTeamMember || isAddingMember) return;
     
     setIsAddingMember(true);
     
-    try {
-      // Buscar el miembro seleccionado del equipo
-      const selectedMember = currentTeam?.members?.find(m => m.member.id === selectedTeamMember);
-      
-      if (!selectedMember) {
-        throw new Error("Miembro seleccionado no encontrado");
-      }
-      
-      // Obtener el correo del miembro del equipo
-      const email = selectedMember.member.email;
-      
-      if (!email) {
-        throw new Error("No se pudo determinar el correo electrónico del miembro");
-      }
-      
-      // Ya que sabemos que este usuario ya está en el equipo, solo lo añadimos al proyecto
-      const response = await apiClient.post(`/projects/invite-member`, {
-        projectId: project.id,
-        email: email,
-        userId: user?.id,
-        invitedUserId: selectedMember.member.id,
-      });
-      
+    await apiClient.post(`/projects/invite-member`, {
+      projectId: project.id,
+      userId: user?.id,
+      invitedUserId: selectedTeamMember,
+      email: availableTeamMembers.find(m => m.member.id === selectedTeamMember)?.member.email
+    })
+    .then(async (response) => {
       if (response.data) {
-        // Añadir el ID del miembro a la lista de recientemente añadidos
-        setRecentlyAddedMembers(prev => [...prev, selectedMember.member.id]);
-        
-        // Refrescar la lista de miembros
         await refetchMembers();
+        await fetchAvailableTeamMembers();
         
-        // Limpiar la selección
         setSelectedTeamMember('');
         
-        const displayName = `${selectedMember.member.name || ''} ${selectedMember.member.lastName || ''}`.trim();
-        
-        toast({
+        notifications.show({
           title: "Miembro añadido",
-          description: `${displayName || email} ha sido añadido al proyecto.`,
+          message: "El miembro ha sido añadido al proyecto exitosamente",
+          color: "green"
         });
       }
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || "No se pudo añadir al miembro";
-      
-      toast({
+    })
+    .catch((error) => {
+      notifications.show({
         title: "Error",
-        description: errorMessage,
-        variant: "destructive",
+        message: error.response?.data?.message || "No se pudo añadir al miembro",
+        color: "red"
       });
-    } finally {
+    })
+    .finally(() => {
       setIsAddingMember(false);
-    }
-  };
-
-  // Generar una clave única para cada miembro
-  const getMemberKey = (member: any) => {
-    // Usar una combinación de user_id e id para crear una clave realmente única
-    return `member-${member.user_id}`;
-  };
-
-  // Filtrar miembros duplicados antes de mostrarlos
-  const uniqueProjectMembers = useMemo(() => {
-    const uniqueMembers: Record<string, any> = {};
-    
-    projectMembers.forEach(member => {
-      const userId = member.user_id;
-      // Solo guardamos la primera aparición de cada usuario
-      if (!uniqueMembers[userId]) {
-        uniqueMembers[userId] = member;
-      }
     });
-    
-    return Object.values(uniqueMembers);
-  }, [projectMembers]);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -155,7 +123,7 @@ export function InviteMembersDialog({
         <DialogHeader>
           <DialogTitle className="dark:text-gray-200">Miembros del Proyecto</DialogTitle>
           <DialogDescription className="dark:text-gray-400">
-            {`${uniqueProjectMembers.length} miembro(s) en este proyecto`}
+            {`${projectMembers.length} miembro(s) en este proyecto`}
             {currentTeam && (
               <span className="ml-1">
                 - Equipo: {currentTeam.name}
@@ -184,12 +152,12 @@ export function InviteMembersDialog({
                       {availableTeamMembers.length > 0 ? (
                         availableTeamMembers.map((teamMember) => (
                           <SelectItem 
-                          key={`select-${teamMember.member.id}`} 
+                            key={teamMember.member.id} 
                             value={teamMember.member.id}
                             className="dark:text-gray-200"
                           >
                             {`${teamMember.member.name || ''} ${teamMember.member.lastName || ''}`.trim() || 'Usuario'} 
-                            <span className="ml-1 text-gray-500">({teamMember.role})</span>
+                            <span className="ml-1 text-gray-500">({teamMember.role || 'Miembro del Equipo'})</span>
                           </SelectItem>
                         ))
                       ) : (
@@ -234,7 +202,7 @@ export function InviteMembersDialog({
           </div>
         
         {/* Lista de miembros actuales */}
-        <div className="max-h-[60vh] overflow-y-auto">
+        <div className="max-h-[280px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
           {loadingMembers ? (
             <div className="flex flex-col gap-2">
               {[1, 2, 3].map(i => (
@@ -247,33 +215,33 @@ export function InviteMembersDialog({
                 </div>
               ))}
             </div>
-          ) : uniqueProjectMembers.length > 0 ? (
-            <div className="grid gap-2">
-              {uniqueProjectMembers.map((member) => (
+          ) : projectMembers.length > 0 ? (
+            <div className="grid gap-1.5">
+              {projectMembers.map((member) => (
                 <div 
-                  key={getMemberKey(member)} 
-                  className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                  key={member.id}
+                  className="flex items-center p-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
                 >
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                      {member.user && member.user.name 
-                        ? member.user.name.charAt(0) + (member.user.lastName ? member.user.lastName.charAt(0) : '') 
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-sm">
+                      {member.name 
+                        ? member.name.charAt(0) + (member.lastName ? member.lastName.charAt(0) : '') 
                         : 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium dark:text-gray-200">
-                      {member.user 
-                        ? `${member.user.name || ''} ${member.user.lastName || ''}`.trim() 
+                  <div className="ml-3 flex-1 min-w-0">
+                    <p className="text-sm font-medium dark:text-gray-200 truncate">
+                      {member 
+                        ? `${member.name || ''} ${member.lastName || ''}`.trim() 
                         : 'Usuario'}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {member.user?.email || member.user_id}
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {member.email || member.id}
                     </p>
                   </div>
-                  <div className="ml-auto">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                      {member.role || 'Miembro'}
+                  <div className="ml-2 flex-shrink-0">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                      Miembro
                     </span>
                   </div>
                 </div>

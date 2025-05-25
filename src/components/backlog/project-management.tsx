@@ -1,6 +1,5 @@
 import { useContext, useEffect, useState, useMemo } from "react"
 import { Tabs } from "@/components/ui/tabs"
-import { useToast } from "@/hooks/use-toast"
 import { useLocation, useParams } from "react-router-dom"
 import { Projects } from "@/interfaces/projects.interface"
 import { apiClient } from "@/api/client-gateway"
@@ -46,15 +45,13 @@ export default function ProjectManagement() {
   const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
   const [allBacklogTasks, setAllBacklogTasks] = useState<Task[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const { toast } = useToast();
   const { project_id } = useParams();
   const location = useLocation();
   const [project, setProject] = useState<Projects | null>(null);
   const [newUserStoryTitle, setNewUserStoryTitle] = useState("")
   const [newUserStoryType, setNewUserStoryType] = useState<'bug' | 'feature' | 'task' | 'refactor' | 'user_story'>('user_story');
   const [newUserStoryPriority, setNewUserStoryPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
-  const [loading, setIsLoading] = useState<boolean> (false)
-  const [error, setError] = useState<any> (null)
+  const [isLoading, setIsLoading] = useState<boolean>(false)
   const [backlogId, setBacklogId] = useState<string | null>(null);
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
@@ -112,7 +109,6 @@ export default function ProjectManagement() {
     goal: string;
   }) => {
     try {
-      // Create a new sprint
       const newSprintData = {
         name: sprintData.name,
         projectId: project_id,
@@ -121,7 +117,6 @@ export default function ProjectManagement() {
         goal: sprintData.goal || ""
       };
 
-      // Llamar a la API para crear el sprint
       const response = await apiClient.post(`/backlog/create-sprint`, newSprintData);
       
       if (response.data) {
@@ -142,17 +137,18 @@ export default function ProjectManagement() {
           [newSprint.id]: true,
         }));
 
-        toast({
+        notifications.show({
           title: "Sprint creado",
-          description: `Se ha creado el sprint "${newSprint.name}" exitosamente.`,
+          message: `Se ha creado el sprint "${newSprint.name}" exitosamente.`,
+          color: "green"
         });
       }
     } catch (error) {
       console.error("Error creating sprint:", error);
-      toast({
+      notifications.show({
         title: "Error",
-        description: "No se pudo crear el sprint",
-        variant: "destructive",
+        message: "No se pudo crear el sprint",
+        color: "red"
       });
     }
   };
@@ -168,19 +164,19 @@ export default function ProjectManagement() {
         return response.data.id;
       } else {
         console.error("No backlog ID found in response:", response.data);
-        toast({
+        notifications.show({
           title: "Error",
-          description: "No se pudo obtener el ID del backlog",
-          variant: "destructive",
+          message: "No se pudo obtener el ID del backlog",
+          color: "red"
         });
         return null;
       }
     } catch (error) {
       console.error("Error fetching backlog ID:", error);
-      toast({
+      notifications.show({
         title: "Error",
-        description: "No se pudo obtener el ID del backlog",
-        variant: "destructive",
+        message: "No se pudo obtener el ID del backlog",
+        color: "red"
       });
       return null;
     }
@@ -193,12 +189,10 @@ export default function ProjectManagement() {
     console.log("Fetching backlog tasks with backlogId:", backlogId);
     try {
       setIsLoading(true);
-      setError(null);
       const response = await apiClient.get(`/backlog/get-all-issues/${backlogId}`);
       console.log("Backlog tasks response:", response.data);
       
       if (response.data) {
-
         console.log("Processing tasks:", response.data.length, "tasks found");
         
         const mappedTasks = response.data.map((task: any) => ({
@@ -226,11 +220,10 @@ export default function ProjectManagement() {
       }
     } catch (error) {
       console.error("Error fetching backlog tasks:", error);
-      setError("Failed to fetch backlog tasks");
-      toast({
+      notifications.show({
         title: "Error",
-        description: "No se pudieron cargar las tareas del backlog",
-        variant: "destructive",
+        message: "No se pudieron cargar las tareas del backlog",
+        color: "red"
       });
     } finally {
       setIsLoading(false);
@@ -296,10 +289,10 @@ export default function ProjectManagement() {
       }
     } catch (error) {
       console.error("Error fetching sprints:", error);
-      toast({
+      notifications.show({
         title: "Error",
-        description: "No se pudieron cargar los sprints",
-        variant: "destructive",
+        message: "No se pudieron cargar los sprints",
+        color: "red"
       });
       setSprints([]);
     }
@@ -320,10 +313,10 @@ export default function ProjectManagement() {
       }
     } catch (error) {
       console.error("Error fetching epics:", error);
-      toast({
+      notifications.show({
         title: "Error",
-        description: "No se pudieron cargar las épicas",
-        variant: "destructive",
+        message: "No se pudieron cargar las épicas",
+        color: "red"
       });
       setEpics([]);
     }
@@ -377,18 +370,17 @@ export default function ProjectManagement() {
   const handleStartSprint = (sprintId: string) => {
     setSprints(sprints.map((sprint) => (sprint.id === sprintId ? { ...sprint, isActive: true } : sprint)))
 
-    toast({
+    notifications.show({
       title: "Sprint iniciado",
-      description: "El sprint ha sido iniciado exitosamente.",
-    })
+      message: "El sprint ha sido iniciado exitosamente.",
+      color: "green"
+    });
   }
 
   const handleCompleteSprint = (sprintId: string) => {
-    // Find the current sprint
     const currentSprint = sprints.find((sprint) => sprint.id === sprintId);
     if (!currentSprint) return;
 
-    // Filter tasks based on status
     const incompleteTasks = currentSprint.tasks.filter((task: Task) => 
       task.status !== "done" && task.status !== "closed"
     );
@@ -411,33 +403,33 @@ export default function ProjectManagement() {
         [newSprintId]: true,
       }));
 
-      toast({
+      notifications.show({
         title: "Sprint completado",
-        description: `Se han movido ${incompleteTasks.length} tareas incompletas a "${newSprint.name}".`,
+        message: `Se han movido ${incompleteTasks.length} tareas incompletas a "${newSprint.name}".`,
+        color: "green"
       });
     } else {
-      // If no incomplete tasks, just remove the current sprint
       setSprints(sprints.filter((s) => s.id !== sprintId));
 
-      toast({
+      notifications.show({
         title: "Sprint completado",
-        description: "Todas las tareas fueron completadas exitosamente.",
+        message: "Todas las tareas fueron completadas exitosamente.",
+        color: "green"
       });
     }
   };
 
   const handleDeleteSprint = (sprintId: string) => {
-    // Find the sprint to be deleted
     const sprintToDelete = sprints.find((sprint) => sprint.id === sprintId)
     if (!sprintToDelete) return
 
-    // Remove the sprint
     setSprints(sprints.filter((s) => s.id !== sprintId))
 
-    toast({
+    notifications.show({
       title: "Sprint eliminado",
-      description: `El sprint "${sprintToDelete.name}" ha sido eliminado exitosamente.`,
-    })
+      message: `El sprint "${sprintToDelete.name}" ha sido eliminado exitosamente.`,
+      color: "green"
+    });
   }
 
   const openEditTaskModal = (task: Task, sprintId: string | null = null) => {
@@ -588,10 +580,11 @@ export default function ProjectManagement() {
   const handleSaveSprintEdit = (updatedSprint: Sprint) => {
     setSprints(sprints.map((s) => (s.id === updatedSprint.id ? updatedSprint : s)))
 
-    toast({
+    notifications.show({
       title: "Sprint actualizado",
-      description: `El sprint "${updatedSprint.name}" ha sido actualizado exitosamente.`,
-    })
+      message: `El sprint "${updatedSprint.name}" ha sido actualizado exitosamente.`,
+      color: "green"
+    });
   }
 
   const handleToggleBacklogTaskCompletion = (taskId: string) => {
@@ -607,9 +600,10 @@ export default function ProjectManagement() {
     );
     const taskDetails = backlogTasks.find(t => t.id === taskId);
     if (taskDetails) {
-      toast({
+      notifications.show({
         title: "Tarea de Backlog actualizada",
-        description: `El estado de "${taskDetails.title}" ha sido actualizado.`,
+        message: `El estado de "${taskDetails.title}" ha sido actualizado.`,
+        color: "green"
       });
     }
   };
@@ -635,9 +629,10 @@ export default function ProjectManagement() {
     const currentSprint = sprints.find(s => s.id === sprintId);
     const taskDetails = currentSprint?.tasks.find((t: Task) => t.id === taskId);
     if (taskDetails) {
-      toast({
+      notifications.show({
         title: "Tarea actualizada",
-        description: `El estado de "${taskDetails.title}" ha sido actualizado.`,
+        message: `El estado de "${taskDetails.title}" ha sido actualizado.`,
+        color: "green"
       });
     }
   };
@@ -676,10 +671,11 @@ export default function ProjectManagement() {
              : sprint
          ));
         
-      toast({
+      notifications.show({
         title: "Tarea movida",
-        description: `La historia "${taskToMove.title}" ha sido movida al sprint.`,
-        });
+        message: `La historia "${taskToMove.title}" ha sido movida al sprint.`,
+        color: "green"
+      });
         }
       } catch (error: any) {
         console.error("Error moving task to sprint:", error);
@@ -689,25 +685,25 @@ export default function ProjectManagement() {
         
         // Mostrar mensaje específico según el error
         if (error.response?.status === 404) {
-          toast({
+          notifications.show({
             title: "Error al mover tarea",
-            description: "No se encontró el sprint o la tarea. Verifica que ambos existan.",
-            variant: "destructive",
+            message: "No se encontró el sprint o la tarea. Verifica que ambos existan.",
+            color: "red"
           });
         } else {
-       toast({
+       notifications.show({
          title: "Error",
-         description: "No se pudo mover la tarea al sprint. Inténtalo de nuevo más tarde.",
-         variant: "destructive",
+         message: "No se pudo mover la tarea al sprint. Inténtalo de nuevo más tarde.",
+         color: "red"
        });
         }
       }
     } catch (error) {
       console.error("Unexpected error in moveTaskToSprint:", error);
-      toast({
+      notifications.show({
         title: "Error inesperado",
-        description: "Ocurrió un error al procesar la solicitud",
-        variant: "destructive",
+        message: "Ocurrió un error al procesar la solicitud",
+        color: "red"
       });
     }
   };
@@ -751,10 +747,11 @@ export default function ProjectManagement() {
          // Add to backlog
          setBacklogTasks([...backlogTasks, movedTask]);
         
-      toast({
+      notifications.show({
         title: "Tarea movida",
-        description: `La historia "${taskToMove.title}" ha sido movida al backlog.`,
-        });
+        message: `La historia "${taskToMove.title}" ha sido movida al backlog.`,
+        color: "green"
+      });
         }
       } catch (error: any) {
         console.error("Error moving task to backlog:", error);
@@ -768,25 +765,25 @@ export default function ProjectManagement() {
         
         // Mostrar mensaje específico según el error
         if (error.response?.status === 404) {
-          toast({
+          notifications.show({
             title: "Error al mover tarea",
-            description: "No se encontró el sprint o la tarea en el servidor. Verifica que ambos existan.",
-            variant: "destructive",
+            message: "No se encontró el sprint o la tarea en el servidor. Verifica que ambos existan.",
+            color: "red"
           });
         } else {
-       toast({
+       notifications.show({
          title: "Error",
-         description: "No se pudo mover la tarea al backlog. Inténtalo de nuevo más tarde.",
-         variant: "destructive",
+         message: "No se pudo mover la tarea al backlog. Inténtalo de nuevo más tarde.",
+         color: "red"
        });
         }
       }
     } catch (error) {
       console.error("Unexpected error in moveTaskToBacklog:", error);
-      toast({
+      notifications.show({
         title: "Error inesperado",
-        description: "Ocurrió un error al procesar la solicitud",
-        variant: "destructive",
+        message: "Ocurrió un error al procesar la solicitud",
+        color: "red"
       });
     }
   };
@@ -857,13 +854,14 @@ export default function ProjectManagement() {
     if (!userId) return null;
     
     // Buscar en los miembros del proyecto
-    const projectMember = projectMembers.find((member: any) => member.user_id === userId);
+    const projectMember = projectMembers.find((member) => member.userId === userId);
 
-    if (projectMember && projectMember.user) {
+    if (projectMember) {
+      const initials = `${projectMember.name?.charAt(0) || ''}${projectMember.lastName?.charAt(0) || ''}`.toUpperCase() || 'U';
       return { 
-        initials: projectMember.initials || 'U',
-        name: projectMember.user.name,
-        lastName: projectMember.user.lastName || ''
+        initials,
+        name: projectMember.name || '',
+        lastName: projectMember.lastName || ''
       };
     }
     
@@ -918,9 +916,10 @@ export default function ProjectManagement() {
           projectId: project_id // Needed for client-side cache invalidation, will be removed before API call
         }, {
           onSuccess: () => {
-            toast({
+            notifications.show({
               title: "Estado actualizado",
-              description: `El estado de "${task.title}" ha sido actualizado a ${getStatusDisplayText(status).toLowerCase()}.`,
+              message: `El estado de "${task.title}" ha sido actualizado a ${getStatusDisplayText(status).toLowerCase()}.`,
+              color: "green"
             });
             
             // Force refresh of project issues data with queryClient
@@ -945,10 +944,10 @@ export default function ProjectManagement() {
               )
             );
             
-            toast({
+            notifications.show({
               title: "Error",
-              description: "No se pudo actualizar el estado de la tarea",
-              variant: "destructive",
+              message: "No se pudo actualizar el estado de la tarea",
+              color: "red"
             });
           }
         });
@@ -970,18 +969,18 @@ export default function ProjectManagement() {
           )
         );
         
-        toast({
+        notifications.show({
           title: "Error",
-          description: "No se pudo actualizar el estado de la tarea",
-          variant: "destructive",
+          message: "No se pudo actualizar el estado de la tarea",
+          color: "red"
         });
       }
     } catch (error) {
       console.error("Unexpected error updating task status:", error);
-      toast({
+      notifications.show({
         title: "Error inesperado",
-        description: "Ocurrió un error al actualizar el estado",
-        variant: "destructive",
+        message: "Ocurrió un error al actualizar el estado",
+        color: "red"
       });
     }
   };
@@ -1023,7 +1022,6 @@ export default function ProjectManagement() {
         {
           id: taskId,
           status,
-          userId: user?.id,
           projectId: project_id
         },
         {
@@ -1123,9 +1121,10 @@ export default function ProjectManagement() {
         // Call API to delete the task
         await apiClient.delete(`/issues/delete/${taskId}`);
         
-        toast({
+        notifications.show({
           title: "Tarea eliminada",
-          description: `La tarea "${taskToDelete.title}" ha sido eliminada exitosamente.`,
+          message: `La tarea "${taskToDelete.title}" ha sido eliminada exitosamente.`,
+          color: "green"
         });
       } catch (error) {
         console.error("Error deleting task:", error);
@@ -1133,18 +1132,18 @@ export default function ProjectManagement() {
         // Revert the UI change on error
         setBacklogTasks(prev => [...prev, taskToDelete]);
         
-        toast({
+        notifications.show({
           title: "Error",
-          description: "No se pudo eliminar la tarea. Inténtalo de nuevo más tarde.",
-          variant: "destructive",
+          message: "No se pudo eliminar la tarea. Inténtalo de nuevo más tarde.",
+          color: "red"
         });
       }
     } catch (error) {
       console.error("Unexpected error in handleDeleteTask:", error);
-      toast({
+      notifications.show({
         title: "Error inesperado",
-        description: "Ocurrió un error al procesar la solicitud",
-        variant: "destructive",
+        message: "Ocurrió un error al procesar la solicitud",
+        color: "red"
       });
     }
   };
@@ -1181,10 +1180,10 @@ export default function ProjectManagement() {
       }
     } catch (error) {
       console.error("Error fetching epic issues:", error);
-      toast({
+      notifications.show({
         title: "Error",
-        description: "No se pudieron cargar las tareas de la épica",
-        variant: "destructive",
+        message: "No se pudieron cargar las tareas de la épica",
+        color: "red"
       });
     }
   };
@@ -1235,19 +1234,19 @@ export default function ProjectManagement() {
 
   const handleCreateUserStory = async () => {
     if (!newUserStoryTitle.trim()) {
-      toast({
+      notifications.show({
         title: "Error",
-        description: "El título de la historia de usuario no puede estar vacío.",
-        variant: "destructive",
+        message: "El título de la historia de usuario no puede estar vacío.",
+        color: "red"
       });
       return;
     }
 
     if (!backlogId) {
-      toast({
+      notifications.show({
         title: "Error",
-        description: "No se ha cargado el ID del backlog",
-        variant: "destructive",
+        message: "No se ha cargado el ID del backlog",
+        color: "red"
       });
       return;
     }
@@ -1267,11 +1266,10 @@ export default function ProjectManagement() {
 
       const response = await createIssue.mutateAsync(newTask);
       
-      // Actualizar el estado local con el nuevo issue
       if (response) {
         const newIssue = {
           ...response,
-          storyPoints: response.story_points || 0, // Asegurarnos de que storyPoints esté presente
+          storyPoints: response.story_points || 0,
         };
         setBacklogTasks(prev => [...prev, newIssue]);
         setAllBacklogTasks(prev => [...prev, newIssue]);
@@ -1279,16 +1277,17 @@ export default function ProjectManagement() {
       
       setNewUserStoryTitle("");
       setNewUserStoryEpicId(undefined);
-      toast({
+      notifications.show({
         title: "Historia de usuario creada",
-        description: `Se ha añadido "${newTask.title}" al backlog.`,
+        message: `Se ha añadido "${newTask.title}" al backlog.`,
+        color: "green"
       });
     } catch (error) {
       console.error("Error creating user story:", error);
-      toast({
+      notifications.show({
         title: "Error",
-        description: "Failed to create user story",
-        variant: "destructive",
+        message: "Failed to create user story",
+        color: "red"
       });
     }
   };
@@ -1375,6 +1374,7 @@ export default function ProjectManagement() {
           onOpenEpicDialog={() => setIsEpicDialogOpen(true)}
           getEpicById={getEpicById}
           searchTerm={searchTerm}
+          isLoading={isLoading}
         />
       </div>
 

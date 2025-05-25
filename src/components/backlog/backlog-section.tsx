@@ -8,6 +8,7 @@ import { Epic } from "@/interfaces/epic.interface";
 import { useState, useMemo } from "react";
 import { Pagination } from '@mantine/core';
 import { CreateIssueForm } from "./create-issue-form";
+import { TaskSkeleton } from "./task-skeleton";
 
 interface BacklogSectionProps {
   isExpanded: boolean;
@@ -43,6 +44,7 @@ interface BacklogSectionProps {
   onOpenEpicDialog?: () => void;
   getEpicById?: (epicId?: string) => Epic | null;
   searchTerm?: string;
+  isLoading?: boolean;
 }
 
 export function BacklogSection({
@@ -79,6 +81,7 @@ export function BacklogSection({
   onOpenEpicDialog,
   getEpicById,
   searchTerm,
+  isLoading = false,
 }: BacklogSectionProps) {
   // Calculate task counts by status
   const taskCounts = useMemo(() => {
@@ -170,61 +173,61 @@ export function BacklogSection({
             epics={epics}
           />
 
-          {tasks.length === 0 ? (
-            <div className="text-center text-gray-500 dark:text-gray-400 py-4">
-              {searchTerm ? (
-                <>
-                  <p>No se encontraron resultados para "{searchTerm}"</p>
-                  <p className="text-sm mt-1">Intenta con otros términos de búsqueda</p>
-                </>
-              ) : (
-                "No hay tareas en el backlog"
-              )}
-            </div>
-          ) : (
-            <>
-              {tasks.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onToggleCompletion={onToggleTaskCompletion}
-                  onEdit={onEditTask}
-                  onMoveToSprint={onMoveTaskToSprint}
-                  availableSprints={availableSprints}
-                  getPriorityColor={getPriorityColor}
-                  getTypeColor={getTypeColor}
-                  getStatusColor={getStatusColor}
-                  getStatusDisplayText={getStatusDisplayText}
-                  getAssignedUser={getAssignedUser}
-                  onStatusChange={onStatusChange}
-                  onAssignUser={onAssignUser}
-                  onDeleteTask={onDeleteTask}
-                  getEpicById={getEpicById}
-                />
-              ))}
-
-              {totalPages > 1 && (
-                <div className="flex justify-center mt-4">
-                  <Pagination 
-                    total={totalPages}
-                    value={currentPage} 
-                    onChange={handlePageChange}
-                    size="sm"
-                    radius="md"
-                    withEdges
-                    getItemProps={(page) => ({
-                      style: {
-                        backgroundColor: page === currentPage ? '#4263EB' : '',
-                        color: page === currentPage ? 'white' : '',
-                      }
-                    })}
+          <div className="mt-4">
+            {isLoading ? (
+              // Show 5 skeleton items while loading
+              Array.from({ length: 5 }).map((_, index) => (
+                <TaskSkeleton key={index} />
+              ))
+            ) : tasks.length > 0 ? (
+              <>
+                {tasks.map((task) => (
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    onToggleCompletion={onToggleTaskCompletion}
+                    onEdit={onEditTask}
+                    onMoveToSprint={onMoveTaskToSprint}
+                    availableSprints={availableSprints}
+                    getPriorityColor={getPriorityColor}
+                    getTypeColor={getTypeColor}
+                    getStatusColor={getStatusColor}
+                    getStatusDisplayText={getStatusDisplayText}
+                    getAssignedUser={getAssignedUser}
+                    onStatusChange={onStatusChange}
+                    onAssignUser={onAssignUser}
+                    onDeleteTask={onDeleteTask}
+                    getEpicById={getEpicById}
                   />
-                  <div className="ml-4 text-sm text-gray-500">
-                    Página {currentPage} de {totalPages}
-                  </div>
-                </div>
-              )}
-            </>
+                ))}
+              </>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                {searchTerm ? "No se encontraron tareas que coincidan con la búsqueda" : "No hay tareas en el backlog"}
+              </div>
+            )}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-4">
+              <Pagination 
+                total={totalPages}
+                value={currentPage} 
+                onChange={handlePageChange}
+                size="sm"
+                radius="md"
+                withEdges
+                getItemProps={(page) => ({
+                  style: {
+                    backgroundColor: page === currentPage ? '#4263EB' : '',
+                    color: page === currentPage ? 'white' : '',
+                  }
+                })}
+              />
+              <div className="ml-4 text-sm text-gray-500">
+                Página {currentPage} de {totalPages}
+              </div>
+            </div>
           )}
         </div>
       )}

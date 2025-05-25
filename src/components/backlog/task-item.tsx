@@ -1,13 +1,12 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Edit, Trash, ChevronDown, MoveRight, Loader2, Bug, FileText, Sparkles, GitBranch, Circle, BookOpen, Lightbulb } from "lucide-react";
+import { Edit, Trash, ChevronDown, MoveRight, Loader2, Bug, FileText, Sparkles, GitBranch, BookOpen, Lightbulb } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Task } from "@/interfaces/task.interface";
 import { Epic } from "@/interfaces/epic.interface";
@@ -51,19 +50,16 @@ interface TaskItemProps {
 
 export function TaskItem({
   task,
-  onToggleCompletion,
   onEdit,
   onMoveToSprint,
   onMoveToBacklog,
   onDeleteTask,
   availableSprints,
   getPriorityColor,
-  getTypeColor,
   getStatusColor,
   getStatusDisplayText,
   getAssignedUser,
   onStatusChange,
-  onAssignUser,
   getEpicById,
 }: TaskItemProps) {
   const [isMoving, setIsMoving] = useState(false);
@@ -71,6 +67,9 @@ export function TaskItem({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isIssueDetailOpen, setIsIssueDetailOpen] = useState(false);
+
+  console.log('task', task);
+  console.log('assignedUser', getAssignedUser(task.assignedTo));
 
   const handleMoveToSprint = async (sprintId: string) => {
     if (!onMoveToSprint) return;
