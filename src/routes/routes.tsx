@@ -19,7 +19,7 @@ import TimeTackingPage from "@/pages/teams/dashboard/TimeTackingPage";
 import Layout from "@/layouts/dashboard/layout";
 import ProjectsPage from "@/pages/projects/page";
 import ProjectManagement from "@/components/backlog/project-management";
-import ProjectBoardPage from "@/pages/projects/board";
+import ProjectBoardPage from "@/pages/board/page";
 
 function AppRoutes() {
   return (

@@ -1,13 +1,15 @@
 import { Task } from "./task.interface";
+import { Projects } from "./projects.interface";
 
 export interface Sprint {
   id: string;
   name: string;
-  isActive: boolean;
-  tasks: Task[];
-  startDate?: Date;
-  endDate?: Date;
-  goal?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  goal: string;
+  isFinished: boolean;
+  isStarted: boolean;
+  startedAt: Date | null;
+  fnishedAt: Date | null;
+  project: Projects;
+  issues: Task[];
+  status: 'active' | 'inactive';
 } 

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import KanbanBoard from "@/pages/backlog/kanban/page";
+import KanbanBoard from "@/components/board/KanbanBoard";
 import { apiClient } from "@/api/client-gateway";
 import { Projects } from "@/interfaces/projects.interface";
 
-export default function ProjectBoardPage() {
+export default function BoardPage() {
   const { project_id } = useParams();
   const [project, setProject] = useState<Projects | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,7 +46,6 @@ export default function ProjectBoardPage() {
         </p>
       </div>
 
-      {/* Tablero Kanban */}
       <KanbanBoard />
     </div>
   );
