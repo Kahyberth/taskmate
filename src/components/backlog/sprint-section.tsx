@@ -1,10 +1,19 @@
 import { Button } from "@/components/ui/button";
-import { ChevronDown, CheckSquare } from "lucide-react";
+import { ChevronDown, ChevronRight, MoreHorizontal, Edit, Copy, Trash, Loader2 } from "lucide-react";
 import { TaskItem } from "./task-item";
 import { Task } from "@/interfaces/task.interface";
 import { Sprint } from "@/interfaces/sprint.interface";
 import { Epic } from "@/interfaces/epic.interface";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { AssignedUser } from "@/interfaces/assigned-user.interface";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { notifications } from "@mantine/notifications";
 
 interface SprintSectionProps {
   sprint: Sprint;
@@ -16,14 +25,14 @@ interface SprintSectionProps {
   onStatusChange: (sprintId: string, taskId: string, status: Task["status"]) => void;
   onStartSprint: (sprintId: string) => void;
   onCompleteSprint: (sprintId: string) => void;
-  onDeleteTask?: (taskId: string) => void;
+  onDeleteSprint: (sprintId: string) => void;
   getPriorityColor: (priority?: string) => string;
   getTypeColor: (type?: string) => string;
   getStatusColor: (status: string) => string;
   getStatusDisplayText: (status: string) => string;
-  getAssignedUser: (userId?: string) => { initials: string } | null;
-  onAssignUser?: (taskId: string, userId: string | undefined) => void;
-  getEpicById?: (epicId?: string) => Epic | null;
+  getAssignedUser: (userId?: string) => AssignedUser | null;
+  onDeleteTask: (taskId: string) => void;
+  getEpicById: (epicId?: string) => Epic | null;
 }
 
 export function SprintSection({
@@ -36,117 +45,196 @@ export function SprintSection({
   onStatusChange,
   onStartSprint,
   onCompleteSprint,
-  onDeleteTask,
+  onDeleteSprint,
   getPriorityColor,
   getTypeColor,
   getStatusColor,
   getStatusDisplayText,
   getAssignedUser,
-  onAssignUser,
-  getEpicById,
+  onDeleteTask,
+  getEpicById
 }: SprintSectionProps) {
-  const handleToggleClick = (e: React.MouseEvent) => {
-    // Only toggle if clicking on the header section elements
-    if (e.target instanceof Element && 
-        (e.target.closest('.sprint-header') || 
-         e.target.classList.contains('sprint-header'))) {
-      onToggleExpand();
-    }
-  };
-  
+  const [isStartingSpring, setIsStartingSprint] = useState(false);
+  const [isCompletingSprint, setIsCompletingSprint] = useState(false);
+  const [isDeletingSprint, setIsDeletingSprint] = useState(false);
+
   // Calculate task counts by status
   const taskCounts = useMemo(() => {
-    const todoCount = sprint.tasks.filter(task => task.status === "to-do").length;
-    const inProgressCount = sprint.tasks.filter(task => 
+    const issues = sprint.issues || [];
+    const todoCount = issues.filter(task => task.status === "to-do").length;
+    const inProgressCount = issues.filter(task => 
       task.status === "in-progress" || task.status === "review"
     ).length;
-    const doneCount = sprint.tasks.filter(task => 
+    const doneCount = issues.filter(task => 
       task.status === "done" || task.status === "closed"
     ).length;
     
     return { todoCount, inProgressCount, doneCount };
-  }, [sprint.tasks]);
+  }, [sprint.issues]);
+
+  const handleStartSprint = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsStartingSprint(true);
+    try {
+      await onStartSprint(sprint.id);
+    } finally {
+      setIsStartingSprint(false);
+    }
+  };
+
+  const handleCompleteSprint = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsCompletingSprint(true);
+    try {
+      await onCompleteSprint(sprint.id);
+    } finally {
+      setIsCompletingSprint(false);
+    }
+  };
+
+  const handleDeleteSprint = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!sprint.issues?.length || sprint.issues.length === 0) {
+      setIsDeletingSprint(true);
+      try {
+        await onDeleteSprint(sprint.id);
+      } finally {
+        setIsDeletingSprint(false);
+      }
+    } else {
+      notifications.show({
+        title: "No se puede eliminar",
+        message: "El sprint tiene tareas asignadas. Muévalas al backlog antes de eliminar el sprint.",
+        color: "red"
+      });
+    }
+  };
   
   return (
-    <div className="mb-6 border border-gray-200 rounded-md p-3 shadow-sm bg-white dark:bg-black/20 dark:border-white/10">
-      <div className="flex flex-col sprint-header" onClick={handleToggleClick}>
-        {/* First row: sprint name and expand/collapse control */}
-        <div className="flex items-center mb-2 cursor-pointer">
-          <ChevronDown
-            size={16}
-            className={`mr-2 transition-transform ${isExpanded ? "transform rotate-0" : "transform rotate-270"}`}
-          />
-          <span className="font-medium dark:text-white">{sprint.name}</span>
-          <span className="ml-2 text-gray-500 dark:text-gray-400 text-sm">
-            <button 
-              className="text-xs text-gray-500 dark:text-gray-400 underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              Añadir fechas
-            </button> ({sprint.tasks.length}{" "}
-            actividades)
-          </span>
-        </div>
-        
-        {/* Second row: stats and actions */}
-        <div className="flex items-center mb-2">
-          <div className="flex items-center gap-2">
-          {/* To-do count */}
-            <span className="text-xs text-gray-500 dark:text-gray-400">{taskCounts.todoCount}</span>
-          {/* In-progress count */}
-            <div className="w-6 h-4 bg-blue-100 dark:bg-blue-900/30 rounded-sm flex items-center justify-center text-xs text-blue-800 dark:text-blue-300">
-            {taskCounts.inProgressCount}
-          </div>
-          {/* Done count */}
-            <span className="text-xs text-gray-500 dark:text-gray-400">{taskCounts.doneCount}</span>
-          </div>
-          <div className="ml-auto">
-          <Button
-            variant="outline"
-            size="sm"
-              className="h-7 text-xs dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-            onClick={(e) => {
-              e.stopPropagation();
-              sprint.isActive ? onCompleteSprint(sprint.id) : onStartSprint(sprint.id);
-            }}
-          >
-            {sprint.isActive ? "Completar sprint" : "Iniciar sprint"}
-          </Button>
-          </div>
-        </div>
-      </div>
-
-      {isExpanded && (
-        <div className="pl-8">
-          {sprint.tasks.map((task) => (
-            <TaskItem
-              key={task.id}
-              task={task}
-              onToggleCompletion={onToggleTaskCompletion}
-              onEdit={onEditTask}
-              onMoveToBacklog={onMoveTaskToBacklog}
-              getPriorityColor={getPriorityColor}
-              getTypeColor={getTypeColor}
-              getStatusColor={getStatusColor}
-              getStatusDisplayText={getStatusDisplayText}
-              getAssignedUser={getAssignedUser}
-              onStatusChange={(taskId, status) => onStatusChange(sprint.id, taskId, status)}
-              onAssignUser={onAssignUser}
-              onDeleteTask={onDeleteTask}
-              getEpicById={getEpicById}
+    <div className="mb-4">
+      <div className="border border-black/10 dark:border-white/10 rounded-md p-3 shadow-sm bg-white dark:bg-black/20">
+        <div className="flex items-center justify-between backlog-header">
+          <div className="flex items-center cursor-pointer">
+            <ChevronDown
+              className={`h-5 w-5 transform transition-transform dark:text-gray-400 ${
+                isExpanded ? "" : "-rotate-90"
+              }`}
+              onClick={onToggleExpand}
             />
-          ))}
-        </div>
-      )}
+            <h3 className="text-lg font-semibold dark:text-gray-200 ml-2">{sprint.name}</h3>
+            {sprint.goal && (
+              <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                - {sprint.goal}
+              </span>
+            )}
+          </div>
 
-      <div className="flex items-center justify-center py-4 text-gray-400 dark:text-gray-500">
-        <CheckSquare size={16} className="mr-2" />
-        <span className="text-sm">
-          {sprint.tasks.length} actividades | Estimación:{" "}
-          {sprint.tasks.reduce((sum, task) => sum + (task.storyPoints || 0), 0).toFixed(1).replace(/\.0$/, '')} puntos
-          {sprint.tasks.some(task => task.storyPoints === 0 || task.storyPoints === undefined) && 
-            " (algunas tareas sin estimar)"}
-        </span>
+          <div className="flex items-center space-x-2">
+            <div className="ml-auto flex items-center gap-2">
+              {/* To-do count */}
+              <span className="text-xs text-gray-500 dark:text-gray-400">{taskCounts.todoCount}</span>
+              {/* In-progress count */}
+              <div className="w-6 h-4 bg-blue-100 dark:bg-blue-900/30 rounded-sm flex items-center justify-center text-xs text-blue-800 dark:text-blue-300">
+                {taskCounts.inProgressCount}
+              </div>
+              {/* Done count */}
+              <span className="text-xs text-gray-500 dark:text-gray-400">{taskCounts.doneCount}</span>
+            </div>
+
+            <Button
+              variant={sprint.isStarted ? "destructive" : "outline"}
+              size="sm"
+              onClick={sprint.isStarted ? handleCompleteSprint : handleStartSprint}
+              disabled={isStartingSpring || isCompletingSprint}
+              className="h-7 text-xs dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800 min-w-[120px]"
+            >
+              {isStartingSpring || isCompletingSprint ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {sprint.isStarted ? "Completando..." : "Iniciando..."}
+                </>
+              ) : (
+                sprint.isStarted ? "Completar sprint" : "Iniciar sprint"
+              )}
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 dark:text-gray-200 dark:hover:bg-gray-800">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={(e) => {
+                  e.stopPropagation();
+                  notifications.show({
+                    title: "Editar sprint",
+                    message: "Esta funcionalidad será implementada próximamente.",
+                    color: "blue"
+                  });
+                }}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  <span>Editar sprint</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleDeleteSprint}
+                  className="text-red-600 focus:text-red-600"
+                  disabled={isDeletingSprint}
+                >
+                  {isDeletingSprint ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <span>Eliminando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash className="mr-2 h-4 w-4" />
+                      <span>Eliminar sprint</span>
+                    </>
+                  )}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {isExpanded && (
+          <div className="mt-4 space-y-4">
+            {(sprint.issues || []).map((task) => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                onToggleCompletion={() => onToggleTaskCompletion(task.id)}
+                onEdit={() => onEditTask(task)}
+                onMoveToBacklog={() => onMoveTaskToBacklog(task.id)}
+                onStatusChange={(taskId, status) => onStatusChange(sprint.id, taskId, status)}
+                getPriorityColor={getPriorityColor}
+                getTypeColor={getTypeColor}
+                getStatusColor={getStatusColor}
+                getStatusDisplayText={getStatusDisplayText}
+                getAssignedUser={getAssignedUser}
+                onDeleteTask={() => onDeleteTask(task.id)}
+                getEpicById={getEpicById}
+              />
+            ))}
+            {!sprint.issues?.length && (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                No hay tareas en este sprint
+              </div>
+            )}
+          </div>
+        )}
+
+        {isExpanded && sprint.issues?.length > 0 && (
+          <div className="flex items-center justify-center py-4 text-gray-400 dark:text-gray-500">
+            <span className="text-sm">
+              Estimación total: {sprint.issues.reduce((sum, task) => sum + (task.storyPoints || 0), 0).toFixed(1).replace(/\.0$/, '')} puntos
+              {sprint.issues.some(task => task.storyPoints === 0 || task.storyPoints === undefined) && 
+                " (algunas tareas sin estimar)"}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -117,7 +117,7 @@ export function BacklogSection({
             size={16}
             className={`mr-2 transition-transform ${isExpanded ? "transform rotate-0" : "transform rotate-270"}`}
           />
-          <span className="font-medium dark:text-white">Backlog</span>
+          <h3 className="text-lg font-semibold dark:text-gray-200 ml-2">Backlog</h3>
           <span className="ml-2 text-gray-500 dark:text-gray-400 text-sm">
             {searchTerm ? (
               <>Filtrando: {totalTasks} resultado{totalTasks !== 1 ? 's' : ''}</>
@@ -159,6 +159,10 @@ export function BacklogSection({
 
       {isExpanded && (
         <div className="pl-8">
+          <p className="text-md">
+            Crear incidencia
+          </p>
+            
           {/* Input for new user story */}
           <CreateIssueForm
             onCreateUserStory={onCreateUserStory}

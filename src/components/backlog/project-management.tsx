@@ -20,25 +20,10 @@ import { useUpdateIssue, invalidateProjectIssues, useCreateIssue } from "@/api/q
 import { useQueryClient } from "@tanstack/react-query"
 import { EpicIssuesDialog } from "./epic-issues-dialog"
 import { notifications } from "@mantine/notifications"
+import { Sprint } from "@/interfaces/sprint.interface"
+import { AssignedUser } from "@/interfaces/assigned-user.interface"
 
-// Define sprint interface
-interface Sprint {
-  id: string;
-  name: string;
-  isActive: boolean;
-  tasks: Task[];
-  startDate?: Date;
-  endDate?: Date;
-  goal?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
 
-interface AssignedUser {
-  initials: string;
-  name: string;
-  lastName: string;
-}
 
 export default function ProjectManagement() {
   const [sprints, setSprints] = useState<Sprint[]>([]);
@@ -77,7 +62,6 @@ export default function ProjectManagement() {
 
   // Create sprint state
   const [isCreateSprintOpen, setIsCreateSprintOpen] = useState(false)
-  const [nextSprintNumber, setNextSprintNumber] = useState(2)
 
   // Edit task state
   const [isEditTaskOpen, setIsEditTaskOpen] = useState(false)
@@ -104,35 +88,43 @@ export default function ProjectManagement() {
 
   const handleCreateSprint = async (sprintData: {
     name: string;
-    startDate?: Date;
-    endDate?: Date;
     goal: string;
   }) => {
     try {
+      if (!project_id) {
+        notifications.show({
+          title: "Error",
+          message: "No se encontró el ID del proyecto",
+          color: "red"
+        });
+        return;
+      }
+
       const newSprintData = {
         name: sprintData.name,
-        projectId: project_id,
-        startDate: sprintData.startDate ? sprintData.startDate.toISOString() : undefined,
-        endDate: sprintData.endDate ? sprintData.endDate.toISOString() : undefined,
-        goal: sprintData.goal || ""
+        goal: sprintData.goal || "",
+        projectId: project_id
       };
 
-      const response = await apiClient.post(`/backlog/create-sprint`, newSprintData);
+      const response = await apiClient.post(`/sprints/create`, newSprintData);
+      console.log("Sprint created:", response.data);
       
       if (response.data) {
         const newSprint: Sprint = {
           id: response.data.id,
           name: response.data.name,
-          isActive: false,
-          tasks: [],
-          startDate: sprintData.startDate,
-          endDate: sprintData.endDate,
-          goal: sprintData.goal
+          goal: response.data.goal || "",
+          isFinished: response.data.isFinished,
+          isStarted: response.data.isStarted,
+          startedAt: response.data.startedAt ? new Date(response.data.startedAt) : null,
+          fnishedAt: response.data.fnishedAt ? new Date(response.data.fnishedAt) : null,
+          project: response.data.project,
+          issues: [],
+          status: response.data.status || 'inactive'
         };
-        
-        setSprints([...sprints, newSprint]);
-        setNextSprintNumber(nextSprintNumber + 1);
-        setExpandedSections((prev) => ({
+
+        setSprints(prevSprints => [...prevSprints, newSprint]);
+        setExpandedSections(prev => ({
           ...prev,
           [newSprint.id]: true,
         }));
@@ -143,11 +135,11 @@ export default function ProjectManagement() {
           color: "green"
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating sprint:", error);
       notifications.show({
         title: "Error",
-        message: "No se pudo crear el sprint",
+        message: error.response?.data?.message || "No se pudo crear el sprint",
         color: "red"
       });
     }
@@ -233,56 +225,48 @@ export default function ProjectManagement() {
   const fetchSprints = async () => {
     console.log("Fetching sprints for project:", project_id);
     try {
-      const response = await apiClient.get(`/backlog/sprints/${project_id}`);
+      if (!project_id) {
+        console.error("No project ID available");
+        return;
+      }
+
+      // Obtener los sprints del proyecto
+      const response = await apiClient.get(`/sprints/get-sprints-by-project/${project_id}`);
       console.log("Sprints response:", response.data);
       
       if (response.data && Array.isArray(response.data)) {
         const mappedSprints = response.data.map((sprint: any) => ({
           id: sprint.id,
           name: sprint.name,
-          isActive: sprint.status === 'active',
-          tasks: sprint.tasks ? sprint.tasks.map((task: any) => ({
-            id: task.id,
-            title: task.title,
-            description: task.description || "",
-            type: task.type || "user_story",
-            status: task.status || "to-do",
-            priority: task.priority || "medium",
-            createdBy: task.createdBy || user?.id,
-            acceptanceCriteria: task.acceptanceCriteria || "",
-            productBacklogId: task.productBacklogId || backlogId,
-            storyPoints: task.story_points || 0,
-            assignedTo: task.assignedTo,
-            createdAt: task.createdAt,
-            updatedAt: task.updatedAt,
-            doneAt: task.doneAt,
-            finishedAt: task.finishedAt
-          })) : [],
-          startDate: sprint.startDate ? new Date(sprint.startDate) : undefined,
-          endDate: sprint.endDate ? new Date(sprint.endDate) : undefined,
           goal: sprint.goal || "",
-          createdAt: sprint.createdAt ? new Date(sprint.createdAt) : undefined,
-          updatedAt: sprint.updatedAt ? new Date(sprint.updatedAt) : undefined
+          isFinished: sprint.isFinished,
+          isStarted: sprint.isStarted,
+          startedAt: sprint.startedAt ? new Date(sprint.startedAt) : null,
+          fnishedAt: sprint.fnishedAt ? new Date(sprint.fnishedAt) : null,
+          project: sprint.project,
+          issues: sprint.issues ? sprint.issues.map((issue: any) => ({
+            id: issue.id,
+            title: issue.title,
+            description: issue.description || "",
+            type: issue.type || "user_story",
+            status: issue.status || "to-do",
+            priority: issue.priority || "medium",
+            createdBy: issue.createdBy || user?.id,
+            acceptanceCriteria: issue.acceptanceCriteria || "",
+            productBacklogId: issue.product_backlog?.id || backlogId,
+            storyPoints: issue.story_points || 0,
+            assignedTo: issue.assignedTo,
+            createdAt: issue.createdAt,
+            updatedAt: issue.updatedAt,
+            doneAt: issue.doneAt,
+            finishedAt: issue.finishedAt,
+            code: issue.code
+          })) : [],
+          status: sprint.status
         }));
         
         console.log("Sprints mapped successfully:", mappedSprints.length, "sprints found");
         setSprints(mappedSprints);
-        
-        // Actualizar el número del próximo sprint
-        if (mappedSprints.length > 0) {
-          const sprintNumbers = mappedSprints
-            .map((s: Sprint) => {
-              const match = s.name.match(/Sprint\s+(\d+)/i);
-              return match ? parseInt(match[1]) : 0;
-            })
-            .filter((n: number) => !isNaN(n));
-            
-          if (sprintNumbers.length > 0) {
-            const maxNumber = Math.max(...sprintNumbers);
-            setNextSprintNumber(maxNumber + 1);
-            console.log("Next sprint number set to:", maxNumber + 1);
-          }
-        }
       } else {
         console.log("No sprints found");
         setSprints([]);
@@ -368,75 +352,104 @@ export default function ProjectManagement() {
   }, [isMembersDialogOpen]);
 
   const handleStartSprint = (sprintId: string) => {
-    setSprints(sprints.map((sprint) => (sprint.id === sprintId ? { ...sprint, isActive: true } : sprint)))
+    return apiClient.post(`/sprints/start-sprint?sprintId=${sprintId}`)
+      .then((response) => {
+        if (response.data) {
+          setSprints(prevSprints => prevSprints.map(sprint => 
+            sprint.id === sprintId ? response.data : sprint
+          ));
 
-    notifications.show({
-      title: "Sprint iniciado",
-      message: "El sprint ha sido iniciado exitosamente.",
-      color: "green"
-    });
-  }
+          notifications.show({
+            title: "Sprint iniciado",
+            message: "El sprint ha sido iniciado exitosamente.",
+            color: "green"
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Error starting sprint:", error);
+        notifications.show({
+          title: "Error",
+          message: error.response?.data?.message || "No se pudo iniciar el sprint",
+          color: "red"
+        });
+        throw error;
+      });
+  };
 
   const handleCompleteSprint = (sprintId: string) => {
-    const currentSprint = sprints.find((sprint) => sprint.id === sprintId);
-    if (!currentSprint) return;
+    return apiClient.post(`/sprints/complete-sprint?sprintId=${sprintId}`)
+      .then((response) => {
+        if (response.data) {
+          const currentSprint = sprints.find(sprint => sprint.id === sprintId);
+          if (!currentSprint) return;
 
-    const incompleteTasks = currentSprint.tasks.filter((task: Task) => 
-      task.status !== "done" && task.status !== "closed"
-    );
+          if (response.data.id) {
+            setSprints(prevSprints => [
+              ...prevSprints.filter(s => s.id !== sprintId),
+              response.data
+            ]);
 
-    if (incompleteTasks.length > 0) {
-      const newSprintId = `sprint-${nextSprintNumber}`;
-      const newSprint: Sprint = {
-        id: newSprintId,
-        name: `Tablero Sprint ${nextSprintNumber}`,
-        isActive: false,
-        tasks: incompleteTasks,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      setSprints([...sprints.filter((s) => s.id !== sprintId), newSprint]);
-      setNextSprintNumber(nextSprintNumber + 1);
-      setExpandedSections((prev) => ({
-        ...prev,
-        [newSprintId]: true,
-      }));
-
-      notifications.show({
-        title: "Sprint completado",
-        message: `Se han movido ${incompleteTasks.length} tareas incompletas a "${newSprint.name}".`,
-        color: "green"
+            notifications.show({
+              title: "Sprint completado",
+              message: "Se ha completado el sprint y las tareas pendientes se han movido al nuevo sprint.",
+              color: "green"
+            });
+          } else {
+            setSprints(prevSprints => prevSprints.filter(s => s.id !== sprintId));
+            
+            notifications.show({
+              title: "Sprint completado",
+              message: "Todas las tareas fueron completadas exitosamente.",
+              color: "green"
+            });
+          }
+        }
+      })
+      .catch((error) => {
+        console.error("Error completing sprint:", error);
+        notifications.show({
+          title: "Error",
+          message: error.response?.data?.message || "No se pudo completar el sprint",
+          color: "red"
+        });
+        throw error;
       });
-    } else {
-      setSprints(sprints.filter((s) => s.id !== sprintId));
-
-      notifications.show({
-        title: "Sprint completado",
-        message: "Todas las tareas fueron completadas exitosamente.",
-        color: "green"
-      });
-    }
   };
 
   const handleDeleteSprint = (sprintId: string) => {
-    const sprintToDelete = sprints.find((sprint) => sprint.id === sprintId)
-    if (!sprintToDelete) return
-
-    setSprints(sprints.filter((s) => s.id !== sprintId))
 
     notifications.show({
-      title: "Sprint eliminado",
-      message: `El sprint "${sprintToDelete.name}" ha sido eliminado exitosamente.`,
-      color: "green"
+      title: "Funcionalidad no disponible",
+      message: "Esta funcionalidad será implementada próximamente.",
+      color: "blue"
     });
-  }
+    // return apiClient.delete(`/sprints/delete/${sprintId}`)
+    //   .then(() => {
+    //     setSprints(prevSprints => prevSprints.filter(s => s.id !== sprintId));
+
+    //     notifications.show({
+    //       title: "Sprint eliminado",
+    //       message: "El sprint ha sido eliminado exitosamente.",
+    //       color: "green"
+    //     });
+    //   })
+    //   .catch((error) => {
+    //     console.error("Error deleting sprint:", error);
+    //     notifications.show({
+    //       title: "Error",
+    //       message: error.response?.data?.message || "No se pudo eliminar el sprint",
+    //       color: "red"
+    //     });
+    //     throw error;
+    //   });
+  };
 
   const openEditTaskModal = (task: Task, sprintId: string | null = null) => {
-    setEditingTask(task)
-    setEditingSprintId(sprintId)
-    setIsEditTaskOpen(true)
-  }
+    setEditingTask(task);
+    setEditingSprintId(sprintId);
+    setIsEditTaskOpen(true);
+  };
 
   const handleSaveTaskEdit = async (updatedTask: Partial<Task>) => {
     console.log("Saving task edit:", updatedTask);
@@ -477,8 +490,8 @@ export default function ProjectManagement() {
           sprint.id === editingSprintId
             ? {
                 ...sprint,
-                tasks: sprint.tasks.map((task: Task) =>
-                  task.id === editingTask.id ? optimisticTask : task
+                issues: sprint.issues.map((issue) =>
+                  issue.id === editingTask.id ? optimisticTask : issue
                 ),
               }
             : sprint
@@ -520,8 +533,8 @@ export default function ProjectManagement() {
               sprint.id === editingSprintId
                 ? {
                     ...sprint,
-                    tasks: sprint.tasks.map((task: Task) =>
-                      task.id === editingTask.id ? taskModified : task
+                    issues: sprint.issues.map((issue) =>
+                      issue.id === editingTask.id ? taskModified : issue
                     ),
                   }
                 : sprint
@@ -541,8 +554,8 @@ export default function ProjectManagement() {
               sprint.id === editingSprintId
                 ? {
                     ...sprint,
-                    tasks: sprint.tasks.map((task: Task) =>
-                      task.id === editingTask.id ? editingTask : task
+                    issues: sprint.issues.map((issue) =>
+                      issue.id === editingTask.id ? editingTask : issue
                     ),
                   }
                 : sprint
@@ -614,7 +627,7 @@ export default function ProjectManagement() {
         sprint.id === sprintId
           ? {
               ...sprint,
-              tasks: sprint.tasks.map((task: Task) =>
+              issues: sprint.issues.map((task: Task) =>
                 task.id === taskId
                   ? {
                       ...task,
@@ -627,7 +640,7 @@ export default function ProjectManagement() {
       )
     );
     const currentSprint = sprints.find(s => s.id === sprintId);
-    const taskDetails = currentSprint?.tasks.find((t: Task) => t.id === taskId);
+    const taskDetails = currentSprint?.issues.find((t: Task) => t.id === taskId);
     if (taskDetails) {
       notifications.show({
         title: "Tarea actualizada",
@@ -647,41 +660,49 @@ export default function ProjectManagement() {
     try {
       // Optimistic update - remove from backlog immediately
       setBacklogTasks(prev => prev.filter(task => task.id !== taskId));
+      setAllBacklogTasks(prev => prev.filter(task => task.id !== taskId));
       
       try {
-        const response = await apiClient.post(`/backlog/move-issue-to-sprint`, {
-          taskId,
-          sprintId: targetSprintId,
-        });
+        const response = await apiClient.post(`/backlog/move-issue-to-sprint?issueId=${taskId}&sprintId=${targetSprintId}`);
 
         if (response.data) {
           // Asegurarse de que la tarea tenga todos los campos necesarios
-         const movedTask = {
-           ...taskToMove,
+          const movedTask = {
+            ...taskToMove,
             ...response.data,
             // Asegurar que estos campos estén presentes
             productBacklogId: response.data.productBacklogId || backlogId,
-            storyPoints: response.data.story_points || taskToMove.storyPoints || 0
-         };
+            storyPoints: response.data.story_points || taskToMove.storyPoints || 0,
+            status: response.data.status || taskToMove.status,
+            type: response.data.type || taskToMove.type,
+            priority: response.data.priority || taskToMove.priority,
+            assignedTo: response.data.assignedTo || taskToMove.assignedTo,
+            createdBy: response.data.createdBy || taskToMove.createdBy,
+            acceptanceCriteria: response.data.acceptanceCriteria || taskToMove.acceptanceCriteria || "",
+            epicId: response.data.epicId || taskToMove.epicId
+          };
 
-         // Update sprint tasks
-         setSprints(sprints.map(sprint => 
-           sprint.id === targetSprintId 
-             ? { ...sprint, tasks: [...sprint.tasks, movedTask] } 
-             : sprint
-         ));
+          // Solo actualizar el sprint después de una respuesta exitosa
+          setSprints(prevSprints => 
+            prevSprints.map(sprint => 
+              sprint.id === targetSprintId 
+                ? { ...sprint, issues: [...sprint.issues, movedTask] } 
+                : sprint
+            )
+          );
         
-      notifications.show({
-        title: "Tarea movida",
-        message: `La historia "${taskToMove.title}" ha sido movida al sprint.`,
-        color: "green"
-      });
+          notifications.show({
+            title: "Tarea movida",
+            message: `La historia "${taskToMove.title}" ha sido movida al sprint.`,
+            color: "green"
+          });
         }
       } catch (error: any) {
         console.error("Error moving task to sprint:", error);
         
-        // Revert changes on error
+        // Revert changes on error - solo necesitamos restaurar el backlog ya que el sprint no se actualizó
         setBacklogTasks(prev => [...prev, taskCopy]);
+        setAllBacklogTasks(prev => [...prev, taskCopy]);
         
         // Mostrar mensaje específico según el error
         if (error.response?.status === 404) {
@@ -691,11 +712,11 @@ export default function ProjectManagement() {
             color: "red"
           });
         } else {
-       notifications.show({
-         title: "Error",
-         message: "No se pudo mover la tarea al sprint. Inténtalo de nuevo más tarde.",
-         color: "red"
-       });
+          notifications.show({
+            title: "Error",
+            message: "No se pudo mover la tarea al sprint. Inténtalo de nuevo más tarde.",
+            color: "red"
+          });
         }
       }
     } catch (error) {
@@ -712,7 +733,7 @@ export default function ProjectManagement() {
     try {
       // Encontrar el sprint y la tarea antes de llamar a la API
       const sprint = sprints.find(s => s.id === sprintId);
-      const taskToMove = sprint?.tasks.find((task: Task) => task.id === taskId);
+      const taskToMove = sprint?.issues.find((task: Task) => task.id === taskId);
       
       if (!sprint || !taskToMove) {
         console.error("Sprint or task not found:", sprintId, taskId);
@@ -722,9 +743,9 @@ export default function ProjectManagement() {
       const taskCopy = { ...taskToMove };
       
       // Optimistic update - remove from sprint immediately
-      setSprints(sprints.map(sprint =>
+      setSprints(prevSprints => prevSprints.map(sprint =>
         sprint.id === sprintId
-          ? { ...sprint, tasks: sprint.tasks.filter((task: Task) => task.id !== taskId) }
+          ? { ...sprint, issues: sprint.issues.filter((task: Task) => task.id !== taskId) }
           : sprint
       ));
       
@@ -736,30 +757,38 @@ export default function ProjectManagement() {
 
         if (response.data) {
           // Asegurarse de que la tarea tenga todos los campos necesarios
-         const movedTask = {
-           ...taskToMove,
+          const movedTask = {
+            ...taskToMove,
             ...response.data,
             // Asegurar que estos campos estén presentes
             productBacklogId: response.data.productBacklogId || backlogId,
-            storyPoints: response.data.story_points || taskToMove.storyPoints || 0
-         };
+            storyPoints: response.data.story_points || taskToMove.storyPoints || 0,
+            status: response.data.status || taskToMove.status,
+            type: response.data.type || taskToMove.type,
+            priority: response.data.priority || taskToMove.priority,
+            assignedTo: response.data.assignedTo || taskToMove.assignedTo,
+            createdBy: response.data.createdBy || taskToMove.createdBy,
+            acceptanceCriteria: response.data.acceptanceCriteria || taskToMove.acceptanceCriteria || "",
+            epicId: response.data.epicId || taskToMove.epicId
+          };
 
-         // Add to backlog
-         setBacklogTasks([...backlogTasks, movedTask]);
+          // Add to backlog
+          setBacklogTasks(prev => [...prev, movedTask]);
+          setAllBacklogTasks(prev => [...prev, movedTask]);
         
-      notifications.show({
-        title: "Tarea movida",
-        message: `La historia "${taskToMove.title}" ha sido movida al backlog.`,
-        color: "green"
-      });
+          notifications.show({
+            title: "Tarea movida",
+            message: `La historia "${taskToMove.title}" ha sido movida al backlog.`,
+            color: "green"
+          });
         }
       } catch (error: any) {
         console.error("Error moving task to backlog:", error);
         
         // Revert changes on error
-        setSprints(sprints.map(s => 
+        setSprints(prevSprints => prevSprints.map(s => 
           s.id === sprintId 
-            ? { ...s, tasks: [...s.tasks.filter((t: Task) => t.id !== taskId), taskCopy] }
+            ? { ...s, issues: [...s.issues.filter((t: Task) => t.id !== taskId), taskCopy] }
             : s
         ));
         
@@ -771,11 +800,11 @@ export default function ProjectManagement() {
             color: "red"
           });
         } else {
-       notifications.show({
-         title: "Error",
-         message: "No se pudo mover la tarea al backlog. Inténtalo de nuevo más tarde.",
-         color: "red"
-       });
+          notifications.show({
+            title: "Error",
+            message: "No se pudo mover la tarea al backlog. Inténtalo de nuevo más tarde.",
+            color: "red"
+          });
         }
       }
     } catch (error) {
@@ -877,6 +906,8 @@ export default function ProjectManagement() {
    * @param status Nuevo estado
    */
   const handleSprintTaskStatusChange = async (sprintId: string, taskId: string, status: Task["status"]) => {
+    console.log("Starting status change for task:", taskId, "to status:", status);
+    
     try {
       // Encontrar el sprint y la tarea
       const sprint = sprints.find((s) => s.id === sprintId);
@@ -885,7 +916,7 @@ export default function ProjectManagement() {
         return;
       }
       
-      const task = sprint.tasks.find((t) => t.id === taskId);
+      const task = sprint.issues?.find((t) => t.id === taskId);
       if (!task) {
         console.error("Task not found in sprint:", taskId);
         return;
@@ -895,91 +926,91 @@ export default function ProjectManagement() {
       const previousStatus = task.status;
       
       // Actualización optimista
-      const updatedTask = { ...task, status } as Task;
-      setSprints(
-        sprints.map((s) =>
-          s.id === sprintId
-            ? {
-                ...s,
-                tasks: s.tasks.map((t) => (t.id === taskId ? updatedTask : t)),
-              }
-            : s
-        )
-      );
+      setSprints(prevSprints => prevSprints.map(s => 
+        s.id === sprintId 
+          ? {
+              ...s,
+              issues: s.issues?.map(t => 
+                t.id === taskId 
+                  ? { ...t, status } 
+                  : t
+              ) || []
+            }
+          : s
+      ));
       
-      try {
-        // Use the mutation hook instead of direct API call
-        updateIssue({
+      // Usar el mutation hook para actualizar la tarea
+      updateIssue(
+        {
           id: taskId,
           status,
-          userId: user?.id,
-          projectId: project_id // Needed for client-side cache invalidation, will be removed before API call
-        }, {
-          onSuccess: () => {
+          projectId: project_id
+        },
+        {
+          onSuccess: (data) => {
+            console.log("Status update successful:", data);
             notifications.show({
               title: "Estado actualizado",
               message: `El estado de "${task.title}" ha sido actualizado a ${getStatusDisplayText(status).toLowerCase()}.`,
               color: "green"
             });
-            
-            // Force refresh of project issues data with queryClient
+
+            // Force refresh of project issues data
             if (project_id) {
-              invalidateProjectIssues(queryClient, project_id as string);
+              invalidateProjectIssues(queryClient, project_id);
             }
           },
-          onError: (error) => {
-            console.error("Error updating task status:", error);
+          onError: (error: any) => {
+            console.error("Error in mutation onError callback:", error);
             
             // Restaurar el estado anterior
-            setSprints(
-              sprints.map((s) =>
-                s.id === sprintId
-                  ? {
-                      ...s,
-                      tasks: s.tasks.map((t) =>
-                        t.id === taskId ? { ...t, status: previousStatus } as Task : t
-                      ),
-                    }
-                  : s
-              )
-            );
+            setSprints(prevSprints => prevSprints.map(s => 
+              s.id === sprintId 
+                ? {
+                    ...s,
+                    issues: s.issues?.map(t => 
+                      t.id === taskId 
+                        ? { ...t, status: previousStatus } 
+                        : t
+                    ) || []
+                  }
+                : s
+            ));
             
-            notifications.show({
-              title: "Error",
-              message: "No se pudo actualizar el estado de la tarea",
-              color: "red"
-            });
+            // Mostrar mensaje de error específico según el tipo de error
+            if (!error.response || error.message?.includes('Network Error') || error.message?.includes('Failed to fetch')) {
+              notifications.show({
+                title: "Error de conexión",
+                message: "No se pudo conectar con el servidor. El servicio de proyectos no está disponible.",
+                color: "red"
+              });
+            } else if (error.response?.status === 404) {
+              notifications.show({
+                title: "Error",
+                message: "No se encontró la tarea en el servidor",
+                color: "red"
+              });
+            } else if (error.response?.status === 500) {
+              notifications.show({
+                title: "Error del servidor",
+                message: "El servidor no pudo procesar la solicitud",
+                color: "red"
+              });
+            } else {
+              notifications.show({
+                title: "Error",
+                message: "No se pudo actualizar el estado de la tarea",
+                color: "red"
+              });
+            }
           }
-        });
-      } catch (error) {
-        // Handle any unexpected errors in the mutation call itself
-        console.error("Error in mutation call:", error);
-        
-        // Restaurar el estado anterior
-        setSprints(
-          sprints.map((s) =>
-            s.id === sprintId
-              ? {
-                  ...s,
-                  tasks: s.tasks.map((t) =>
-                    t.id === taskId ? { ...t, status: previousStatus } as Task : t
-                  ),
-                }
-              : s
-          )
-        );
-        
-        notifications.show({
-          title: "Error",
-          message: "No se pudo actualizar el estado de la tarea",
-          color: "red"
-        });
-      }
-    } catch (error) {
-      console.error("Unexpected error updating task status:", error);
+        }
+      );
+    } catch (error: any) {
+      console.error("Unexpected error in handleSprintTaskStatusChange:", error);
       notifications.show({
         title: "Error inesperado",
-        message: "Ocurrió un error al actualizar el estado",
+        message: "Ocurrió un error al actualizar el estado. Por favor, intenta de nuevo.",
         color: "red"
       });
     }
@@ -1102,9 +1133,6 @@ export default function ProjectManagement() {
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    console.log("taskId", taskId);
-    console.log("handleDeleteTask", taskId);
-    console.log("backlogTasks", backlogTasks);
     try {
       // Find the task to show its title in the toast
       const taskToDelete = backlogTasks.find(task => task.id === taskId);
@@ -1116,6 +1144,7 @@ export default function ProjectManagement() {
       
       // Optimistic update - remove from UI immediately
       setBacklogTasks(prev => prev.filter(task => task.id !== taskId));
+      setAllBacklogTasks(prev => prev.filter(task => task.id !== taskId));
       
       try {
         // Call API to delete the task
@@ -1131,6 +1160,7 @@ export default function ProjectManagement() {
         
         // Revert the UI change on error
         setBacklogTasks(prev => [...prev, taskToDelete]);
+        setAllBacklogTasks(prev => [...prev, taskToDelete]);
         
         notifications.show({
           title: "Error",
@@ -1293,7 +1323,7 @@ export default function ProjectManagement() {
   };
 
   return (
-    <div className="flex flex-col h-screen dark:bg-black/20">
+    <div className="flex flex-col h-screen ">
       {/* Header */}
       <ProjectHeader 
         project={project}
@@ -1330,6 +1360,7 @@ export default function ProjectManagement() {
             onStatusChange={handleSprintTaskStatusChange}
             onStartSprint={handleStartSprint}
             onCompleteSprint={handleCompleteSprint}
+            onDeleteSprint={handleDeleteSprint}
             getPriorityColor={getPriorityColor}
             getTypeColor={getTypeColor}
             getStatusColor={getStatusColor}
@@ -1383,7 +1414,6 @@ export default function ProjectManagement() {
         isOpen={isCreateSprintOpen}
         onOpenChange={setIsCreateSprintOpen}
         onCreateSprint={handleCreateSprint}
-        nextSprintNumber={nextSprintNumber}
       />
 
       <EditTaskModal

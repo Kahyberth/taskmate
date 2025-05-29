@@ -219,7 +219,7 @@ export function InviteMembersDialog({
             <div className="grid gap-1.5">
               {projectMembers.map((member) => (
                 <div 
-                  key={member.id}
+                  key={member.userId || member.id}
                   className="flex items-center p-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
                 >
                   <Avatar className="h-9 w-9">

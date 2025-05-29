@@ -51,7 +51,7 @@ export function SearchFilters({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-3 p-3 border-b border-black/10 dark:border-white/10 bg-white dark:bg-black/20">
+    <div className="flex flex-wrap items-center gap-3 p-3 border-b border-black/10 dark:border-white/10">
       {/* Buscador */}
       <div className="relative flex-1 min-w-[200px]">
         <div className="relative flex items-center">
@@ -122,56 +122,6 @@ export function SearchFilters({
           <Plus size={16} />
         </Button>
         
-        <div className="flex items-center gap-1 ml-auto">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-9 w-9 rounded-lg dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-800"
-              >
-                <MoreHorizontal size={16} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="dark:bg-gray-800 dark:border-gray-700">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation()
-                  toast({
-                    title: "Selecciona un sprint",
-                    description: "Por favor, selecciona un sprint específico para editarlo.",
-                  })
-                }}
-                className="dark:text-gray-200 dark:hover:bg-gray-700"
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                <span>Editar sprint</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  toast({
-                    title: "Duplicar sprint",
-                    description: "Esta funcionalidad será implementada próximamente.",
-                  })
-                }}
-                className="dark:text-gray-200 dark:hover:bg-gray-700"
-              >
-                <Copy className="mr-2 h-4 w-4" />
-                <span>Duplicar sprint</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="dark:border-gray-700" />
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation()
-                }}
-                className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 dark:hover:bg-red-900/30"
-              >
-                <Trash className="mr-2 h-4 w-4" />
-                <span>Eliminar sprint</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
       </div>
     </div>
   );

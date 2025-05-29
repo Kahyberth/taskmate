@@ -51,7 +51,7 @@ export function CreateIssueForm({
   };
 
   return (
-    <div className="flex flex-nowrap items-center gap-2 my-4 w-full">
+    <div className="flex flex-nowrap items-center gap-2 mb-4 mt-1 w-full">
       <Input
         type="text"
         placeholder="Título de la historia"

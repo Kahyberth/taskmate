@@ -9,18 +9,7 @@ import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-
-interface Sprint {
-  id: string;
-  name: string;
-  isActive: boolean;
-  tasks: any[];
-  startDate?: Date;
-  endDate?: Date;
-  goal?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+import { Sprint } from "@/interfaces/sprint.interface";
 
 interface EditSprintModalProps {
   isOpen: boolean;
@@ -44,8 +33,8 @@ export function EditSprintModal({
   useEffect(() => {
     if (sprint) {
       setEditSprintName(sprint.name);
-      setEditSprintStartDate(sprint.startDate);
-      setEditSprintEndDate(sprint.endDate);
+      setEditSprintStartDate(sprint.startedAt || undefined);
+      setEditSprintEndDate(sprint.fnishedAt || undefined);
       setEditSprintGoal(sprint.goal || "");
     }
   }, [sprint]);
@@ -56,8 +45,8 @@ export function EditSprintModal({
     const updatedSprint: Sprint = {
       ...sprint,
       name: editSprintName,
-      startDate: editSprintStartDate,
-      endDate: editSprintEndDate,
+      startedAt: editSprintStartDate || null,
+      fnishedAt: editSprintEndDate || null,
       goal: editSprintGoal,
     };
 

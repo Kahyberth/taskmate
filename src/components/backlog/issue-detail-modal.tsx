@@ -8,8 +8,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Task } from "@/interfaces/task.interface";
 import { apiClient } from "@/api/client-gateway";
 import { AuthContext } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, Send, Save, Edit, FileEdit } from "lucide-react";
+import { notifications } from '@mantine/notifications';
+import { Loader2, Send, Save, FileEdit} from "lucide-react";
 
 interface Comment {
   id: string;
@@ -42,7 +42,6 @@ export function IssueDetailModal({
   onOpenEditModal,
 }: IssueDetailModalProps) {
   const { user } = useContext(AuthContext);
-  const { toast } = useToast();
   
   // States for the form
   const [description, setDescription] = useState("");
@@ -50,16 +49,14 @@ export function IssueDetailModal({
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [editComment, setEditComment] = useState<{id: string, text: string} | null>(null);
-  
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{id: string, isOpen: boolean} | null>(null);
   const [editing, setEditing] = useState(false);
-  
-  // Loading states
   const [loadingComments, setLoadingComments] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
   const [editingComment, setEditingComment] = useState(false);
+  const [deletingComment, setDeletingComment] = useState(false);
 
-  // Fetch comments when the modal opens or task changes
   useEffect(() => {
     if (isOpen && task) {
       setDescription(task.description || "");
@@ -69,7 +66,6 @@ export function IssueDetailModal({
     }
   }, [isOpen, task]);
 
-  // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
       setNewComment("");
@@ -78,17 +74,14 @@ export function IssueDetailModal({
     }
   }, [isOpen]);
 
-  // Reset form after successful edit
   useEffect(() => {
     if (!editingComment && !editComment) {
-      // Si terminamos de editar y no hay comentario en edición, recargamos comentarios
       if (isOpen && task) {
         fetchComments();
       }
     }
   }, [editingComment, editComment, isOpen, task]);
 
-  // Fetch comments for the current issue
   const fetchComments = async () => {
     if (!task) return;
     
@@ -98,17 +91,16 @@ export function IssueDetailModal({
       setComments(response.data || []);
     } catch (error) {
       console.error("Error fetching comments:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los comentarios",
-        variant: "destructive",
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudieron cargar los comentarios',
+        color: 'red',
       });
     } finally {
       setLoadingComments(false);
     }
   };
 
-  // Format acceptance criteria as a bulleted list
   const formatAcceptanceCriteria = (criteria: string) => {
     if (!criteria) return <p className="text-gray-500 dark:text-gray-400 italic">No se han definido criterios de aceptación</p>;
     
@@ -124,7 +116,6 @@ export function IssueDetailModal({
     );
   };
 
-  // Handle edit button click - closes this modal and opens edit modal
   const handleEdit = () => {
     if (task) {
       onOpenChange(false);
@@ -132,25 +123,21 @@ export function IssueDetailModal({
     }
   };
 
-  // Cancel editing and restore original values
   const handleCancelEdit = () => {
     setEditing(false);
     setDescription(task?.description || "");
     setAcceptanceCriteria(task?.acceptanceCriteria || "");
   };
 
-  // Save both description and acceptance criteria in a single request
   const handleSave = async () => {
     if (!task) return;
     
     setSaving(true);
     try {
-      // Solo incluir los campos que hayan cambiado
       const updatedFields: Partial<Task> = {
         id: task.id
       };
       
-      // Comparar con los valores originales
       if (description !== task.description) {
         updatedFields.description = description;
       }
@@ -159,30 +146,29 @@ export function IssueDetailModal({
         updatedFields.acceptanceCriteria = acceptanceCriteria;
       }
       
-      // Solo realizar la petición si hay cambios
       if (Object.keys(updatedFields).length > 1) {
         await onTaskUpdate(updatedFields);
         
-        toast({
-          title: "Éxito",
-          description: "Cambios guardados correctamente",
+        notifications.show({
+          title: 'Éxito',
+          message: 'Cambios guardados correctamente',
+          color: 'green',
         });
       }
       
       setEditing(false);
     } catch (error) {
       console.error("Error saving changes:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron guardar los cambios",
-        variant: "destructive",
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudieron guardar los cambios',
+        color: 'red',
       });
     } finally {
       setSaving(false);
     }
   };
 
-  // Submit a new comment
   const handleSubmitComment = async () => {
     if (!task || !user || !newComment.trim()) return;
     
@@ -194,96 +180,80 @@ export function IssueDetailModal({
         user_id: user.id
       });
       
-      // Clear input and refresh comments
       setNewComment("");
       await fetchComments();
       
-      toast({
-        title: "Éxito",
-        description: "Comentario añadido correctamente",
-      });
     } catch (error) {
       console.error("Error submitting comment:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo añadir el comentario",
-        variant: "destructive",
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo añadir el comentario',
+        color: 'red',
       });
     } finally {
       setSubmittingComment(false);
     }
   };
 
-  // Update an existing comment
   const handleUpdateComment = async () => {
     if (!editComment || !user) return;
     
     setEditingComment(true);
     try {
-      // Enviar la actualización al backend
       const response = await apiClient.put("/issues/update-comment", {
         id: editComment.id,
         comment: editComment.text,
         user_id: user.id
       });
       
-      // Verificar si la respuesta fue exitosa
       if (response.data) {
-        // Actualizar el comentario en la lista local
         setComments(comments.map(comment => 
           comment.id === editComment.id 
             ? { ...comment, comment: editComment.text, updatedAt: new Date() }
             : comment
         ));
         
-        // Limpiar estado de edición
         setEditComment(null);
-        
-        // Mostrar mensaje de éxito
-        toast({
-          title: "Éxito",
-          description: "Comentario actualizado correctamente",
-        });
       } else {
         throw new Error("No se recibió confirmación del servidor");
       }
     } catch (error) {
       console.error("Error updating comment:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar el comentario",
-        variant: "destructive",
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo actualizar el comentario',
+        color: 'red',
       });
     } finally {
       setEditingComment(false);
     }
   };
 
-  // Delete a comment
+  const showDeleteConfirmation = (commentId: string) => {
+    setDeleteConfirmation({ id: commentId, isOpen: true });
+  };
+
   const handleDeleteComment = async (commentId: string) => {
     if (!commentId) return;
     
+    setDeletingComment(true);
     try {
       await apiClient.delete(`/issues/delete-comment/${commentId}`);
-      
-      // Refresh comments
+      setDeleteConfirmation(null);
       await fetchComments();
       
-      toast({
-        title: "Éxito",
-        description: "Comentario eliminado correctamente",
-      });
     } catch (error) {
       console.error("Error deleting comment:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar el comentario",
-        variant: "destructive",
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo eliminar el comentario',
+        color: 'red',
       });
+    } finally {
+      setDeletingComment(false);
     }
   };
 
-  // Format date to a readable string
   const formatDate = (dateString: Date) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -378,7 +348,6 @@ export function IssueDetailModal({
             </div>
           ) : (
             <>
-              {/* Description section (read-only) */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="description" className="text-md font-medium dark:text-gray-200">
@@ -395,7 +364,6 @@ export function IssueDetailModal({
                 </div>
               </div>
 
-              {/* Acceptance criteria section (read-only) */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="acceptance-criteria" className="text-md font-medium dark:text-gray-200">
@@ -412,13 +380,11 @@ export function IssueDetailModal({
 
           <Separator className="my-4 dark:bg-gray-700" />
 
-          {/* Comments section */}
           <div className="space-y-3">
             <Label className="text-md font-medium dark:text-gray-200">
               Comentarios
             </Label>
             
-            {/* Comments list */}
             <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
               {loadingComments ? (
                 <div className="flex justify-center py-6">
@@ -442,7 +408,6 @@ export function IssueDetailModal({
                         </span>
                       </div>
 
-                      {/* Comment actions if user is the author */}
                       {user && user.id === comment.user_id && (
                         <div className="flex gap-2">
                           <Button
@@ -456,7 +421,7 @@ export function IssueDetailModal({
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteComment(comment.id)}
+                            onClick={() => showDeleteConfirmation(comment.id)}
                             className="h-7 text-xs text-red-500 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-gray-800"
                           >
                             Eliminar
@@ -465,7 +430,6 @@ export function IssueDetailModal({
                       )}
                     </div>
 
-                    {/* Comment text or edit form */}
                     {editComment?.id === comment.id ? (
                       <div className="space-y-2">
                         <Textarea
@@ -517,7 +481,6 @@ export function IssueDetailModal({
               )}
             </div>
             
-            {/* New comment form */}
             <div className="mt-4 space-y-2">
               <Textarea
                 placeholder="Añadir un comentario..."
@@ -558,6 +521,44 @@ export function IssueDetailModal({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <Dialog open={deleteConfirmation?.isOpen} onOpenChange={(open) => !open && setDeleteConfirmation(null)}>
+        <DialogContent className="sm:max-w-[425px] dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-200">Confirmar eliminación</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              ¿Estás seguro de que deseas eliminar este comentario? Esta acción no se puede deshacer.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmation(null)}
+              className="dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+              disabled={deletingComment}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteConfirmation && handleDeleteComment(deleteConfirmation.id)}
+              disabled={deletingComment}
+              className="dark:bg-red-700 dark:hover:bg-red-800"
+            >
+              {deletingComment ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <span>Eliminando...</span>
+                </>
+              ) : (
+                "Eliminar"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 } 

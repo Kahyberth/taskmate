@@ -17,7 +17,7 @@ export function ProjectHeader({
   onOpenMembersDialog,
 }: ProjectHeaderProps) {
   return (
-    <header className="border-b border-black/10 dark:border-white/10 bg-white dark:bg-black/20">
+    <header className="border-b border-black/10 dark:border-white/10">
       <div className="flex items-center p-3 px-4"></div>
       <div className="flex items-center justify-between px-4 pb-2">
         <div className="flex items-center gap-2">

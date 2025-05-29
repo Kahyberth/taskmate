@@ -68,9 +68,6 @@ export function TaskItem({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isIssueDetailOpen, setIsIssueDetailOpen] = useState(false);
 
-  console.log('task', task);
-  console.log('assignedUser', getAssignedUser(task.assignedTo));
-
   const handleMoveToSprint = async (sprintId: string) => {
     if (!onMoveToSprint) return;
     setIsMoving(true);
@@ -195,22 +192,21 @@ export function TaskItem({
 
         <div className="flex flex-wrap items-center gap-2 justify-end ml-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex flex-wrap gap-1 items-center order-2 sm:order-1">
-              {task.priority && (
-                <span className={`text-xs px-2 py-0.5 rounded-full ${getPriorityColor(task.priority)}`}>
-                  {task.priority}
-                </span>
-              )}
-              {epic && <EpicBadge epic={epic} />}
-              {task.storyPoints !== undefined && task.storyPoints !== null ? (
-                <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-2 py-0.5 rounded-full">
-                  {task.storyPoints > 0 ? 
-                    `${task.storyPoints % 1 === 0 ? task.storyPoints : task.storyPoints.toFixed(1)} pts` : 
-                    "Sin estimar"}
-                </span>
-              ) : null}
-              {task.assignedTo ? (
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
+            {task.priority && (
+              <span className={`text-xs px-2 py-0.5 rounded-full ${getPriorityColor(task.priority)}`}>
+                {task.priority}
+              </span>
+            )}
+            {epic && <EpicBadge epic={epic} />}
+            <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-2 py-0.5 rounded-full">
+              {typeof task.storyPoints === 'number' && task.storyPoints > 0
+                ? `${task.storyPoints % 1 === 0 ? task.storyPoints : task.storyPoints.toFixed(1)} pts`
+                : "Sin estimar"}
+            </span>
+
+            {task.assignedTo ? (
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
                     <TooltipTrigger asChild>
                       <Avatar className="h-6 w-6 hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-700 transition-all">
                         <AvatarFallback className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
