@@ -12,4 +12,5 @@ export interface Sprint {
   project: Projects;
   issues: Task[];
   status: 'active' | 'inactive';
+  autoStart?: boolean;
 } 

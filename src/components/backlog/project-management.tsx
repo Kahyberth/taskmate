@@ -235,35 +235,37 @@ export default function ProjectManagement() {
       console.log("Sprints response:", response.data);
       
       if (response.data && Array.isArray(response.data)) {
-        const mappedSprints = response.data.map((sprint: any) => ({
-          id: sprint.id,
-          name: sprint.name,
-          goal: sprint.goal || "",
-          isFinished: sprint.isFinished,
-          isStarted: sprint.isStarted,
-          startedAt: sprint.startedAt ? new Date(sprint.startedAt) : null,
-          fnishedAt: sprint.fnishedAt ? new Date(sprint.fnishedAt) : null,
-          project: sprint.project,
-          issues: sprint.issues ? sprint.issues.map((issue: any) => ({
-            id: issue.id,
-            title: issue.title,
-            description: issue.description || "",
-            type: issue.type || "user_story",
-            status: issue.status || "to-do",
-            priority: issue.priority || "medium",
-            createdBy: issue.createdBy || user?.id,
-            acceptanceCriteria: issue.acceptanceCriteria || "",
-            productBacklogId: issue.product_backlog?.id || backlogId,
-            storyPoints: issue.story_points || 0,
-            assignedTo: issue.assignedTo,
-            createdAt: issue.createdAt,
-            updatedAt: issue.updatedAt,
-            doneAt: issue.doneAt,
-            finishedAt: issue.finishedAt,
-            code: issue.code
-          })) : [],
-          status: sprint.status
-        }));
+        const mappedSprints = response.data
+          .filter((sprint: any) => !sprint.isFinished)
+          .map((sprint: any) => ({
+            id: sprint.id,
+            name: sprint.name,
+            goal: sprint.goal || "",
+            isFinished: sprint.isFinished,
+            isStarted: sprint.isStarted,
+            startedAt: sprint.startedAt ? new Date(sprint.startedAt) : null,
+            fnishedAt: sprint.fnishedAt ? new Date(sprint.fnishedAt) : null,
+            project: sprint.project,
+            issues: sprint.issues ? sprint.issues.map((issue: any) => ({
+              id: issue.id,
+              title: issue.title,
+              description: issue.description || "",
+              type: issue.type || "user_story",
+              status: issue.status || "to-do",
+              priority: issue.priority || "medium",
+              createdBy: issue.createdBy || user?.id,
+              acceptanceCriteria: issue.acceptanceCriteria || "",
+              productBacklogId: issue.product_backlog?.id || backlogId,
+              storyPoints: issue.story_points || 0,
+              assignedTo: issue.assignedTo,
+              createdAt: issue.createdAt,
+              updatedAt: issue.updatedAt,
+              doneAt: issue.doneAt,
+              finishedAt: issue.finishedAt,
+              code: issue.code
+            })) : [],
+            status: sprint.status
+          }));
         
         console.log("Sprints mapped successfully:", mappedSprints.length, "sprints found");
         setSprints(mappedSprints);
@@ -1132,6 +1134,49 @@ export default function ProjectManagement() {
     }
   };
 
+  const handleDeleteTaskSprint = async (taskId: string, sprintId: string) => {
+    const sprint = sprints.find(sprint => sprint.id === sprintId);
+    if (!sprint) {
+      console.error("Sprint not found:", sprintId);
+      return;
+    }
+    
+    const taskToDelete = sprint.issues?.find(issue => issue.id === taskId);
+    if (!taskToDelete) {
+      console.error("Task not found:", taskId);
+      return;
+    }
+
+    setSprints(prevSprints => prevSprints.map(s => 
+      s.id === sprintId
+        ? {...s, issues: s.issues.filter(issue => issue.id !== taskId)}
+        : s
+    ));
+
+    await apiClient.delete(`/issues/delete/${taskId}`)
+      .then(response => {
+        notifications.show({
+          title: "Tarea eliminada",
+          message: response.data.message,
+          color: "green"
+        });
+      })
+      .catch(error => {
+        console.error("Error deleting task:", error);
+        notifications.show({
+          title: "Error",
+          message: "No se pudo eliminar la tarea. Inténtalo de nuevo más tarde.",
+          color: "red"
+        });
+        
+        setSprints(prevSprints => prevSprints.map(s => 
+          s.id === sprintId
+            ? {...s, issues: [...s.issues, taskToDelete]}
+            : s
+        ));
+      });
+  };
+
   const handleDeleteTask = async (taskId: string) => {
     try {
       // Find the task to show its title in the toast
@@ -1361,12 +1406,16 @@ export default function ProjectManagement() {
             onStartSprint={handleStartSprint}
             onCompleteSprint={handleCompleteSprint}
             onDeleteSprint={handleDeleteSprint}
+            onEditSprint={(sprint: Sprint) => {
+              setEditingSprint(sprint);
+              setIsEditSprintOpen(true);
+            }}
             getPriorityColor={getPriorityColor}
             getTypeColor={getTypeColor}
             getStatusColor={getStatusColor}
             getStatusDisplayText={getStatusDisplayText}
             getAssignedUser={getAssignedUser}
-            onDeleteTask={handleDeleteTask}
+            onDeleteTask={handleDeleteTaskSprint}
             getEpicById={getEpicById}
           />
         ))}

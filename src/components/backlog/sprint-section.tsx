@@ -26,12 +26,13 @@ interface SprintSectionProps {
   onStartSprint: (sprintId: string) => void;
   onCompleteSprint: (sprintId: string) => void;
   onDeleteSprint: (sprintId: string) => void;
+  onEditSprint: (sprint: Sprint) => void;
   getPriorityColor: (priority?: string) => string;
   getTypeColor: (type?: string) => string;
   getStatusColor: (status: string) => string;
   getStatusDisplayText: (status: string) => string;
   getAssignedUser: (userId?: string) => AssignedUser | null;
-  onDeleteTask: (taskId: string) => void;
+  onDeleteTask: (taskId: string, sprintId: string) => void;
   getEpicById: (epicId?: string) => Epic | null;
 }
 
@@ -46,6 +47,7 @@ export function SprintSection({
   onStartSprint,
   onCompleteSprint,
   onDeleteSprint,
+  onEditSprint,
   getPriorityColor,
   getTypeColor,
   getStatusColor,
@@ -165,14 +167,7 @@ export function SprintSection({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={(e) => {
-                  e.stopPropagation();
-                  notifications.show({
-                    title: "Editar sprint",
-                    message: "Esta funcionalidad será implementada próximamente.",
-                    color: "blue"
-                  });
-                }}>
+                <DropdownMenuItem onClick={() => onEditSprint(sprint)}>
                   <Edit className="mr-2 h-4 w-4" />
                   <span>Editar sprint</span>
                 </DropdownMenuItem>
@@ -214,7 +209,7 @@ export function SprintSection({
                 getStatusColor={getStatusColor}
                 getStatusDisplayText={getStatusDisplayText}
                 getAssignedUser={getAssignedUser}
-                onDeleteTask={() => onDeleteTask(task.id)}
+                onDeleteTask={(taskId) => onDeleteTask(taskId, sprint.id)}
                 getEpicById={getEpicById}
               />
             ))}
