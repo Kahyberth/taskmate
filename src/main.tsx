@@ -23,21 +23,13 @@ const queryClient = new QueryClient({
 });
 
 
-const originalFetch = window.fetch;
-window.fetch = async (...args) => {
-  console.log('%c[Fetch] Petición al backend:', 'color: #2196F3; font-weight: bold', args[0]);
-  return originalFetch(...args);
-};
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <MantineProvider>
           <AuthProvider>
-              {/* <SocketProvider> */}
               <Notifications />
-              {/* </SocketProvider> */}
               <AppRoutes />
           </AuthProvider>
         </MantineProvider>
