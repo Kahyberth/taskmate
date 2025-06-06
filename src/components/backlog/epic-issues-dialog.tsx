@@ -25,7 +25,6 @@ export function EpicIssuesDialog({
   onOpenChange,
   epic,
   onEditTask,
-  onStatusChange,
   getPriorityColor,
   getStatusColor,
   getStatusDisplayText,

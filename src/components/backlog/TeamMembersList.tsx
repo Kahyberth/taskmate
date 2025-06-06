@@ -62,18 +62,18 @@ const TeamMembersList: React.FC<Props> = ({ teamId }) => {
       <h2>Team Members</h2>
       <ul>
         {members.map((member) => (
-          <li key={member.member.id} style={{ marginBottom: '1rem' }}>
+          <li key={member.user.id} style={{ marginBottom: '1rem' }}>
             <strong>
-              {member.member.name} {member.member.lastName}
+              {member.user.name} {member.user.lastName}
             </strong>{' '}
             - <em>{member.roleInTeam}</em>
             <br />
-            Email: {member.member.email}
+            Email: {member.user.email}
             <br />
-            Company: {member.member.company}
+            Company: {member.user.company}
             <br />
-            Status: {member.member.isActive ? 'Active' : 'Inactive'}, Available:{' '}
-            {member.member.isAvailable ? 'Yes' : 'No'}
+            Status: {member.user.isActive ? 'Active' : 'Inactive'}, Available:{' '}
+            {member.user.isAvailable ? 'Yes' : 'No'}
           </li>
         ))}
       </ul>

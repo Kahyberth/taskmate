@@ -231,9 +231,7 @@ const userStories: UserStory[] = [
 export default function UserStories() {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [selectedStory, setSelectedStory] = useState<UserStory | null>(null);
 
-  // Filtrar historias por estado y búsqueda
   const filteredStories = userStories.filter((story) => {
     const matchesStatus =
       selectedStatus === "all" || story.status === selectedStatus;
@@ -243,7 +241,6 @@ export default function UserStories() {
     return matchesStatus && matchesSearch;
   });
 
-  // Contar historias por estado
   const todoCount = userStories.filter(
     (story) => story.status === "todo"
   ).length;
@@ -254,7 +251,6 @@ export default function UserStories() {
     (story) => story.status === "completed"
   ).length;
 
-  // Función para obtener el color y el icono según el estado
   const getStatusDetails = (status: UserStoryStatus) => {
     switch (status) {
       case "todo":
@@ -288,7 +284,6 @@ export default function UserStories() {
     }
   };
 
-  // Función para obtener detalles de prioridad
   const getPriorityDetails = (priority: UserStoryPriority) => {
     switch (priority) {
       case "high":
@@ -322,7 +317,6 @@ export default function UserStories() {
     }
   };
 
-  // Calcular el progreso total
   const totalPoints = userStories.reduce((sum, story) => sum + story.points, 0);
   const completedPoints = userStories
     .filter((story) => story.status === "completed")
@@ -484,10 +478,7 @@ export default function UserStories() {
                 filteredStories.map((story) => (
                   <Dialog key={story.id}>
                     <DialogTrigger asChild>
-                      <div
-                        className="border rounded-lg p-4 bg-card/50 hover:bg-card/80 hover:shadow-md transition-all duration-200 cursor-pointer"
-                        onClick={() => setSelectedStory(story)}
-                      >
+                      <div className="border rounded-lg p-4 bg-card/50 hover:bg-card/80 hover:shadow-md transition-all duration-200 cursor-pointer">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-start">
                             <div className="mt-0.5 mr-3">
@@ -708,7 +699,6 @@ export default function UserStories() {
             className="animate-in fade-in-50 duration-300"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
               <div className="space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b">
                   <div className="flex items-center">
@@ -725,10 +715,7 @@ export default function UserStories() {
                   .map((story) => (
                     <Dialog key={story.id}>
                       <DialogTrigger asChild>
-                        <div
-                          className="border rounded-lg p-3 bg-card/50 hover:bg-card/80 hover:shadow-md transition-all duration-200 cursor-pointer"
-                          onClick={() => setSelectedStory(story)}
-                        >
+                        <div className="border rounded-lg p-3 bg-card/50 hover:bg-card/80 hover:shadow-md transition-all duration-200 cursor-pointer">
                           <h4 className="font-medium text-sm">{story.title}</h4>
                           <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
                             {story.description}
@@ -782,10 +769,7 @@ export default function UserStories() {
                   .map((story) => (
                     <Dialog key={story.id}>
                       <DialogTrigger asChild>
-                        <div
-                          className="border rounded-lg p-3 bg-card/50 hover:bg-card/80 hover:shadow-md transition-all duration-200 cursor-pointer"
-                          onClick={() => setSelectedStory(story)}
-                        >
+                        <div className="border rounded-lg p-3 bg-card/50 hover:bg-card/80 hover:shadow-md transition-all duration-200 cursor-pointer">
                           <h4 className="font-medium text-sm">{story.title}</h4>
                           <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
                             {story.description}
@@ -839,10 +823,7 @@ export default function UserStories() {
                   .map((story) => (
                     <Dialog key={story.id}>
                       <DialogTrigger asChild>
-                        <div
-                          className="border rounded-lg p-3 bg-card/50 hover:bg-card/80 hover:shadow-md transition-all duration-200 cursor-pointer"
-                          onClick={() => setSelectedStory(story)}
-                        >
+                        <div className="border rounded-lg p-3 bg-card/50 hover:bg-card/80 hover:shadow-md transition-all duration-200 cursor-pointer">
                           <h4 className="font-medium text-sm">{story.title}</h4>
                           <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
                             {story.description}

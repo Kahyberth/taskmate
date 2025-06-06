@@ -1,11 +1,10 @@
-import { useState, useEffect, useContext, useMemo } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserPlus, Users, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/api/client-gateway";
 import { AuthContext } from "@/context/AuthContext";
 import { Team } from "@/lib/store";
@@ -27,25 +26,19 @@ export function InviteMembersDialog({
   project,
   projectMembers,
   refetchMembers,
-  teams,
   currentTeam
 }: InviteMembersDialogProps) {
-  const { toast } = useToast();
   const { user } = useContext(AuthContext);
   const [availableTeamMembers, setAvailableTeamMembers] = useState<any[]>([]);
   
-  // Estado para el formulario
+
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [selectedTeamMember, setSelectedTeamMember] = useState<string>('');
   const [loadingMembers, setLoadingMembers] = useState(false);
-  // Crear un estado para trackear los miembros recién añadidos
-  const [recentlyAddedMembers, setRecentlyAddedMembers] = useState<string[]>([]);
 
-  // Limpiar el formulario cuando se abre/cierra el modal
   useEffect(() => {
     if (!open) {
       setSelectedTeamMember('');
-      setRecentlyAddedMembers([]);
     } else if (open) {
       fetchAvailableTeamMembers();
     }
@@ -79,7 +72,7 @@ export function InviteMembersDialog({
     })
   }
 
-  // Función para añadir un miembro existente del equipo
+
   const handleAddTeamMember = async () => {
     if (!selectedTeamMember || isAddingMember) return;
     

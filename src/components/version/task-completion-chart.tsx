@@ -3,7 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useTheme } from "@/context/ThemeContext"
 const generateData = () => {
   const days = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
-  return days.map((day, index) => {
+  return days.map((day) => {
     const completedBase = Math.floor(Math.random() * 30) + 20
     const inProgressBase = Math.floor(Math.random() * 15) + 10
     const pendingBase = Math.floor(Math.random() * 10) + 5

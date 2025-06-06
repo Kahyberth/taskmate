@@ -32,7 +32,7 @@ export function CreateTeamDialog({ open, onOpenChange }: CreateTeamDialogProps) 
   const [teamImage, setTeamImage] = useState<string | null>(null)
 
   const { user: user_data } = useContext(AuthContext)
-  const { createTeam, loading, error } = useTeamService()
+  const { createTeam, loading } = useTeamService()
   const { fetchTeams } = useTeams()
   
 

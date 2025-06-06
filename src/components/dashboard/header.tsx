@@ -1,4 +1,4 @@
-import { Bell, Settings, Menu } from "lucide-react";
+import { Settings, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,12 +10,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  TooltipProvider,
-  TooltipContent,
-  TooltipTrigger,
-  Tooltip,
-} from "@/components/ui/tooltip";
 import { Link } from "react-router-dom";
 import { useContext, useEffect } from "react";
 import { AuthContext } from "@/context/AuthContext";

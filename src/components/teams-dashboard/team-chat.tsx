@@ -109,7 +109,7 @@ export default function TeamChat({
 }: {
   channels: any[];
   teamMembers: Members[];
-  team_data: any[];
+  team_data: { name: string; [key: string]: any };
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showSidebar, setShowSidebar] = useState(true);
@@ -317,10 +317,10 @@ export default function TeamChat({
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
-      setFileUploads((prev) => [...prev, ...newFiles]);
-      e.target.value = "";
+    if (e.target.files) {
+      setIsUploading(true);
+      setFileUploads([...fileUploads, ...Array.from(e.target.files)]);
+      setIsUploading(false);
     }
   };
 
@@ -459,10 +459,153 @@ export default function TeamChat({
   };
 
   return (
-    <>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold">Team Chat</h1>
-      </div>
+    <div className={`flex h-full ${isMobileView ? 'flex-col' : 'flex-row'}`}>
+      {showSidebar && (
+        <div className={`${isMobileView ? 'w-full' : 'w-80'} border-r`}>
+          <div className="p-3 border-b border-border/40">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar chats..."
+                className="pl-8 w-full bg-background/50 border-border/50 focus:bg-background"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-3 border-b border-border/40">
+            <h3 className="text-sm font-medium">Chats</h3>
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full"
+                onClick={() => setShowNewGroupDialog(true)}
+              >
+                <Plus className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <div className="h-[calc(100%-120px)] overflow-y-auto p-2 scrollbar-thin">
+              <div className="space-y-1">
+                {chatGroups
+                  .filter(
+                    (group) =>
+                      group.name
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()) ||
+                      (group.description &&
+                        group.description
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase()))
+                  )
+                  .map((group) => (
+                    <button
+                      key={group.id}
+                      className={cn(
+                        "w-full flex items-center p-2 rounded-md text-left transition-colors",
+                        selectedGroupId === group.id
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-muted/50"
+                      )}
+                      onClick={() => {
+                        setSelectedGroupId(group.id);
+                        setChatGroups((prev) =>
+                          prev.map((g) =>
+                            g.id === group.id
+                              ? { ...g, unreadCount: 0 }
+                              : g
+                          )
+                        );
+                      }}
+                    >
+                      <div className="relative">
+                        <Avatar className="h-9 w-9 mr-2">
+                          {group.avatar ? (
+                            <AvatarImage src={group.avatar} />
+                          ) : null}
+                          <AvatarFallback className="text-xs font-medium bg-primary/20">
+                            {group.initials}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium text-sm truncate">
+                            {group.name}
+                          </p>
+                          {group.lastMessage && (
+                            <span className="text-xs text-muted-foreground">
+                              {group.lastMessage.timestamp}
+                            </span>
+                          )}
+                        </div>
+                        {group.lastMessage && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {group.lastMessage.content}
+                          </p>
+                        )}
+                      </div>
+                      {group.unreadCount > 0 && (
+                        <Badge className="ml-1 bg-primary text-primary-foreground h-5 min-w-5 flex items-center justify-center rounded-full text-xs">
+                          {group.unreadCount}
+                        </Badge>
+                      )}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          </div>
+          <div className="p-3 border-t border-border/40 ">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Avatar className="h-8 w-8 mr-2">
+                  <AvatarImage
+                    src={
+                      userProfile?.profile?.profile_picture ||
+                      "/placeholder.svg?height=32&width=32"
+                    }
+                  />
+                  <AvatarFallback className="bg-primary/10 text-xs font-medium">
+                    {userProfile?.name?.slice(0, 2).toUpperCase() ||
+                      "YO"}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">
+                    {userProfile?.name || "You"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Online
+                  </p>
+                </div>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-full"
+                  >
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>Perfil</DropdownMenuItem>
+                  <DropdownMenuItem>Preferencias</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Cerrar sesión
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+      )}
       <Card className="relative overflow-hidden bg-card border border-border/40rounded-xl h-[calc(100vh-32px)]  w-full max-w-none flex flex-col overscroll-contain">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/80 via-primary to-primary/80"></div>
         {chatGroups.length === 0 ? (
@@ -532,151 +675,6 @@ export default function TeamChat({
             {isExpanded && (
               <>
                 <CardContent className="p-0 flex flex-1 overflow-hidden">
-                  {/* Sidebar de grupos */}
-                  <div className="w-64 border-r border-border/40 flex flex-col">
-                    <div className="p-3 border-b border-border/40">
-                      <div className="relative">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          type="search"
-                          placeholder="Buscar chats..."
-                          className="pl-8 w-full bg-background/50 border-border/50 focus:bg-background"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between p-3 border-b border-border/40">
-                      <h3 className="text-sm font-medium">Chats</h3>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 rounded-full"
-                          onClick={() => setShowNewGroupDialog(true)}
-                        >
-                          <Plus className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                      <div className="h-[calc(100%-120px)] overflow-y-auto p-2 scrollbar-thin">
-                        <div className="space-y-1">
-                          {chatGroups
-                            .filter(
-                              (group) =>
-                                group.name
-                                  .toLowerCase()
-                                  .includes(searchQuery.toLowerCase()) ||
-                                (group.description &&
-                                  group.description
-                                    .toLowerCase()
-                                    .includes(searchQuery.toLowerCase()))
-                            )
-                            .map((group) => (
-                              <button
-                                key={group.id}
-                                className={cn(
-                                  "w-full flex items-center p-2 rounded-md text-left transition-colors",
-                                  selectedGroupId === group.id
-                                    ? "bg-primary/10 text-primary"
-                                    : "hover:bg-muted/50"
-                                )}
-                                onClick={() => {
-                                  setSelectedGroupId(group.id);
-                                  setChatGroups((prev) =>
-                                    prev.map((g) =>
-                                      g.id === group.id
-                                        ? { ...g, unreadCount: 0 }
-                                        : g
-                                    )
-                                  );
-                                }}
-                              >
-                                <div className="relative">
-                                  <Avatar className="h-9 w-9 mr-2">
-                                    {group.avatar ? (
-                                      <AvatarImage src={group.avatar} />
-                                    ) : null}
-                                    <AvatarFallback className="text-xs font-medium bg-primary/20">
-                                      {group.initials}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between">
-                                    <p className="font-medium text-sm truncate">
-                                      {group.name}
-                                    </p>
-                                    {group.lastMessage && (
-                                      <span className="text-xs text-muted-foreground">
-                                        {group.lastMessage.timestamp}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {group.lastMessage && (
-                                    <p className="text-xs text-muted-foreground truncate">
-                                      {group.lastMessage.content}
-                                    </p>
-                                  )}
-                                </div>
-                                {group.unreadCount > 0 && (
-                                  <Badge className="ml-1 bg-primary text-primary-foreground h-5 min-w-5 flex items-center justify-center rounded-full text-xs">
-                                    {group.unreadCount}
-                                  </Badge>
-                                )}
-                              </button>
-                            ))}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-3 border-t border-border/40 ">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <Avatar className="h-8 w-8 mr-2">
-                            <AvatarImage
-                              src={
-                                userProfile?.profile?.profile_picture ||
-                                "/placeholder.svg?height=32&width=32"
-                              }
-                            />
-                            <AvatarFallback className="bg-primary/10 text-xs font-medium">
-                              {userProfile?.name?.slice(0, 2).toUpperCase() ||
-                                "YO"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-medium">
-                              {userProfile?.name || "You"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Online
-                            </p>
-                          </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 rounded-full"
-                            >
-                              <Settings className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Perfil</DropdownMenuItem>
-                            <DropdownMenuItem>Preferencias</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                              <LogOut className="h-4 w-4 mr-2" />
-                              Cerrar sesión
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </div>
                   {/* Área de mensajes */}
                   <div className="flex-1 flex flex-col overflow-hidden ">
                     <div className="p-3 flex items-center justify-between">
@@ -1073,6 +1071,6 @@ export default function TeamChat({
           </>
         )}
       </Card>
-    </>
+    </div>
   );
 }

@@ -11,22 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, Plus, Edit, Trash, Circle } from "lucide-react";
+import { Loader2, Plus, Edit, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/api/client-gateway";
 import { Epic } from "@/interfaces/epic.interface";
 
-// Define available epic colors
-const epicColors = [
-  { name: "purple", value: "#9333ea", bg: "bg-purple-100", text: "text-purple-800" },
-  { name: "blue", value: "#2563eb", bg: "bg-blue-100", text: "text-blue-800" },
-  { name: "green", value: "#16a34a", bg: "bg-green-100", text: "text-green-800" },
-  { name: "yellow", value: "#ca8a04", bg: "bg-yellow-100", text: "text-yellow-800" },
-  { name: "red", value: "#dc2626", bg: "bg-red-100", text: "text-red-800" },
-  { name: "pink", value: "#db2777", bg: "bg-pink-100", text: "text-pink-800" },
-  { name: "indigo", value: "#4f46e5", bg: "bg-indigo-100", text: "text-indigo-800" },
-  { name: "gray", value: "#4b5563", bg: "bg-gray-100", text: "text-gray-800" },
-];
 
 interface EpicDialogProps {
   open: boolean;

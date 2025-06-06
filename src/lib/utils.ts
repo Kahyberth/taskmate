@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { TeamRoleEnum } from "@/enums/team-roles.enum"
-import { AlarmClockPlus, Briefcase, ChartSpline, GitBranch, Home, LayoutGrid, ListTodo, LogsIcon, MessageSquare, PlaySquare, SquareKanban, Users, Users2 } from "lucide-react"
+import { AlarmClockPlus, Briefcase, Home, LayoutGrid, ListTodo, MessageSquare, PlaySquare, SquareKanban, Users, Users2 } from "lucide-react"
 import { LucideIcon } from "lucide-react"
 import { Projects } from "@/interfaces/projects.interface"
 

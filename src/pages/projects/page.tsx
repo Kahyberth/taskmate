@@ -26,10 +26,9 @@ import { CreateProjectForm } from "@/components/projects/create-project";
 import { ProjectCard } from "@/components/projects/project-card";
 import { ProjectCardSkeleton } from "@/components/projects/project-card-skeleton";
 import { AuthContext } from "@/context/AuthContext";
-import { useProjectsByUser, useCreateIssue, queryKeys } from "@/api/queries";
-import { useQueryClient } from '@tanstack/react-query';
+import { useProjectsByUser} from "@/api/queries";
 
-// Definir un tipo para el proyecto
+
 type Project = {
   id: string;
   name?: string;
@@ -38,15 +37,7 @@ type Project = {
   createdBy?: string;
 };
 
-// Definir un tipo para issue
-interface Issue {
-  id: string;
-  title: string;
-  description?: string;
-  status: string;
-  priority?: string;
-  projectId: string;
-}
+
 
 export default function ProjectsPage() {
   const { user } = useContext(AuthContext);
@@ -57,10 +48,10 @@ export default function ProjectsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
   
-  // Debounce search input to prevent excessive re-renders
+ 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // Usar React Query para obtener los proyectos donde el usuario es miembro (creados por el usuario o invitado)
+
   const { 
     data: projectsData = { projects: [], totalPages: 0, total: 0 }, 
     isLoading, 

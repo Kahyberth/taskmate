@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 export function ThemeToggle() {
-  const [theme, setThemeState] = React.useState<"light" | "dark" | "system">("light")
+  const [, setThemeState] = React.useState<"light" | "dark" | "system">("light")
 
   function setTheme(theme: "light" | "dark" | "system") {
     const root = window.document.documentElement

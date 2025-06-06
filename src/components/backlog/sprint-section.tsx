@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronRight, MoreHorizontal, Edit, Copy, Trash, Loader2 } from "lucide-react";
+import { ChevronDown, MoreHorizontal, Edit, Trash, Loader2 } from "lucide-react";
 import { TaskItem } from "./task-item";
 import { Task } from "@/interfaces/task.interface";
 import { Sprint } from "@/interfaces/sprint.interface";

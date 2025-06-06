@@ -9,7 +9,6 @@ export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     const checkIfMobile = () => {
@@ -29,7 +28,6 @@ export default function MainLayout() {
       <DashboardHeader
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        notificationCount={notificationCount}
       />
 
       <div className="flex flex-1 overflow-hidden">

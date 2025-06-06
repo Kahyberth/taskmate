@@ -375,7 +375,7 @@ export const useCreateIssue = () => {
       // Retornar el contexto con el caché anterior
       return { previousIssues };
     },
-    onError: (err, newIssue, context) => {
+    onError: (_, newIssue, context) => {
       // Si hay un error, revertir al caché anterior
       if (context?.previousIssues) {
         queryClient.setQueryData(
@@ -384,7 +384,7 @@ export const useCreateIssue = () => {
         );
       }
     },
-    onSettled: (data, error, variables) => {
+    onSettled: (_, __, variables) => {
       // Invalidar y refetch después de que la mutación se complete
       if (variables.productBacklogId) {
         queryClient.invalidateQueries({ 

@@ -1,15 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, ChevronDown, MoreHorizontal, X, Plus } from "lucide-react";
+import { Search, ChevronDown, X, Plus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from "@/hooks/use-toast";
-import { Edit, Copy, Trash } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Epic } from "@/interfaces/epic.interface";
 

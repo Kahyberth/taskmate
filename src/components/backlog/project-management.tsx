@@ -49,11 +49,9 @@ export default function ProjectManagement() {
   const [newUserStoryEpicId, setNewUserStoryEpicId] = useState<string | undefined>(undefined);
   const [selectedEpic, setSelectedEpic] = useState<Epic | null>(null);
   const [isEpicIssuesDialogOpen, setIsEpicIssuesDialogOpen] = useState(false);
-  const [epicIssues, setEpicIssues] = useState<Task[]>([]);
 
   const { user } = useContext(AuthContext);
-  // Use the teams hook to access teams data
-  const { teams, loading: loadingTeams } = useTeams();
+  const { teams } = useTeams();
   
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
     "sprint-1": true,
@@ -419,32 +417,12 @@ export default function ProjectManagement() {
       });
   };
 
-  const handleDeleteSprint = (sprintId: string) => {
-
+  const handleDeleteSprint = () => {
     notifications.show({
       title: "Funcionalidad no disponible",
       message: "Esta funcionalidad será implementada próximamente.",
       color: "blue"
     });
-    // return apiClient.delete(`/sprints/delete/${sprintId}`)
-    //   .then(() => {
-    //     setSprints(prevSprints => prevSprints.filter(s => s.id !== sprintId));
-
-    //     notifications.show({
-    //       title: "Sprint eliminado",
-    //       message: "El sprint ha sido eliminado exitosamente.",
-    //       color: "green"
-    //     });
-    //   })
-    //   .catch((error) => {
-    //     console.error("Error deleting sprint:", error);
-    //     notifications.show({
-    //       title: "Error",
-    //       message: error.response?.data?.message || "No se pudo eliminar el sprint",
-    //       color: "red"
-    //     });
-    //     throw error;
-    //   });
   };
 
   const openEditTaskModal = (task: Task, sprintId: string | null = null) => {
@@ -585,12 +563,6 @@ export default function ProjectManagement() {
     }
   };
 
-  const openEditSprintModal = (sprint: Sprint) => {
-    if (!sprint) return
-
-    setEditingSprint(sprint)
-    setIsEditSprintOpen(true)
-  }
 
   const handleSaveSprintEdit = (updatedSprint: Sprint) => {
     setSprints(sprints.map((s) => (s.id === updatedSprint.id ? updatedSprint : s)))
@@ -1247,20 +1219,6 @@ export default function ProjectManagement() {
 
     setSelectedEpic(epic);
     setIsEpicIssuesDialogOpen(true);
-
-    try {
-      const response = await apiClient.get(`/issues/by-epic/${epicId}`);
-      if (response.data) {
-        setEpicIssues(response.data);
-      }
-    } catch (error) {
-      console.error("Error fetching epic issues:", error);
-      notifications.show({
-        title: "Error",
-        message: "No se pudieron cargar las tareas de la épica",
-        color: "red"
-      });
-    }
   };
 
   const itemsPerPage = 15;

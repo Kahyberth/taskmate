@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,12 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useTeams } from "@/context/TeamsContext";
 import { useUpdateProject } from "@/api/queries";
-import { AuthContext } from "@/context/AuthContext";
 import { apiClient } from "@/api/client-gateway";
 
 interface EditProjectDialogProps {
@@ -39,7 +37,6 @@ export function EditProjectDialog({
   onOpenChange,
   onProjectUpdated,
 }: EditProjectDialogProps) {
-  // Estado para el formulario de edición
   const [projectName, setProjectName] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState("");
@@ -50,23 +47,26 @@ export function EditProjectDialog({
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [projectMembers, setProjectMembers] = useState<string[]>([]);
   const [loadingProjectMembers, setLoadingProjectMembers] = useState(false);
-  
-  const { user } = useContext(AuthContext);
+
   const { teams, loading: loadingTeams } = useTeams();
   const updateProjectMutation = useUpdateProject();
 
-  // Obtener el equipo seleccionado de la lista de equipos
-  const currentTeam = selectedTeam ? teams?.find(team => team.id === selectedTeam) : null;
-  
-  // Load project members data
+  const currentTeam = selectedTeam
+    ? teams?.find((team) => team.id === selectedTeam)
+    : null;
+
   useEffect(() => {
     if (open && project && project.id) {
       const fetchProjectMembers = async () => {
         setLoadingProjectMembers(true);
         try {
-          const response = await apiClient.get(`/projects/members/${project.id}`);
+          const response = await apiClient.get(
+            `/projects/members/${project.id}`
+          );
           if (response.data && Array.isArray(response.data)) {
-            const memberIds = response.data.map((member: any) => member.userId || member.user_id);
+            const memberIds = response.data.map(
+              (member: any) => member.userId || member.user_id
+            );
             setProjectMembers(memberIds);
             setSelectedMembers(memberIds);
             console.log("Loaded project members:", memberIds);
@@ -82,12 +82,13 @@ export function EditProjectDialog({
     }
   }, [open, project]);
 
-  // Load team members data
   useEffect(() => {
     if (open && selectedTeam) {
       const fetchTeamMembers = async () => {
         try {
-          const response = await apiClient.get(`/teams/get-members-by-team/${selectedTeam}`);
+          const response = await apiClient.get(
+            `/teams/get-members-by-team/${selectedTeam}`
+          );
           if (response.data && Array.isArray(response.data)) {
             setTeamMembers(response.data);
             console.log("Loaded team members:", response.data);
@@ -100,38 +101,33 @@ export function EditProjectDialog({
       fetchTeamMembers();
     }
   }, [open, selectedTeam]);
-  
-  // Cargar datos del proyecto al abrir el modal de edición
+
   useEffect(() => {
     if (open && project) {
       setProjectName(project.name || "");
       setDescription(project.description || "");
       setType(project.type || "SCRUM");
-      
-      // Process tags and handle different formats
+
       let tagsString = "";
       if (project.tags) {
         if (Array.isArray(project.tags)) {
-          // Convert any formatting to clean strings
           const cleanTags = project.tags.map((tag: any) => {
-            if (typeof tag === 'string') {
-              // Remove any JSON-like formatting: {""} or {""}
-              return tag.replace(/[{"}]/g, '');
+            if (typeof tag === "string") {
+              return tag.replace(/[{"}]/g, "");
             }
             return tag;
           });
           tagsString = cleanTags.join(", ");
-        } else if (typeof project.tags === 'string') {
-          // If it's a single string, just remove any JSON formatting
-          tagsString = project.tags.replace(/[{"}]/g, '');
+        } else if (typeof project.tags === "string") {
+          tagsString = project.tags.replace(/[{"}]/g, "");
         }
       }
       setTags(tagsString);
-      
+
       setSelectedTeam(project.teamId || project.team_id || null);
     }
   }, [open, project]);
-  
+
   const toggleMember = (id: string) => {
     setSelectedMembers((prev) =>
       prev.includes(id)
@@ -142,7 +138,7 @@ export function EditProjectDialog({
 
   const handleUpdateProject = async () => {
     if (isUpdating) return;
-    
+
     if (!projectName.trim()) {
       notifications.show({
         title: "Error",
@@ -163,7 +159,6 @@ export function EditProjectDialog({
         withCloseButton: false,
       });
 
-      // Convertir las tags a array si no lo es
       const tagsArray = tags
         .split(",")
         .map((tag) => tag.trim())
@@ -190,7 +185,6 @@ export function EditProjectDialog({
             autoClose: 2000,
             withCloseButton: true,
           });
-          // Cerrar el diálogo y notificar al padre que debe actualizar
           onOpenChange(false);
           if (onProjectUpdated) {
             onProjectUpdated();
@@ -206,7 +200,7 @@ export function EditProjectDialog({
             autoClose: 2000,
             withCloseButton: true,
           });
-        }
+        },
       });
     } catch (error) {
       console.error("Error updating project:", error);
@@ -221,8 +215,8 @@ export function EditProjectDialog({
   };
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onOpenChange={(newOpen) => {
         if (!isUpdating) {
           onOpenChange(newOpen);
@@ -233,10 +227,11 @@ export function EditProjectDialog({
         <DialogHeader>
           <DialogTitle>Editar Proyecto</DialogTitle>
           <DialogDescription>
-            Actualiza los detalles del proyecto. Haz click en guardar cuando termines.
+            Actualiza los detalles del proyecto. Haz click en guardar cuando
+            termines.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="edit-name">Nombre del Proyecto</Label>
@@ -292,7 +287,9 @@ export function EditProjectDialog({
                   <Loader size="sm" />
                 </div>
               ) : (
-                <div className="text-sm">{currentTeam?.name || "Sin equipo asignado"}</div>
+                <div className="text-sm">
+                  {currentTeam?.name || "Sin equipo asignado"}
+                </div>
               )}
             </div>
           </div>
@@ -301,10 +298,14 @@ export function EditProjectDialog({
             <div className="space-y-4">
               <div className="border p-4 rounded-md">
                 <div className="mb-3">
-                  <Label className="mb-2 block font-bold">Miembros del Proyecto</Label>
-                  <p className="text-xs text-muted-foreground mb-2">Estos son los miembros actualmente asignados al proyecto.</p>
+                  <Label className="mb-2 block font-bold">
+                    Miembros del Proyecto
+                  </Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Estos son los miembros actualmente asignados al proyecto.
+                  </p>
                 </div>
-                
+
                 {loadingProjectMembers ? (
                   <div className="flex justify-center p-4">
                     <Loader size="sm" />
@@ -312,21 +313,24 @@ export function EditProjectDialog({
                 ) : (
                   <div>
                     {teamMembers
-                      .filter(member => projectMembers.includes(member.member?.id))
-                      .map(member => (
-                        <div 
-                          key={member.member?.id} 
+                      .filter((member) =>
+                        projectMembers.includes(member.member?.id)
+                      )
+                      .map((member) => (
+                        <div
+                          key={member.member?.id}
                           className="flex items-center justify-between border-b py-2 last:border-0"
                         >
                           <div className="flex items-center gap-2">
                             <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
-                              {member.member?.name?.charAt(0)}{member.member?.lastName?.charAt(0)}
+                              {member.member?.name?.charAt(0)}
+                              {member.member?.lastName?.charAt(0)}
                             </div>
                             <span className="text-sm">
                               {member.member?.name} {member.member?.lastName}
                             </span>
                           </div>
-                          <button 
+                          <button
                             onClick={() => toggleMember(member.member?.id)}
                             className="text-destructive hover:text-destructive/70 text-sm"
                           >
@@ -334,7 +338,9 @@ export function EditProjectDialog({
                           </button>
                         </div>
                       ))}
-                    {teamMembers.filter(member => projectMembers.includes(member.member?.id)).length === 0 && (
+                    {teamMembers.filter((member) =>
+                      projectMembers.includes(member.member?.id)
+                    ).length === 0 && (
                       <p className="text-center text-muted-foreground py-2 text-sm">
                         Este proyecto no tiene miembros asignados
                       </p>
@@ -345,10 +351,14 @@ export function EditProjectDialog({
 
               <div className="border p-4 rounded-md">
                 <div className="mb-3">
-                  <Label className="mb-2 block font-bold">Añadir Miembros del Equipo</Label>
-                  <p className="text-xs text-muted-foreground mb-2">Selecciona miembros del equipo para añadir al proyecto.</p>
+                  <Label className="mb-2 block font-bold">
+                    Añadir Miembros del Equipo
+                  </Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Selecciona miembros del equipo para añadir al proyecto.
+                  </p>
                 </div>
-                
+
                 {loadingTeams || loadingProjectMembers ? (
                   <div className="flex justify-center p-4">
                     <Loader size="sm" />
@@ -356,26 +366,38 @@ export function EditProjectDialog({
                 ) : (
                   <div>
                     {teamMembers
-                      .filter(member => !projectMembers.includes(member.member?.id))
-                      .map(member => (
-                        <div 
-                          key={member.member?.id} 
+                      .filter(
+                        (member) => !projectMembers.includes(member.member?.id)
+                      )
+                      .map((member) => (
+                        <div
+                          key={member.member?.id}
                           className="flex items-center gap-3 py-2 border-b last:border-0"
                         >
                           <input
                             type="checkbox"
                             id={`add-member-${member.member?.id}`}
-                            checked={selectedMembers.includes(member.member?.id)}
+                            checked={selectedMembers.includes(
+                              member.member?.id
+                            )}
                             onChange={() => toggleMember(member.member?.id)}
                             className="rounded"
                           />
-                          <label htmlFor={`add-member-${member.member?.id}`} className="text-sm flex-1 cursor-pointer">
-                            {member.member?.name || 'Unknown'} {member.member?.lastName || ''}
-                            <span className="text-xs text-muted-foreground ml-1">({member.role})</span>
+                          <label
+                            htmlFor={`add-member-${member.member?.id}`}
+                            className="text-sm flex-1 cursor-pointer"
+                          >
+                            {member.member?.name || "Unknown"}{" "}
+                            {member.member?.lastName || ""}
+                            <span className="text-xs text-muted-foreground ml-1">
+                              ({member.role})
+                            </span>
                           </label>
                         </div>
                       ))}
-                    {teamMembers.filter(member => !projectMembers.includes(member.member?.id)).length === 0 && (
+                    {teamMembers.filter(
+                      (member) => !projectMembers.includes(member.member?.id)
+                    ).length === 0 && (
                       <p className="text-center text-muted-foreground py-2 text-sm">
                         No hay más miembros disponibles para añadir al proyecto
                       </p>
@@ -386,16 +408,16 @@ export function EditProjectDialog({
             </div>
           )}
         </div>
-        
+
         <DialogFooter>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isUpdating}
           >
             Cancelar
           </Button>
-          <Button 
+          <Button
             onClick={handleUpdateProject}
             disabled={!projectName.trim() || !selectedTeam || isUpdating}
           >
@@ -405,4 +427,4 @@ export function EditProjectDialog({
       </DialogContent>
     </Dialog>
   );
-} 
+}

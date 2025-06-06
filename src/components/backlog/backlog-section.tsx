@@ -1,11 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { ChevronDown, MoreHorizontal, Loader2, CheckSquare, Plus } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChevronDown, MoreHorizontal, CheckSquare } from "lucide-react";
 import { TaskItem } from "./task-item";
 import { Task } from "@/interfaces/task.interface";
 import { Epic } from "@/interfaces/epic.interface";
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { Pagination } from '@mantine/core';
 import { CreateIssueForm } from "./create-issue-form";
 import { TaskSkeleton } from "./task-skeleton";
@@ -78,7 +76,6 @@ export function BacklogSection({
   getAssignedUser,
   onAssignUser,
   epics = [],
-  onOpenEpicDialog,
   getEpicById,
   searchTerm,
   isLoading = false,

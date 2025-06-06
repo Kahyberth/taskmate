@@ -32,7 +32,7 @@ export function StatsCards() {
   const [stats, setStats] = useState<DashboardStat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Query to get user's issues directly
+
   const { data: userIssues, isLoading: isLoadingIssues } = useQuery({
     queryKey: ['userIssues', user?.id],
     queryFn: async () => {
@@ -66,16 +66,11 @@ export function StatsCards() {
       const inProgress = userIssues.filter(issue => 
         issue.status === 'in-progress'
       ).length;
-      const toDo = userIssues.filter(issue =>
-        issue.status === 'to-do' || issue.status === 'review'
-      ).length;
       
-      // Calculate percentages for progress bars
       const completedPercentage = total > 0 ? Math.round((completed / total) * 100) : 0;
       const inProgressPercentage = total > 0 ? Math.round((inProgress / total) * 100) : 0;
-      const toDoPercentage = total > 0 ? Math.round((toDo / total) * 100) : 0;
       
-      // For demonstration, simulate previous values
+    
       const previousTotal = total - Math.floor(total * 0.12);
       const previousCompleted = completed - Math.floor(completed * 0.08);
       const previousInProgress = inProgress - Math.floor(inProgress * 0.03);
@@ -84,16 +79,15 @@ export function StatsCards() {
       const completedChange = calculateChange(completed, previousCompleted);
       const inProgressChange = calculateChange(inProgress, previousInProgress);
 
-      // Interpret trends based on what would be considered positive
+      
       const totalTrend = total > previousTotal ? "up" : "down";
       const completedTrend = completed > previousCompleted ? "up" : "down";
-      // For "In Progress", fewer tasks in progress might mean more are completed
+      
       const inProgressTrend = inProgress < previousInProgress ? "down" : "up";
       
-      // Determine if trend is positive or negative
-      const isTotalTrendPositive = totalTrend === "up"; // More tasks is positive for visibility
-      const isCompletedTrendPositive = completedTrend === "up"; // More completed is always positive
-      const isInProgressTrendPositive = inProgressTrend === "down"; // Less in progress is positive (more completed)
+      const isTotalTrendPositive = totalTrend === "up"; 
+      const isCompletedTrendPositive = completedTrend === "up"; 
+      const isInProgressTrendPositive = inProgressTrend === "down"; 
       
       setStats([
         {

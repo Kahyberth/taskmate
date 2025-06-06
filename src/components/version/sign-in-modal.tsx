@@ -13,8 +13,6 @@ import {
   AlertCircle,
   CheckCircle2,
   BrainCircuit,
-  ShieldCheck,
-  Sparkles,
   Lock,
   Mail,
 } from "lucide-react";
