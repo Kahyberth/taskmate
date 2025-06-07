@@ -22,18 +22,18 @@ export function AIAssistantDialog({ open, onOpenChange }: AIAssistantDialogProps
   const [aiResponse, setAiResponse] = useState("")
   const [aiIsThinking, setAiIsThinking] = useState(false)
 
-  // Handle AI assistant query
+
   const handleAiQuery = () => {
     if (!aiQuery.trim()) return
 
     setAiIsThinking(true)
     setAiResponse("")
 
-    // Simulate AI processing
+    
     setTimeout(() => {
       setAiIsThinking(false)
 
-      // Sample responses based on query keywords
+     
       if (aiQuery.toLowerCase().includes("productivity")) {
         setAiResponse(
           "Based on your recent activity, I recommend focusing on the API Integration project today. Your productivity peaks between 9-11 AM, making this an ideal time for complex tasks. Would you like me to block this time on your calendar?",

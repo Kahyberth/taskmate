@@ -187,7 +187,7 @@ export default function TeamChat({
   useEffect(() => {
     if (!userProfile || !selectedGroup) return;
 
-    const socket = io("http://localhost:4005", { auth: { userProfile } });
+    const socket = io(`${import.meta.env.VITE_CHAT_WS}`, { auth: { userProfile } });
 
     socket.emit("join", selectedGroup.id);
 
