@@ -40,10 +40,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { type Socket, io } from "socket.io-client";
 import { useRef } from "react";
 import { AuthContext } from "@/context/AuthContext";
+import { apiClient } from "@/api/client-gateway";
 
 const fibonacciSequence = ["0", "1", "2", "3", "5", "8", "13", "21", "34", "?"];
-// const fibonacciModified = ["0", "1", "2", "3", "5", "8", "13", "20", "40", "100", "?"];
-// const tallas = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "?"];
+
 
 interface User {
   id: number;
@@ -77,7 +77,6 @@ export function PlanningPokerRoom() {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [isFibonacciModalOpen, setIsFibonacciModalOpen] = useState(false);
   const [isSessionStarted, setIsSessionStarted] = useState(false);
-  // const [sequence, setSequence] = useState(fibonacciSequence);
   const [chatMessage, setChatMessage] = useState("");
   const [chatMessages, setChatMessages] = useState<
     { user: string; message: string; timestamp: string }[]
@@ -109,6 +108,8 @@ export function PlanningPokerRoom() {
     reasoning: string;
   } | null>(null);
 
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
   const { id: room_id } = useParams();
   const { userProfile } = useContext(AuthContext);
   const [roomCreator, setRoomCreator] = useState<string | null>(null);
@@ -120,7 +121,7 @@ export function PlanningPokerRoom() {
   }, [chatMessages]);
 
   useEffect(() => {
-    const socket = io("http://localhost:8081", {
+    const socket = io(`${import.meta.env.VITE_POKER_WS}`, {
       auth: {
         userProfile,
       },
@@ -142,6 +143,7 @@ export function PlanningPokerRoom() {
       setChatMessages([]);
       setVotes([]);
       setTimer(null);
+      setAiSuggestion(null);
     });
 
     socket.on("voting-history-updated", (updatedHistory) => {
@@ -385,67 +387,47 @@ export function PlanningPokerRoom() {
       socketRef.current.emit("repeat-voting", room_id);
     }
   };
+ 
 
-  const handleAiSuggestion = () => {
+  const handleAiSuggestion = async () => {
     if (!currentStory || !votingResults) return;
 
-    // In a real implementation, this would call an API endpoint
-    // Here we're simulating the AI suggestion with a simple algorithm
-    const storyComplexity = currentStory.description.length / 50;
-    const votingSpread = Math.abs(votingResults.average - votingResults.median);
+    setIsAiLoading(true);
 
-    // Calculate a suggested point value based on voting results and story complexity
-    let suggestedPoints = votingResults.median;
+    try {
+      const aiEstimation = await apiClient.post(`/poker/ai-estimation`, {
+        title: currentStory.title,
+        description: currentStory.description,
+        priority: currentStory.priority,
+        votes: votes.map((vote) => +vote.value),
+        complexityFactors: ["seguridad", "performance", "usabilidad", "funcionalidad", "estilo"],
+        descriptionClarity: "Media y clara",
+      });
 
-    // If there's high variance in votes, adjust toward the average
-    if (votingSpread > 2) {
-      suggestedPoints = Math.round(
-        (votingResults.median + votingResults.average) / 2
-      );
+      let suggestedPoints = aiEstimation.data.puntuacion_sugerida;
+      const confidence = aiEstimation.data.confianza;
+      let reasoning = aiEstimation.data.justificacion;
+
+      setAiSuggestion({
+        points: suggestedPoints,
+        confidence,
+        reasoning,
+      });
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: "Failed to get AI suggestion. Please try again.",
+        color: "red",
+        position: "top-right",
+      });
+    } finally {
+      setIsAiLoading(false);
     }
-
-    // Adjust based on story complexity
-    if (storyComplexity > 5 && suggestedPoints < 8) {
-      suggestedPoints += 1;
-    }
-
-    // Ensure it's a valid Fibonacci number
-    const fibNumbers = [0, 1, 2, 3, 5, 8, 13, 21, 34];
-    const closestFib = fibNumbers.reduce((prev, curr) =>
-      Math.abs(curr - suggestedPoints) < Math.abs(prev - suggestedPoints)
-        ? curr
-        : prev
-    );
-
-    // Calculate confidence based on voting consensus
-    const confidence = Math.max(0, Math.min(100, 100 - votingSpread * 10));
-
-    // Generate reasoning
-    let reasoning = `Based on the voting results (median: ${
-      votingResults.median
-    }, average: ${votingResults.average.toFixed(1)})`;
-
-    if (votingSpread > 2) {
-      reasoning += ` and the significant spread in team estimates`;
-    }
-
-    if (storyComplexity > 5) {
-      reasoning += `, considering the complexity of the story description`;
-    }
-
-    reasoning += `, I suggest ${closestFib} story points.`;
-
-    setAiSuggestion({
-      points: closestFib,
-      confidence,
-      reasoning,
-    });
   };
 
   const handleAcceptSuggestion = () => {
     if (!aiSuggestion || !room_id || !socketRef.current) return;
 
-    // In a real implementation, this would emit an event to save the accepted suggestion
     socketRef.current.emit("accept-suggestion", {
       room: room_id,
       points: aiSuggestion.points,
@@ -831,8 +813,16 @@ export function PlanningPokerRoom() {
                                 <Button
                                   onClick={handleAiSuggestion}
                                   className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                                  disabled={isAiLoading}
                                 >
-                                  Get AI Suggestion
+                                  {isAiLoading ? (
+                                    <div className="flex items-center justify-center">
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                      Thinking...
+                                    </div>
+                                  ) : (
+                                    "Get AI Suggestion"
+                                  )}
                                 </Button>
                               </div>
                             )}

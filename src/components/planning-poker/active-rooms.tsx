@@ -61,12 +61,31 @@ export function ActiveRooms() {
   const { user: user_data, userProfile } = useContext(AuthContext);
   
   const socketRef = useRef<Socket | null>(null);
+   
+
+
+ //TODO: Agregar un estado global para la project_id
 
   const fetchData = async () => {
     setLoading(true);
     try {
+
+
+      const fetchTeams = await apiClient.get(
+        `/teams/get-team-by-user/${user_data?.id}`
+      );
+
+      const { data: teams } = fetchTeams.data;
+      const teamId = teams[0].id.toString();
+      const fetchProjectsByTeam = await apiClient.get(
+        `/projects/team-projects?teamId=${teamId}`
+      );
+      const { data: projects } = fetchProjectsByTeam;
+      const projectId = projects[0].id.toString();
+
+
       const response = await apiClient.get(
-        `${import.meta.env.VITE_API_URL}/poker/all-sessions`,
+        `${import.meta.env.VITE_API_URL}/poker/session-details-by-project-id?project_id=${projectId}`,
         {
           timeout: 10000,
         }
@@ -105,7 +124,7 @@ export function ActiveRooms() {
   }, []);
 
   useEffect(() => {
-    const socket = io("http://localhost:8081", {
+    const socket = io(`${import.meta.env.VITE_POKER_WS}`, {
       auth: {
         userProfile,
       },
@@ -131,9 +150,19 @@ export function ActiveRooms() {
       );
     });
 
+    socket.on("room-will-be-deleted", ({ message, roomId }) => {
+      notifications.show({
+        title: "Aviso",
+        message,
+        color: "yellow",
+      });
+      setData((prev) => prev.filter((room) => room.id !== roomId));
+    });
+
     return () => {
       socket.off("session-status-changed");
       socket.off("participant-count-updated");
+      socket.off("room-will-be-deleted");
       socket.disconnect();
     };
   }, [userProfile]);
