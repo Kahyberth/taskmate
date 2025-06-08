@@ -343,7 +343,7 @@ export function ProjectProgressChart({ selectedProjectId }: ProjectProgressChart
               color: "var(--chart-tooltip-text)",
             }}
             labelStyle={{ color: "var(--chart-tooltip-text)" }}
-            formatter={(value, name, props) => {
+            formatter={(value, props: any) => {
               if (selectedProjectId) {
                 return [
                   `${value}% (${props.payload.completedIssues}/${props.payload.totalIssues} issues)`, 

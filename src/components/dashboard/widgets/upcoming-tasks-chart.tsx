@@ -5,8 +5,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { upcomingTasks } from "@/data/dashboard-data";
-import { useContext, useEffect, useState } from "react";
-import { AuthContext } from "@/context/AuthContext";
+import { useEffect, useState } from "react";
+
 import { useProjectIssues } from "@/api/queries";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -26,7 +26,6 @@ interface Issue {
 }
 
 export function UpcomingTasksChart({ selectedProjectId }: UpcomingTasksChartProps) {
-  const { user } = useContext(AuthContext);
   const [tasks, setTasks] = useState<any[]>([]);
   
   // Fetch project-specific issues when a project is selected

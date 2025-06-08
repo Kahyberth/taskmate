@@ -28,7 +28,7 @@ export default function Dashboard() {
     aiInsights: "medium",
     notifications: "small",
   });
-  const [dashboardRefreshRate, setDashboardRefreshRate] = useState(30);
+  const [dashboardRefreshRate ] = useState(30);
   const { user } = useContext(AuthContext);
   const { toast } = useToast();
   const [showAIAssistant, setShowAIAssistant] = useState(false);

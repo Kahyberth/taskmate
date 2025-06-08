@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Users, Github, Linkedin, Mail, User, Calendar } from "lucide-react"
+import { Users, Github, Linkedin, Mail, User } from "lucide-react"
 
 export default function TeamMembers({ teamMembers }: { teamMembers: any[] }) {
 

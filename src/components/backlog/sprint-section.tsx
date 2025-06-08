@@ -3,7 +3,6 @@ import { ChevronDown, MoreHorizontal, Edit, Trash, Loader2 } from "lucide-react"
 import { TaskItem } from "./task-item";
 import { Task } from "@/interfaces/task.interface";
 import { Sprint } from "@/interfaces/sprint.interface";
-import { Epic } from "@/interfaces/epic.interface";
 import { useMemo, useState } from "react";
 import { AssignedUser } from "@/interfaces/assigned-user.interface";
 import {
@@ -14,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { notifications } from "@mantine/notifications";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface SprintSectionProps {
   sprint: Sprint;

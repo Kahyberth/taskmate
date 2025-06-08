@@ -59,7 +59,6 @@ import { AuthContext } from "@/context/AuthContext";
 import { apiClient } from "@/api/client-gateway";
 import type { Members } from "@/interfaces/members.interface";
 import { Loader } from "@mantine/core";
-import { Team } from "@/lib/store";
 
 type ChatGroup = {
   id: string;

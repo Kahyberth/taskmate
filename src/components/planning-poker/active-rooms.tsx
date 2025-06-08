@@ -57,14 +57,12 @@ export function ActiveRooms() {
   const [password, setPassword] = useState("");
   const [joiningRoomId, setJoiningRoomId] = useState<string | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
-  const [projectsId, setProjectsId] = useState<string[]>([]);
   const navigate = useNavigate();
   const { user: user_data, userProfile } = useContext(AuthContext);
 
   const socketRef = useRef<Socket | null>(null);
 
   //TODO: Agregar un estado global para la project_id
-
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -86,9 +84,6 @@ export function ActiveRooms() {
       }
 
       const projectIds = allProjects.map((project) => project.id.toString());
-      setProjectsId(projectIds);
-
- 
       let allSessions: Datum[] = [];
 
       for (const projectId of projectIds) {

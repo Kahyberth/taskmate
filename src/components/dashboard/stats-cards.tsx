@@ -1,6 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChevronUp, ChevronDown } from 'lucide-react'
-import { Progress } from "../ui/progress"
 import { useContext, useEffect, useState } from "react"
 import { AuthContext } from "@/context/AuthContext"
 import { useQuery } from "@tanstack/react-query"

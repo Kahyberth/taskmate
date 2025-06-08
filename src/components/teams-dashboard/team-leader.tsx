@@ -19,7 +19,6 @@ import {
 
 export default function TeamLeader({
   leaderData,
-  teamInfo,
 }:{
   leaderData: any;
   teamInfo: any[];

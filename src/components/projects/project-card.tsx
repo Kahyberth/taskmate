@@ -49,6 +49,7 @@ export const ProjectCard = ({
   const [showEditForm, setShowEditForm] = useState(false);
   
   const updateProjectMutation = useUpdateProject();
+  const queryClient = useQueryClient();
 
   const { 
     data: projectStats = { total: 0, completed: 0, progress: 0 }, 

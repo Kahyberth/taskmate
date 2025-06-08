@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Users } from "lucide-react";
 import { TeamsHeader } from "@/components/teams/TeamHeader";

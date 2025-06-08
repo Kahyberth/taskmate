@@ -1,4 +1,4 @@
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AuthContext } from "@/context/AuthContext";
 import { useProjectsByUser } from "@/api/queries";
@@ -9,7 +9,7 @@ interface ProjectSelectorProps {
   onProjectChange: (projectId: string | null) => void;
 }
 
-// Define the Project interface to fix type errors
+
 interface Project {
   id: string;
   name: string;
@@ -20,13 +20,6 @@ export function ProjectSelector({ selectedProjectId, onProjectChange }: ProjectS
   const { user } = useContext(AuthContext);
   const { data: projectsData, isLoading } = useProjectsByUser(user?.id);
   
-  // Don't automatically select the first project - let the user choose
-  // useEffect(() => {
-  //   if (!isLoading && projectsData && projectsData.projects?.length > 0 && !selectedProjectId) {
-  //     onProjectChange(projectsData.projects[0].id);
-  //   }
-  // }, [isLoading, projectsData, selectedProjectId, onProjectChange]);
-
   if (isLoading) {
     return <Skeleton className="h-10 w-[200px]" />;
   }
