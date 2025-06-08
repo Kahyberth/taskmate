@@ -68,6 +68,35 @@ export function CreateRoomDialog({
   const [userStories, setUserStories] = useState<UserStory[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
+
+  useEffect(() => {
+    if (!selectedProjectId) return;
+
+    const fetchProductBacklogId = async () => {
+      const fetchProductBacklogId = await apiClient.get(
+        `/backlog/get-backlog-by-project/${selectedProjectId}`
+      );
+
+      
+
+      const { id: productBacklogId } = fetchProductBacklogId.data;
+
+      if (productBacklogId !== null) {
+        const fetchUserStories = await apiClient.get(
+          `/backlog/get-all-issues/${productBacklogId}`
+        );
+
+        const userStories = fetchUserStories.data;
+
+        setUserStories(userStories || []);
+      }
+    };
+
+    fetchProductBacklogId();
+  }, [selectedProjectId]);
+
+
+
   useEffect(() => {
     if (open) {
       const fetchTeamsByUser = async () => {

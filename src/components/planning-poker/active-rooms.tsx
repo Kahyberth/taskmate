@@ -27,7 +27,7 @@ const statusConfig = {
   closed: { label: "Cerrado", color: "bg-red-500" },
   paused: { label: "Pausado", color: "bg-orange-500" },
   started: { label: "Iniciado", color: "bg-green-500" },
-  default: { label: "Desconocido", color: "bg-gray-500" }
+  default: { label: "Desconocido", color: "bg-gray-500" },
 };
 
 interface ActiveRoom {
@@ -57,42 +57,52 @@ export function ActiveRooms() {
   const [password, setPassword] = useState("");
   const [joiningRoomId, setJoiningRoomId] = useState<string | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [projectsId, setProjectsId] = useState<string[]>([]);
   const navigate = useNavigate();
   const { user: user_data, userProfile } = useContext(AuthContext);
-  
+
   const socketRef = useRef<Socket | null>(null);
-   
 
-
- //TODO: Agregar un estado global para la project_id
+  //TODO: Agregar un estado global para la project_id
 
   const fetchData = async () => {
     setLoading(true);
     try {
-
-
       const fetchTeams = await apiClient.get(
         `/teams/get-team-by-user/${user_data?.id}`
       );
 
       const { data: teams } = fetchTeams.data;
-      const teamId = teams[0].id.toString();
-      const fetchProjectsByTeam = await apiClient.get(
-        `/projects/team-projects?teamId=${teamId}`
-      );
-      const { data: projects } = fetchProjectsByTeam;
-      const projectId = projects[0].id.toString();
 
-
-      const response = await apiClient.get(
-        `${import.meta.env.VITE_API_URL}/poker/session-details-by-project-id?project_id=${projectId}`,
-        {
-          timeout: 10000,
+      const allProjects: any[] = [];
+      for (const team of teams) {
+        const fetchProjectsByTeam = await apiClient.get(
+          `/projects/team-projects?teamId=${team.id}`
+        );
+        const { data: projects } = fetchProjectsByTeam;
+        if (projects.length > 0) {
+          allProjects.push(...projects);
         }
-      );
+      }
+
+      const projectIds = allProjects.map((project) => project.id.toString());
+      setProjectsId(projectIds);
+
+ 
+      let allSessions: Datum[] = [];
+
+      for (const projectId of projectIds) {
+        const response = await apiClient.get(
+          `${import.meta.env.VITE_API_URL}/poker/session-details-by-project-id?project_id=${projectId}`,
+          { timeout: 10000 }
+        );
+        if (Array.isArray(response.data.data)) {
+          allSessions = allSessions.concat(response.data.data);
+        }
+      }
 
       setData(prev =>
-        response.data.data.map((session: Datum) => {
+        allSessions.map((session: Datum) => {
           const prevRoom = prev.find(r => r.id === session.session_id);
           return {
             id: session.session_id,
@@ -129,9 +139,8 @@ export function ActiveRooms() {
         userProfile,
       },
     });
-    
-    socketRef.current = socket;
 
+    socketRef.current = socket;
 
     socket.on("connect", () => {
       console.log("connected to server");
@@ -278,7 +287,9 @@ export function ActiveRooms() {
                     <div className="flex gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4" />
-                        <span>{room.currentParticipants ?? 0}/{room.participants}</span>
+                        <span>
+                          {room.currentParticipants ?? 0}/{room.participants}
+                        </span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
@@ -300,12 +311,12 @@ export function ActiveRooms() {
                     <Badge variant="secondary" className="gap-1">
                       <div
                         className={`h-1.5 w-1.5 rounded-full ${
-                          statusConfig[room.status as keyof typeof statusConfig]?.color || statusConfig.default.color
+                          statusConfig[room.status as keyof typeof statusConfig]
+                            ?.color || statusConfig.default.color
                         }`}
                       />
-                      {
-                        statusConfig[room.status as keyof typeof statusConfig]?.label || statusConfig.default.label
-                      }
+                      {statusConfig[room.status as keyof typeof statusConfig]
+                        ?.label || statusConfig.default.label}
                     </Badge>
                     <Button
                       onClick={() => handleJoinAttempt(room)}
