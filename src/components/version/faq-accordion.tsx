@@ -4,34 +4,29 @@ import { ChevronDown } from "lucide-react"
 
 const faqs = [
   {
-    question: "¿Qué es TaskMate?",
+    question: "What is TaskMate?",
     answer:
-      "TaskMate es una aplicación de gestión de tareas y proyectos diseñada para ayudar a equipos de todos los tamaños a organizar su trabajo, colaborar eficientemente y aumentar su productividad. Ofrece funciones como tableros Kanban, seguimiento de tiempo, integraciones con herramientas populares y mucho más.",
+      "TaskMate is a task and project management application designed to help individuals and teams organize their work efficiently. It offers features like Kanban boards, task tracking, team collaboration tools, and AI-powered productivity insights to help you stay on top of your projects.",
   },
   {
-    question: "¿Cómo puedo empezar a usar TaskMate?",
+    question: "How does the task tracking feature work?",
     answer:
-      "Puedes comenzar registrándote para una prueba gratuita de 14 días sin necesidad de tarjeta de crédito. Simplemente completa el formulario de registro en nuestra página principal, verifica tu correo electrónico y estarás listo para comenzar a organizar tus proyectos y tareas.",
+      "TaskMate's task tracking system allows you to create, assign, and monitor tasks throughout their lifecycle. You can categorize tasks as 'To-Do', 'In Progress', 'Completed', 'In Review'. The analytics dashboard provides visual insights into your productivity patterns, helping you understand where your time is being spent.",
   },
   {
-    question: "¿TaskMate ofrece integraciones con otras herramientas?",
+    question: "What makes TaskMate different from other task management apps?",
     answer:
-      "Sí, TaskMate se integra con una amplia variedad de herramientas populares como GitHub, Slack, Google Drive, Microsoft Teams, Zoom y muchas más. Estas integraciones te permiten centralizar tu flujo de trabajo y aumentar la eficiencia de tu equipo.",
+      "TaskMate stands out with its intuitive user interface, AI-powered features, and comprehensive analytics. Our AI assistant helps prioritize tasks, suggest optimal workflows, and deliver productivity insights. With built-in Planning Poker, teams can estimate tasks collaboratively, while the integrated team chat ensures faster, more effective communication. Visual project tracking also makes it easy to understand your progress at a glance.",
   },
   {
-    question: "¿Puedo usar TaskMate en dispositivos móviles?",
+    question: "Does TaskMate integrate with other tools like GitHub?",
     answer:
-      "Absolutamente. TaskMate está disponible como aplicación móvil para iOS y Android, permitiéndote gestionar tus tareas y proyectos desde cualquier lugar. La aplicación móvil ofrece la mayoría de las funciones disponibles en la versión de escritorio, con una interfaz optimizada para pantallas más pequeñas.",
+      "Not yet — TaskMate currently doesn’t offer integrations with external tools like GitHub. However, support for popular integrations is on our roadmap and coming soon. Stay tuned!",
   },
   {
-    question: "¿Qué nivel de soporte ofrece TaskMate?",
+    question: "How does the AI integration enhance productivity?",
     answer:
-      "El nivel de soporte depende del plan que elijas. Todos los planes incluyen soporte por email, mientras que los planes Pro y Enterprise ofrecen soporte prioritario. Los clientes Enterprise también disfrutan de soporte 24/7 y un gestor de cuenta dedicado para ayudarles con cualquier problema o consulta.",
-  },
-  {
-    question: "¿Cómo funciona la integración con Inteligencia Artificial?",
-    answer:
-      "TaskMate 2.0 incorpora tecnologías avanzadas de IA que te ayudan a trabajar de manera más inteligente. Nuestro asistente virtual puede redactar correos electrónicos, resumir reuniones, sugerir próximos pasos en tus proyectos y automatizar tareas repetitivas. Además, nuestros algoritmos de análisis predictivo pueden identificar posibles cuellos de botella en tus proyectos antes de que ocurran, permitiéndote tomar medidas preventivas.",
+      "TaskMate's AI integration helps boost your productivity in several ways. It analyzes your work patterns to provide personalized productivity insights, automates routine task creation and updates, suggests task prioritization based on deadlines and importance, and helps identify potential bottlenecks in your projects before they occur.",
   },
 ]
 

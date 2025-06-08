@@ -59,6 +59,7 @@ import { AuthContext } from "@/context/AuthContext";
 import { apiClient } from "@/api/client-gateway";
 import type { Members } from "@/interfaces/members.interface";
 import { Loader } from "@mantine/core";
+import { Team } from "@/lib/store";
 
 type ChatGroup = {
   id: string;
@@ -356,7 +357,7 @@ export default function TeamChat({
         const payload = {
           name: newGroupName.trim(),
           description: newGroupDescription.trim() || "",
-          team_id: "43b31791-43e2-4985-85ce-5eb920082b33",
+          team_id: team_data.id,
           user_id: userProfile?.id || "",
           channel_name: newGroupName.trim() + " grupo",
           parentChannelId: selectedGroup.id,
@@ -459,7 +460,7 @@ export default function TeamChat({
   };
 
   return (
-    <div className={`flex h-full ${isMobileView ? 'flex-col' : 'flex-row'}`}>
+    <div className={`flex h-[calc(100vh-120px)] ${isMobileView ? 'flex-col' : 'flex-row'}`}>
       {showSidebar && (
         <div className={`${isMobileView ? 'w-full' : 'w-80'} border-r`}>
           <div className="p-3 border-b border-border/40">
@@ -467,7 +468,7 @@ export default function TeamChat({
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Buscar chats..."
+                placeholder="Search chats..."
                 className="pl-8 w-full bg-background/50 border-border/50 focus:bg-background"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -570,7 +571,7 @@ export default function TeamChat({
                   />
                   <AvatarFallback className="bg-primary/10 text-xs font-medium">
                     {userProfile?.name?.slice(0, 2).toUpperCase() ||
-                      "YO"}
+                      "YOU"}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -593,12 +594,12 @@ export default function TeamChat({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>Perfil</DropdownMenuItem>
-                  <DropdownMenuItem>Preferencias</DropdownMenuItem>
+                  <DropdownMenuItem>Profile</DropdownMenuItem>
+                  <DropdownMenuItem>Preferences</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>
                     <LogOut className="h-4 w-4 mr-2" />
-                    Cerrar sesión
+                    Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -606,8 +607,7 @@ export default function TeamChat({
           </div>
         </div>
       )}
-      <Card className="relative overflow-hidden bg-card border border-border/40rounded-xl h-[calc(100vh-32px)]  w-full max-w-none flex flex-col overscroll-contain">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/80 via-primary to-primary/80"></div>
+      <Card className="relative overflow-hidden bg-card border border-border/40 rounded-xl h-full w-full max-w-none flex flex-col overscroll-contain">
         {chatGroups.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <Loader color="violet" type="bars" />
@@ -624,8 +624,8 @@ export default function TeamChat({
                     <CardTitle className="text-xl">{team_data.name}</CardTitle>
                     <CardDescription>
                       {isExpanded
-                        ? "Comunicación en tiempo real"
-                        : "5 mensajes sin leer"}
+                        ? "Real-time communication"
+                        : "5 unread messages"}
                     </CardDescription>
                   </div>
                 </div>
@@ -641,26 +641,26 @@ export default function TeamChat({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Opciones de Chat</DropdownMenuLabel>
+                      <DropdownMenuLabel>Chat Options</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem>
-                        Silenciar Notificaciones
+                        Mute Notifications
                       </DropdownMenuItem>
-                      <DropdownMenuItem>Buscar Mensajes</DropdownMenuItem>
+                      <DropdownMenuItem>Search Messages</DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => setShowNewGroupDialog(true)}
                       >
-                        Crear Grupo
+                        Create Group
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem>Configuración</DropdownMenuItem>
+                      <DropdownMenuItem>Settings</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={toggleExpanded}
-                    aria-label={isExpanded ? "Colapsar chat" : "Expandir chat"}
+                    aria-label={isExpanded ? "Collapse chat" : "Expand chat"}
                     className="h-8 w-8 rounded-full"
                   >
                     {isExpanded ? (
@@ -675,7 +675,7 @@ export default function TeamChat({
             {isExpanded && (
               <>
                 <CardContent className="p-0 flex flex-1 overflow-hidden">
-                  {/* Área de mensajes */}
+                  {/* Messages area */}
                   <div className="flex-1 flex flex-col overflow-hidden ">
                     <div className="p-3 flex items-center justify-between">
                       <div className="flex items-center">
@@ -711,7 +711,7 @@ export default function TeamChat({
                             {selectedGroup.name}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {selectedGroup.members.length} miembros
+                            {selectedGroup.members.length} members
                           </p>
                         </div>
                       </div>
@@ -734,14 +734,14 @@ export default function TeamChat({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Ver información</DropdownMenuItem>
-                            <DropdownMenuItem>Añadir miembros</DropdownMenuItem>
+                            <DropdownMenuItem>View info</DropdownMenuItem>
+                            <DropdownMenuItem>Add members</DropdownMenuItem>
                             <DropdownMenuItem>
-                              Silenciar notificaciones
+                              Mute notifications
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-red-500">
-                              Abandonar grupo
+                              Leave group
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -830,7 +830,7 @@ export default function TeamChat({
                             ))
                           ) : (
                             <div className="text-center text-muted-foreground">
-                              No hay mensajes
+                              No messages
                             </div>
                           )}
                           <div ref={messagesEndRef} />
@@ -841,7 +841,7 @@ export default function TeamChat({
                       <div className="px-3 py-2 border-t border-border/40 bg-muted/30">
                         <div className="flex items-center justify-between mb-2">
                           <p className="text-xs font-medium">
-                            Archivos adjuntos ({fileUploads.length})
+                            Attached files ({fileUploads.length})
                           </p>
                           <Button
                             variant="ghost"
@@ -910,7 +910,7 @@ export default function TeamChat({
                         </div>
                         <div className="relative flex-1">
                           <Input
-                            placeholder="Escribe tu mensaje..."
+                            placeholder="Type your message..."
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                             onKeyDown={handleKeyDown}
@@ -951,29 +951,28 @@ export default function TeamChat({
                 >
                   <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
-                      <DialogTitle>Crear nuevo grupo</DialogTitle>
+                      <DialogTitle>Create new group</DialogTitle>
                       <DialogDescription>
-                        Crea un nuevo grupo de chat para colaborar con tu
-                        equipo.
+                        Create a new chat group to collaborate with your team.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                       <div className="space-y-2">
-                        <Label htmlFor="group-name">Nombre del grupo</Label>
+                        <Label htmlFor="group-name">Group name</Label>
                         <Input
                           id="group-name"
-                          placeholder="Ej: Equipo de Desarrollo"
+                          placeholder="e.g. Development Team"
                           value={newGroupName}
                           onChange={(e) => setNewGroupName(e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="group-description">
-                          Descripción (opcional)
+                          Description (optional)
                         </Label>
                         <Textarea
                           id="group-description"
-                          placeholder="Describe el propósito de este grupo"
+                          placeholder="Describe the purpose of this group"
                           value={newGroupDescription}
                           onChange={(e) =>
                             setNewGroupDescription(e.target.value)
@@ -983,7 +982,7 @@ export default function TeamChat({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Miembros</Label>
+                        <Label>Members</Label>
                         <div className="max-h-[200px] overflow-y-auto scrollbar-thin">
                           <div className="space-y-1">
                             {teamMembers
@@ -1039,7 +1038,7 @@ export default function TeamChat({
                                     variant="outline"
                                     className="ml-auto bg-green-100 text-green-700"
                                   >
-                                    En línea
+                                    Online
                                   </Badge>
                                 </div>
                               ))}
@@ -1052,7 +1051,7 @@ export default function TeamChat({
                         variant="outline"
                         onClick={() => setShowNewGroupDialog(false)}
                       >
-                        Cancelar
+                        Cancel
                       </Button>
                       <Button
                         onClick={handleCreateGroup}
@@ -1061,7 +1060,7 @@ export default function TeamChat({
                         }
                       >
                         <Users className="h-4 w-4 mr-2" />
-                        Crear grupo
+                        Create group
                       </Button>
                     </DialogFooter>
                   </DialogContent>

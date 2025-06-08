@@ -3,6 +3,7 @@ import { ChevronDown, MoreHorizontal, CheckSquare } from "lucide-react";
 import { TaskItem } from "./task-item";
 import { Task } from "@/interfaces/task.interface";
 import { Epic } from "@/interfaces/epic.interface";
+import { AssignedUser } from "@/interfaces/assigned-user.interface";
 import { useMemo } from "react";
 import { Pagination } from '@mantine/core';
 import { CreateIssueForm } from "./create-issue-form";
@@ -21,7 +22,7 @@ interface BacklogSectionProps {
   onMoveTaskToSprint: (taskId: string, sprintId: string) => void;
   onStatusChange: (taskId: string, status: Task["status"]) => void;
   onCreateSprint: () => void;
-  onDeleteTask?: (taskId: string) => void;
+  onDeleteTask: (taskId: string) => void;
   availableSprints: { id: string; name: string }[];
   newUserStoryTitle: string;
   onNewUserStoryTitleChange: (title: string) => void;
@@ -29,20 +30,15 @@ interface BacklogSectionProps {
   onNewUserStoryTypeChange: (type: 'bug' | 'feature' | 'task' | 'refactor' | 'user_story') => void;
   newUserStoryPriority: 'low' | 'medium' | 'high' | 'critical';
   onNewUserStoryPriorityChange: (priority: 'low' | 'medium' | 'high' | 'critical') => void;
-  newUserStoryEpicId?: string;
-  onNewUserStoryEpicIdChange?: (epicId: string | undefined) => void;
+  newUserStoryEpic?: Epic | null;
+  onNewUserStoryEpicChange: (epic: Epic | null) => void;
   onCreateUserStory: () => Promise<void>;
-  getPriorityColor: (priority?: string) => string;
-  getTypeColor: (type?: string) => string;
-  getStatusColor: (status: string) => string;
-  getStatusDisplayText: (status: string) => string;
-  getAssignedUser: (userId?: string) => { initials: string } | null;
+  getAssignedUser: (userId?: string) => AssignedUser | null;
   onAssignUser?: (taskId: string, userId: string | undefined) => void;
-  epics?: Epic[];
-  onOpenEpicDialog?: () => void;
-  getEpicById?: (epicId?: string) => Epic | null;
-  searchTerm?: string;
-  isLoading?: boolean;
+  epics: Epic[];
+  onOpenEpicDialog: () => void;
+  searchTerm: string;
+  isLoading: boolean;
 }
 
 export function BacklogSection({
@@ -66,21 +62,15 @@ export function BacklogSection({
   onNewUserStoryTypeChange,
   newUserStoryPriority,
   onNewUserStoryPriorityChange,
-  newUserStoryEpicId,
-  onNewUserStoryEpicIdChange,
+  newUserStoryEpic,
+  onNewUserStoryEpicChange,
   onCreateUserStory,
-  getPriorityColor,
-  getTypeColor,
-  getStatusColor,
-  getStatusDisplayText,
   getAssignedUser,
   onAssignUser,
   epics = [],
-  getEpicById,
   searchTerm,
   isLoading = false,
 }: BacklogSectionProps) {
-  // Calculate task counts by status
   const taskCounts = useMemo(() => {
     const todoCount = tasks.filter(task => task.status === "to-do").length;
     const inProgressCount = tasks.filter(task => 
@@ -94,7 +84,6 @@ export function BacklogSection({
   }, [tasks]);
 
   const handleToggleClick = (e: React.MouseEvent) => {
-    // Only toggle if clicking on the header section elements
     if (e.target instanceof Element && 
         (e.target.closest('.backlog-header') || 
          e.target.classList.contains('backlog-header'))) {
@@ -117,20 +106,17 @@ export function BacklogSection({
           <h3 className="text-lg font-semibold dark:text-gray-200 ml-2">Backlog</h3>
           <span className="ml-2 text-gray-500 dark:text-gray-400 text-sm">
             {searchTerm ? (
-              <>Filtrando: {totalTasks} resultado{totalTasks !== 1 ? 's' : ''}</>
+              <>Filtering: {totalTasks} result{totalTasks !== 1 ? 's' : ''}</>
             ) : (
-              `(${totalTasks} actividades)`
+              `(${totalTasks} tasks)`
             )}
           </span>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {/* To-do count */}
           <span className="text-xs text-gray-500 dark:text-gray-400">{taskCounts.todoCount}</span>
-          {/* In-progress count */}
           <div className="w-6 h-4 bg-blue-100 dark:bg-blue-900/30 rounded-sm flex items-center justify-center text-xs text-blue-800 dark:text-blue-300">
             {taskCounts.inProgressCount}
           </div>
-          {/* Done count */}
           <span className="text-xs text-gray-500 dark:text-gray-400">{taskCounts.doneCount}</span>
           <Button 
             variant="outline" 
@@ -141,7 +127,7 @@ export function BacklogSection({
               onCreateSprint();
             }}
           >
-            Crear sprint
+            Create Sprint
           </Button>
           <Button 
             variant="ghost" 
@@ -157,10 +143,9 @@ export function BacklogSection({
       {isExpanded && (
         <div className="pl-8">
           <p className="text-md">
-            Crear incidencia
+            Create Issue
           </p>
             
-          {/* Input for new user story */}
           <CreateIssueForm
             onCreateUserStory={onCreateUserStory}
             newUserStoryTitle={newUserStoryTitle}
@@ -169,14 +154,13 @@ export function BacklogSection({
             onNewUserStoryTypeChange={onNewUserStoryTypeChange}
             newUserStoryPriority={newUserStoryPriority}
             onNewUserStoryPriorityChange={onNewUserStoryPriorityChange}
-            newUserStoryEpicId={newUserStoryEpicId}
-            onNewUserStoryEpicIdChange={onNewUserStoryEpicIdChange}
+            newUserStoryEpic={newUserStoryEpic}
+            onNewUserStoryEpicChange={onNewUserStoryEpicChange}
             epics={epics}
           />
 
           <div className="mt-4">
             {isLoading ? (
-              // Show 5 skeleton items while loading
               Array.from({ length: 5 }).map((_, index) => (
                 <TaskSkeleton key={index} />
               ))
@@ -190,21 +174,16 @@ export function BacklogSection({
                     onEdit={onEditTask}
                     onMoveToSprint={onMoveTaskToSprint}
                     availableSprints={availableSprints}
-                    getPriorityColor={getPriorityColor}
-                    getTypeColor={getTypeColor}
-                    getStatusColor={getStatusColor}
-                    getStatusDisplayText={getStatusDisplayText}
                     getAssignedUser={getAssignedUser}
                     onStatusChange={onStatusChange}
                     onAssignUser={onAssignUser}
                     onDeleteTask={onDeleteTask}
-                    getEpicById={getEpicById}
                   />
                 ))}
               </>
             ) : (
               <div className="text-center py-8 text-gray-500">
-                {searchTerm ? "No se encontraron tareas que coincidan con la búsqueda" : "No hay tareas en el backlog"}
+                {searchTerm ? "No tasks matching the search were found" : "No tasks in the backlog"}
               </div>
             )}
           </div>
@@ -226,7 +205,7 @@ export function BacklogSection({
                 })}
               />
               <div className="ml-4 text-sm text-gray-500">
-                Página {currentPage} de {totalPages}
+                Page {currentPage} of {totalPages}
               </div>
             </div>
           )}
@@ -237,13 +216,13 @@ export function BacklogSection({
         <div className="flex items-center justify-center py-4 text-gray-400 dark:text-gray-500">
           <CheckSquare size={16} className="mr-2" />
           <span className="text-sm">
-            {totalTasks} actividades | Estimación:{" "}
-            {tasks.reduce((sum, task) => sum + (task.storyPoints || 0), 0).toFixed(1).replace(/\.0$/, '')} puntos
+            {totalTasks} tasks | Estimation:{" "}
+            {tasks.reduce((sum, task) => sum + (task.storyPoints || 0), 0).toFixed(1).replace(/\.0$/, '')} points
             {tasks.some(task => task.storyPoints === 0 || task.storyPoints === undefined) && 
-              " (algunas tareas sin estimar)"}
+              " (some tasks not estimated)"}
           </span>
         </div>
       )}
     </div>
   );
-} 
+}

@@ -13,6 +13,12 @@ export const queryKeys = {
   backlogIssues: (projectId: string) => ["backlogIssues", projectId],
   projectIssues: (projectId: string) => ["projectIssues", projectId],
   projectStats: (projectId: string) => ["projectStats", projectId],
+  dashboardStats: (userId: string) => ["dashboardStats", userId],
+  taskCompletionStats: (userId: string) => ["taskCompletionStats", userId],
+  projectProgressStats: (userId: string) => ["projectProgressStats", userId],
+  aiInsights: (userId: string) => ["aiInsights", userId],
+  epics: (projectId: string) => ["epics", projectId],
+  epicIssues: (epicId: string) => ["epicIssues", epicId],
 };
 
 // ====================== TEAMS API ======================
@@ -152,6 +158,20 @@ export const useUpdateTeam = () => {
   });
 };
 
+export const useLeaveTeam = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({teamId, userId}: {teamId: string; userId: string}) => {
+      const response = await apiClient.post(`/teams/leave-team/${teamId}`, { teamId, userId });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [queryKeys.teams] });
+    },
+  });
+};
+
+
 // Eliminar un equipo
 export const useDeleteTeam = () => {
   const queryClient = useQueryClient();
@@ -227,21 +247,13 @@ export const useProjectIssues = (projectId: string | undefined) => {
       if (!projectId) return [];
       try {
         console.log("Fetching issues for project:", projectId);
-        const response = await apiClient.get(`/projects/issues/${projectId}`, {
-          params: {
-            limit: 1000 // Asegurar que obtenemos todos los issues
-          }
-        });
+        
+        // Use the new endpoint to get all issues for a project
+        const response = await apiClient.get(`/issues/by-project/${projectId}`);
+        
         console.log("Project issues API response:", response.data);
         
-        // Manejar diferentes formatos de respuesta del API
-        if (response.data && response.data.issues) {
-          // Nuevo formato: { issues: [...], total: number }
-          console.log(`Received ${response.data.issues.length} issues of ${response.data.total} total`);
-          return response.data.issues || [];
-        } else if (Array.isArray(response.data)) {
-          // Formato antiguo: array directo de issues
-          console.log(`Received ${response.data.length} issues (array format)`);
+        if (Array.isArray(response.data)) {
           return response.data;
         } else {
           console.warn("Unexpected API response format:", response.data);
@@ -258,12 +270,10 @@ export const useProjectIssues = (projectId: string | undefined) => {
   });
 };
 
-// Función auxiliar para calcular el progreso del proyecto
 const calculateProgress = (project: any) => {
   return project.members?.length > 0 ? 0 : 0;
 };
 
-// Obtener proyecto por ID
 export const useProjectById = (projectId: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.project(projectId || ""),
@@ -316,7 +326,7 @@ export const useUpdateProject = () => {
   });
 };
 
-// Eliminar un proyecto
+
 export const useDeleteProject = () => {
   const queryClient = useQueryClient();
   
@@ -325,8 +335,20 @@ export const useDeleteProject = () => {
       const response = await apiClient.delete(`/projects/delete/${projectId}`);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_, projectId) => {
       queryClient.invalidateQueries({ queryKey: [queryKeys.projects] });
+      
+      queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
+      
+      const queryCache = queryClient.getQueryCache();
+      const queries = queryCache.findAll();
+      
+      queries.forEach(query => {
+        const queryKey = query.queryKey;
+        if (Array.isArray(queryKey) && queryKey[0] === queryKeys.userProjects("")[0]) {
+          queryClient.invalidateQueries({ queryKey });
+        }
+      });
     },
   });
 };
@@ -474,7 +496,6 @@ export const invalidateProjectIssues = (queryClient: any, projectId: string | un
   }
 };
 
-// Obtener estadísticas de un proyecto (total, completados, progreso)
 export const useProjectStats = (projectId: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.projectStats(projectId || ""),
@@ -490,8 +511,8 @@ export const useProjectStats = (projectId: string | undefined) => {
       }
     },
     enabled: Boolean(projectId),
-    staleTime: 1000 * 60 * 5, // 5 minutos
-    gcTime: 1000 * 60 * 30, // 30 minutos
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 };
 
@@ -503,4 +524,440 @@ export const invalidateProjectStats = (queryClient: any, projectId: string | und
       queryKey: queryKeys.projectStats(projectId) 
     });
   }
+};
+
+// ====================== DASHBOARD STATS API ======================
+
+export const useTaskCompletionStats = (userId: string | undefined) => {
+  return useQuery({
+    queryKey: queryKeys.taskCompletionStats(userId || ""),
+    queryFn: async () => {
+      if (!userId) return [];
+      try {
+        console.log("Fetching task completion stats for user:", userId);
+        const issuesResponse = await apiClient.get(`/issues/user/${userId}`);
+        const issues = issuesResponse.data || [];
+        console.log(`Processing ${issues.length} issues for task completion stats`);
+        
+        return calculateTaskStatsByDay(issues);
+      } catch (error) {
+        console.error("Error fetching task completion stats:", error);
+      }
+    },
+    enabled: Boolean(userId),
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
+const calculateTaskStatsByDay = (issues: any[]) => {
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  
+  const lastSevenDays = Array.from({length: 7}, (_, i) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() - (6 - i));
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+    
+    return {
+      date: startDate,
+      endDate: endDate,
+      name: dayNames[date.getDay()]
+    };
+  });
+  
+  const statsByDay = lastSevenDays.map(day => {
+    const completedThatDay = issues.filter(issue => {
+      if (issue.updatedAt && (issue.status === 'done' || issue.status === 'closed')) {
+        const updatedDate = new Date(issue.updatedAt);
+        return updatedDate >= day.date && updatedDate <= day.endDate;
+      }
+      return false;
+    }).length;
+    
+    const pendingThatDay = issues.filter(issue => {
+      const createdDate = new Date(issue.createdAt);
+      if (createdDate <= day.endDate) {
+        if (issue.status === 'done' || issue.status === 'closed') {
+          const updatedDate = new Date(issue.updatedAt || new Date());
+          return updatedDate > day.endDate;
+        }
+        return true;
+      }
+      return false;
+    }).length;
+    
+    return {
+      name: day.name,
+      completed: completedThatDay,
+      pending: pendingThatDay,
+      total: completedThatDay + pendingThatDay
+    };
+  });
+  
+  const hasData = statsByDay.some(day => day.total > 0);
+  if (!hasData) {
+    return [];
+  }
+  
+  return statsByDay;
+};
+
+// Obtener estadísticas de progreso de proyectos para el dashboard
+export const useProjectProgressStats = (userId: string | undefined) => {
+  return useQuery({
+    queryKey: queryKeys.projectProgressStats(userId || ""),
+    queryFn: async () => {
+      if (!userId) return [];
+      try {
+        console.log("Fetching project progress stats for user:", userId);
+        
+        // Primero obtenemos los proyectos del usuario
+        const projectsResponse = await apiClient.get(`/projects/findAllByUser?userId=${userId}`);
+        let projects = [];
+        
+        if (projectsResponse.data && projectsResponse.data.data) {
+          projects = projectsResponse.data.data;
+        } else if (Array.isArray(projectsResponse.data)) {
+          projects = projectsResponse.data;
+        }
+        
+        // Limitamos a los 5 proyectos más recientes o activos
+        const recentProjects = projects.slice(0, 5);
+        
+        // Para cada proyecto, obtenemos estadísticas consolidadas de todas sus issues
+        const projectsWithStats = await Promise.all(
+          recentProjects.map(async (project: any) => {
+            try {
+              // 1. Intentamos el endpoint de estadísticas existente primero
+              let progress = 0;
+              let hasFetchedStats = false;
+              
+              try {
+                const statsResponse = await apiClient.get(`/backlog/project-stats/${project.id}`);
+                if (statsResponse.data && typeof statsResponse.data.progress === 'number') {
+                  progress = statsResponse.data.progress;
+                  hasFetchedStats = true;
+                  console.log(`Using existing stats for project ${project.id}:`, progress);
+                }
+              } catch (error) {
+                console.log(`Stats endpoint failed for project ${project.id}, calculating manually`);
+              }
+              
+              // 2. Si el endpoint falló o no devolvió datos válidos, calculamos manualmente
+              if (!hasFetchedStats) {
+                // Obtenemos issues de todas las fuentes
+                const allIssues = await getAllProjectIssues(project.id);
+                
+                if (allIssues.length > 0) {
+                  const completedIssues = allIssues.filter(
+                    issue => issue.status === 'done' || issue.status === 'closed'
+                  ).length;
+                  
+                  progress = Math.round((completedIssues / allIssues.length) * 100);
+                  console.log(`Calculated progress for project ${project.id}:`, progress, `(${completedIssues}/${allIssues.length})`);
+                }
+              }
+              
+              return {
+                name: project.name,
+                progress: progress,
+                total: 100,
+                id: project.id
+              };
+            } catch (error) {
+              console.error(`Error processing stats for project ${project.id}:`, error);
+              return {
+                name: project.name,
+                progress: 0,
+                total: 100,
+                id: project.id
+              };
+            }
+          })
+        );
+        
+        // Ordenamos los proyectos por progreso (de menor a mayor)
+        return projectsWithStats.sort((a, b) => a.progress - b.progress);
+      } catch (error) {
+        console.error("Error fetching project progress stats:", error);
+        return [];
+      }
+    },
+    enabled: Boolean(userId),
+    staleTime: 1000 * 60 * 5, // 5 minutos
+  });
+};
+
+// Función auxiliar para obtener todas las issues de un proyecto
+const getAllProjectIssues = async (projectId: string): Promise<any[]> => {
+  try {
+    let allIssues: any[] = [];
+    
+    // 1. Intentamos obtener issues del backlog
+    try {
+      const backlogResponse = await apiClient.get(`/backlog/get-backlog-by-project/${projectId}`);
+      if (backlogResponse.data && backlogResponse.data.id) {
+        const backlogId = backlogResponse.data.id;
+        const backlogIssuesResponse = await apiClient.get(`/backlog/get-all-issues/${backlogId}`);
+        
+        if (backlogIssuesResponse.data && Array.isArray(backlogIssuesResponse.data)) {
+          allIssues = [...allIssues, ...backlogIssuesResponse.data];
+          console.log(`Found ${backlogIssuesResponse.data.length} issues in backlog for project ${projectId}`);
+        }
+      }
+    } catch (error) {
+      console.log(`No backlog found or error fetching backlog issues for project ${projectId}`);
+    }
+    
+    // 2. Intentamos obtener issues de los sprints
+    try {
+      const sprintsResponse = await apiClient.get(`/sprints/get-sprints-by-project/${projectId}`);
+      
+      if (sprintsResponse.data && Array.isArray(sprintsResponse.data)) {
+        const sprints = sprintsResponse.data;
+        
+        // Para cada sprint, obtenemos sus issues
+        for (const sprint of sprints) {
+          try {
+            const sprintIssuesResponse = await apiClient.get(
+              `/sprints/get-sprint-backlog-issues?sprintId=${sprint.id}`
+            );
+            
+            if (sprintIssuesResponse.data && Array.isArray(sprintIssuesResponse.data)) {
+              allIssues = [...allIssues, ...sprintIssuesResponse.data];
+              console.log(`Found ${sprintIssuesResponse.data.length} issues in sprint ${sprint.id} for project ${projectId}`);
+            }
+          } catch (sprintError) {
+            console.log(`Error fetching issues for sprint ${sprint.id}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.log(`No sprints found or error fetching sprints for project ${projectId}`);
+    }
+    
+    // 3. Como alternativa, intentamos obtener todas las issues del proyecto directamente
+    if (allIssues.length === 0) {
+      try {
+        const projectIssuesResponse = await apiClient.get(`/projects/issues/${projectId}`);
+        
+        if (projectIssuesResponse.data) {
+          // El endpoint puede devolver diferentes formatos
+          if (Array.isArray(projectIssuesResponse.data)) {
+            allIssues = projectIssuesResponse.data;
+          } else if (projectIssuesResponse.data.issues && Array.isArray(projectIssuesResponse.data.issues)) {
+            allIssues = projectIssuesResponse.data.issues;
+          }
+          console.log(`Found ${allIssues.length} issues directly for project ${projectId}`);
+        }
+      } catch (error) {
+        console.log(`Error fetching issues directly for project ${projectId}`);
+      }
+    }
+    
+    // Eliminamos duplicados basados en ID
+    const uniqueIssues = allIssues.filter((issue, index, self) => 
+      index === self.findIndex(i => i.id === issue.id)
+    );
+    
+    console.log(`Total unique issues for project ${projectId}: ${uniqueIssues.length}`);
+    return uniqueIssues;
+  } catch (error) {
+    console.error(`Error in getAllProjectIssues for project ${projectId}:`, error);
+    return [];
+  }
+};
+
+// Obtener insights de IA para el dashboard
+export const useAIInsights = (userId: string | undefined) => {
+  return useQuery({
+    queryKey: queryKeys.aiInsights(userId || ""),
+    queryFn: async () => {
+      if (!userId) return [];
+      try {
+        console.log("Fetching AI insights for user:", userId);
+        
+        // Intentamos obtener los insights del backend si existe el endpoint
+        try {
+          const response = await apiClient.get(`/ai/insights/${userId}`);
+          if (response.data && Array.isArray(response.data)) {
+            return response.data;
+          }
+        } catch (error) {
+          console.log("AI insights endpoint not available, generating locally");
+        }
+        
+        // Si no hay endpoint o falla, generamos insights basados en los datos locales
+        // Obtenemos las tareas del usuario
+        const issuesResponse = await apiClient.get(`/issues/user/${userId}`);
+        const issues = issuesResponse.data || [];
+        
+        // Obtenemos los proyectos del usuario
+        const projectsResponse = await apiClient.get(`/projects/findAllByUser?userId=${userId}`);
+        let projects = [];
+        if (projectsResponse.data && projectsResponse.data.data) {
+          projects = projectsResponse.data.data;
+        } else if (Array.isArray(projectsResponse.data)) {
+          projects = projectsResponse.data;
+        }
+        
+        // Generamos insights basados en los datos
+        const insights = [];
+        
+        // Insight 1: Productividad por día de la semana
+        const issuesByDay = [0, 0, 0, 0, 0, 0, 0]; // Dom, Lun, Mar, Mié, Jue, Vie, Sáb
+        issues.forEach((issue: any) => {
+          if (issue.status === 'done' || issue.status === 'closed') {
+            const updatedAt = new Date(issue.updatedAt);
+            issuesByDay[updatedAt.getDay()]++;
+          }
+        });
+        
+        const mostProductiveDay = issuesByDay.indexOf(Math.max(...issuesByDay));
+        const dayNames = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+        
+        if (Math.max(...issuesByDay) > 0) {
+          insights.push({
+            id: 1,
+            insight: `Eres más productivo los ${dayNames[mostProductiveDay]}. Considera programar tus tareas más importantes para ese día.`,
+            type: "productivity"
+          });
+        }
+        
+        // Insight 2: Proyectos en riesgo
+        const projectsAtRisk = projects.filter((project: any) => {
+          // Verificamos si el proyecto tiene estadísticas
+          if (project.stats && project.stats.progress < 50) {
+            return true;
+          }
+          return false;
+        });
+        
+        if (projectsAtRisk.length > 0) {
+          insights.push({
+            id: 2,
+            insight: `${projectsAtRisk.length} ${projectsAtRisk.length === 1 ? 'proyecto está' : 'proyectos están'} en riesgo de retrasarse basado en el progreso actual.`,
+            type: "risk"
+          });
+        }
+        
+        // Insight 3: Distribución de tipos de tareas
+        const taskTypes: Record<string, number> = {};
+        issues.forEach((issue: any) => {
+          if (!taskTypes[issue.type]) {
+            taskTypes[issue.type] = 0;
+          }
+          taskTypes[issue.type]++;
+        });
+        
+        const mostCommonType = Object.entries(taskTypes).sort((a, b) => b[1] - a[1])[0];
+        if (mostCommonType) {
+          const [type, count] = mostCommonType;
+          const percentage = Math.round((count / issues.length) * 100);
+          
+          insights.push({
+            id: 3,
+            insight: `El ${percentage}% de tus tareas son de tipo "${type}". Considera diversificar tus habilidades trabajando en diferentes tipos de tareas.`,
+            type: "workflow"
+          });
+        }
+        
+        // Insight 4: Tiempo promedio para completar tareas
+        const completedIssues = issues.filter((issue: any) => 
+          issue.status === 'done' || issue.status === 'closed'
+        );
+        
+        if (completedIssues.length > 0) {
+          const completionTimes = completedIssues.map((issue: any) => {
+            const createdAt = new Date(issue.createdAt).getTime();
+            const updatedAt = new Date(issue.updatedAt).getTime();
+            return (updatedAt - createdAt) / (1000 * 60 * 60 * 24); // días
+          });
+          
+          const avgCompletionTime = completionTimes.reduce((a: number, b: number) => a + b, 0) / completionTimes.length;
+          
+          insights.push({
+            id: 4,
+            insight: `En promedio, completas tus tareas en ${avgCompletionTime.toFixed(1)} días. Establecer plazos más cortos podría mejorar tu productividad.`,
+            type: "time"
+          });
+        }
+        
+        return insights;
+      } catch (error) {
+        console.error("Error fetching AI insights:", error);
+        return [];
+      }
+    },
+    enabled: Boolean(userId),
+    staleTime: 1000 * 60 * 30, // 30 minutos
+  });
+};
+
+// Obtener issues por épica
+export const useIssuesByEpic = (epicId: string | undefined) => {
+  return useQuery({
+    queryKey: queryKeys.epicIssues(epicId || ""),
+    queryFn: async () => {
+      if (!epicId) return [];
+      try {
+        console.log("Fetching issues for epic:", epicId);
+        const response = await apiClient.get(`/issues/by-epic/${epicId}`);
+        return response.data || [];
+      } catch (error) {
+        console.error("Error fetching epic issues:", error);
+        return [];
+      }
+    },
+    enabled: Boolean(epicId),
+    staleTime: 1000 * 60 * 5, // 5 minutos
+  });
+};
+
+// Obtener épicas por product backlog
+export const useEpicsByProductBacklog = (productBacklogId: string | undefined) => {
+  return useQuery({
+    queryKey: queryKeys.epics(productBacklogId || ""),
+    queryFn: async () => {
+      if (!productBacklogId) {
+        console.log("useEpicsByProductBacklog: No productBacklogId provided");
+        return [];
+      }
+      try {
+        console.log("Fetching epics for product backlog:", productBacklogId);
+        const response = await apiClient.get(`/epics/get-by-backlog/${productBacklogId}`);
+        const epics = response.data || [];
+        console.log(`Found ${epics.length} epics for backlog ${productBacklogId}:`, epics.map((epic: any) => ({
+          id: epic.id,
+          name: epic.name || epic.title,
+          status: epic.status
+        })));
+        return epics;
+      } catch (error: any) {
+        console.error("Error fetching epics for backlog", productBacklogId, ":", error);
+        console.error("Error details:", {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          message: error.message
+        });
+        throw error; // Re-throw to let React Query handle the error
+      }
+    },
+    enabled: Boolean(productBacklogId),
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    retry: (failureCount, error: any) => {
+      // Don't retry on 404 errors
+      if (error?.response?.status === 404) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
 }; 

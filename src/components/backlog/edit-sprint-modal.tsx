@@ -29,7 +29,6 @@ export function EditSprintModal({
   const [editSprintEndDate, setEditSprintEndDate] = useState<Date>();
   const [editSprintGoal, setEditSprintGoal] = useState("");
 
-  // Update form state when sprint changes
   useEffect(() => {
     if (sprint) {
       setEditSprintName(sprint.name);
@@ -58,12 +57,12 @@ export function EditSprintModal({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] dark:bg-gray-800 dark:border-gray-700">
         <DialogHeader>
-          <DialogTitle className="dark:text-gray-200">Editar sprint</DialogTitle>
+          <DialogTitle className="dark:text-gray-200">Edit Sprint</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="edit-sprint-name" className="text-right dark:text-gray-200">
-              Nombre
+              Name
             </Label>
             <Input
               id="edit-sprint-name"
@@ -73,7 +72,7 @@ export function EditSprintModal({
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right dark:text-gray-200">Fecha inicio</Label>
+            <Label className="text-right dark:text-gray-200">Start Date</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -84,7 +83,7 @@ export function EditSprintModal({
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {editSprintStartDate ? format(editSprintStartDate, "PPP") : <span>Seleccionar fecha</span>}
+                  {editSprintStartDate ? format(editSprintStartDate, "PPP") : <span>Select date</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 dark:bg-gray-800 dark:border-gray-700">
@@ -98,7 +97,7 @@ export function EditSprintModal({
             </Popover>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right dark:text-gray-200">Fecha fin</Label>
+            <Label className="text-right dark:text-gray-200">End Date</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -109,7 +108,7 @@ export function EditSprintModal({
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {editSprintEndDate ? format(editSprintEndDate, "PPP") : <span>Seleccionar fecha</span>}
+                  {editSprintEndDate ? format(editSprintEndDate, "PPP") : <span>Select date</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 dark:bg-gray-800 dark:border-gray-700">
@@ -119,7 +118,7 @@ export function EditSprintModal({
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="edit-sprint-goal" className="text-right dark:text-gray-200">
-              Meta
+              Goal
             </Label>
             <Textarea
               id="edit-sprint-goal"
@@ -136,17 +135,17 @@ export function EditSprintModal({
             onClick={() => onOpenChange(false)}
             className="dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
           >
-            Cancelar
+            Cancel
           </Button>
           <Button 
             type="submit" 
             onClick={handleSaveSprintEdit}
             className="dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
           >
-            Guardar cambios
+            Save Changes
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-} 
+}

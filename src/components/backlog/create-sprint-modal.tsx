@@ -28,7 +28,6 @@ export function CreateSprintModal({
       goal: sprintGoal
     });
 
-    // Reset form
     setSprintName("");
     setSprintGoal("");
     onOpenChange(false);
@@ -38,25 +37,25 @@ export function CreateSprintModal({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] dark:bg-gray-800 dark:border-gray-700">
         <DialogHeader>
-          <DialogTitle className="dark:text-gray-200">Crear nuevo sprint</DialogTitle>
+          <DialogTitle className="dark:text-gray-200">Create New Sprint</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="sprint-name" className="text-right dark:text-gray-200">
-              Nombre
+              Name
             </Label>
             <Input
               id="sprint-name"
               value={sprintName}
               onChange={(e) => setSprintName(e.target.value)}
               className="col-span-3 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:placeholder:text-gray-500"
-              placeholder="Nombre del sprint"
+              placeholder="Sprint name"
               required
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="sprint-goal" className="text-right dark:text-gray-200">
-              Meta
+              Goal
             </Label>
             <Textarea
               id="sprint-goal"
@@ -73,7 +72,7 @@ export function CreateSprintModal({
             onClick={() => onOpenChange(false)}
             className="dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
           >
-            Cancelar
+            Cancel
           </Button>
           <Button 
             type="submit" 
@@ -81,10 +80,10 @@ export function CreateSprintModal({
             className="dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             disabled={!sprintName.trim()}
           >
-            Crear
+            Create
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-} 
+}

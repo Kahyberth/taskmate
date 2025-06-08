@@ -48,8 +48,8 @@ export const InviteMembersDialog = ({ open, team, onOpenChange }: InviteMembersD
       })
 
       notifications.show({
-        title: "Invitación enviada",
-        message: `Se ha enviado una invitación a ${inviteeEmail}`,
+        title: "Invitation sent",
+        message: `An invitation has been sent to ${inviteeEmail}`,
         color: "blue",
       })
 
@@ -60,7 +60,7 @@ export const InviteMembersDialog = ({ open, team, onOpenChange }: InviteMembersD
       if (axios.isAxiosError(error)) {
         const message =
           error.code === "ECONNABORTED"
-            ? "No se pudo establecer conexión con el servidor. Inténtalo de nuevo más tarde."
+            ? "Could not connect to the server. Please try again later."
             : error.response?.data?.message || error.message
 
         notifications.show({
@@ -70,8 +70,8 @@ export const InviteMembersDialog = ({ open, team, onOpenChange }: InviteMembersD
         })
       } else {
         notifications.show({
-          title: "Error desconocido",
-          message: "Ocurrió un error inesperado. Inténtalo de nuevo más tarde.",
+          title: "Unknown error",
+          message: "An unexpected error occurred. Please try again later.",
           color: "red",
         })
       }
@@ -85,26 +85,26 @@ export const InviteMembersDialog = ({ open, team, onOpenChange }: InviteMembersD
       <DialogTrigger asChild>
         <Button className="w-full bg-gradient-to-r from-indigo-400 to-purple-600 hover:from-indigo-500 hover:to-purple-700 dark:from-indigo-600 dark:to-purple-900 dark:hover:from-indigo-600 dark:hover:to-purple-600">
           <Mail className="mr-2 h-4 w-4" />
-          Invitar miembros
+          Invite members
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md bg-white text-black border-gray-200 dark:bg-[#170f3e] dark:text-white dark:border-white/10">
         <DialogHeader>
-          <DialogTitle>Invitar miembros</DialogTitle>
+          <DialogTitle>Invite members</DialogTitle>
           <DialogDescription className="text-gray-600 dark:text-white/70">
-            Invita a nuevos miembros a unirse a tu equipo {team?.name || ""}.
+            Invite new members to join your team {team?.name || ""}.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmitInvitation}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="email" className="text-black dark:text-white">
-                Correo electrónico
+                Email address
               </Label>
               <Input
                 id="email"
                 name="email"
-                placeholder="nombre@ejemplo.com"
+                placeholder="name@example.com"
                 type="email"
                 value={inviteeEmail}
                 onChange={(e) => setInviteeEmail(e.target.value)}
@@ -114,11 +114,11 @@ export const InviteMembersDialog = ({ open, team, onOpenChange }: InviteMembersD
             </div>
             <div className="grid gap-2">
               <Label htmlFor="role" className="text-black dark:text-white">
-                Rol
+                Role
               </Label>
               <Select onValueChange={(value) => setRole(value)} value={role}>
                 <SelectTrigger className="bg-white border border-gray-300 text-black dark:bg-white/5 dark:border-white/10 dark:text-white">
-                  <SelectValue placeholder="Selecciona un rol" />
+                  <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent className="dark:bg-[#1f1b3a] dark:text-white">
                   {roles.map((r, i) => (
@@ -137,14 +137,14 @@ export const InviteMembersDialog = ({ open, team, onOpenChange }: InviteMembersD
               onClick={() => onOpenChange(false)}
               className="border border-gray-300 bg-white text-black hover:bg-gray-100 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
             >
-              Cancelar
+              Cancel
             </Button>
             <Button
               type="submit"
               disabled={isLoading}
               className="bg-gradient-to-r from-indigo-400 to-purple-600 hover:from-indigo-500 hover:to-purple-700 text-white dark:from-indigo-600 dark:to-purple-900 dark:hover:from-indigo-600 dark:hover:to-purple-600"
             >
-              {isLoading ? "Enviando..." : "Invitar"}
+              {isLoading ? "Sending..." : "Invite"}
             </Button>
           </DialogFooter>
         </form>

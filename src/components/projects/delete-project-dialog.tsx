@@ -7,10 +7,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/api/client-gateway";
 import { notifications } from "@mantine/notifications";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useDeleteProject } from "@/api/queries";
 
 interface DeleteProjectDialogProps {
   project: any;
@@ -27,11 +27,13 @@ export function DeleteProjectDialog({
 }: DeleteProjectDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
+  const deleteProjectMutation = useDeleteProject();
 
   const confirmDeleteProject = async () => {
     if (isDeleting || !project) return;
-    
+  
     setIsDeleting(true);
+  
     try {
       const notificationId = notifications.show({
         loading: true,
@@ -41,25 +43,37 @@ export function DeleteProjectDialog({
         autoClose: false,
         withCloseButton: false,
       });
+  
+      await deleteProjectMutation.mutateAsync(project.id);
 
-      await apiClient.delete(`/projects/${project.id}`);
+      if (project.createdBy) {
+        queryClient.invalidateQueries({ 
+          queryKey: ["projects", project.createdBy] 
+        });
+      }
+    
+      const queryCache = queryClient.getQueryCache();
+      const queries = queryCache.findAll();
       
-      // Close dialog first
-      onOpenChange(false);
-      
+      queries.forEach(query => {
+        const queryKey = query.queryKey;
+        if (Array.isArray(queryKey) && queryKey[0] === "projects") {
+          queryClient.invalidateQueries({ queryKey });
+        }
+      });
+  
       notifications.update({
         id: notificationId,
+        loading: false,
         title: "Project Deleted Successfully",
         message: "Your project has been deleted.",
         color: "green",
         autoClose: 2000,
         withCloseButton: true,
       });
-      
-      // Invalidate projects cache to refresh the list
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      
-      // Call the callback if provided
+  
+      onOpenChange(false);
+  
       if (onProjectDeleted) {
         onProjectDeleted();
       }
@@ -73,7 +87,7 @@ export function DeleteProjectDialog({
     } finally {
       setIsDeleting(false);
     }
-  };
+  };  
 
   return (
     <Dialog 
@@ -86,10 +100,10 @@ export function DeleteProjectDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>¿Estás seguro de que quieres eliminar este proyecto?</DialogTitle>
+          <DialogTitle>Are you sure you want to delete this project?</DialogTitle>
           <DialogDescription>
-            Esta acción no se puede deshacer. Se eliminará permanentemente el proyecto
-            y todos sus datos asociados.
+            This action cannot be undone. This will permanently delete the project
+            and all its associated data.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -99,7 +113,7 @@ export function DeleteProjectDialog({
             onClick={() => onOpenChange(false)}
             disabled={isDeleting}
           >
-            Cancelar
+            Cancel
           </Button>
           <Button
             type="button"
@@ -107,10 +121,10 @@ export function DeleteProjectDialog({
             onClick={confirmDeleteProject}
             disabled={isDeleting}
           >
-            {isDeleting ? "Eliminando..." : "Eliminar"}
+            {isDeleting ? "Deleting..." : "Delete"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-} 
+}

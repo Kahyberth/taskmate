@@ -1,9 +1,5 @@
 "use client"
 
-// This is an example of how you might want to update the TeamActionsDropdown component
-// to match the new styling if needed. You would need to replace your existing component
-// with this updated version.
-
 import { MoreHorizontal, Edit, Trash, LogOut, LinkIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -57,7 +53,7 @@ export const TeamActionsDropdown = ({
               }}
             >
               <Edit className="mr-2 h-4 w-4" />
-              Editar equipo
+              Edit team
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10"
@@ -67,7 +63,7 @@ export const TeamActionsDropdown = ({
               }}
             >
               <LinkIcon className="mr-2 h-4 w-4" />
-              Copiar enlace de invitación
+              Copy invite link
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-gray-200 dark:bg-white/10" />
             <DropdownMenuItem
@@ -79,7 +75,7 @@ export const TeamActionsDropdown = ({
               disabled={loading}
             >
               <Trash className="mr-2 h-4 w-4" />
-              Eliminar equipo
+              Delete team
             </DropdownMenuItem>
           </>
         ) : (
@@ -92,7 +88,7 @@ export const TeamActionsDropdown = ({
               }}
             >
               <LinkIcon className="mr-2 h-4 w-4" />
-              Copiar enlace de invitación
+              Copy invite link
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-gray-200 dark:bg-white/10" />
             <DropdownMenuItem
@@ -104,7 +100,7 @@ export const TeamActionsDropdown = ({
               disabled={loading}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Salir del equipo
+              Leave team
             </DropdownMenuItem>
           </>
         )}

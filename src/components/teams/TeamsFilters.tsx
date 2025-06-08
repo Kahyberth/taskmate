@@ -57,7 +57,6 @@ export function TeamsFilters({ filterValue, setFilterValue, searchQuery, setSear
           <SelectContent>
             <SelectItem value="name">Sort by Name</SelectItem>
             <SelectItem value="members">Sort by Members</SelectItem>
-            {/* <SelectItem value="activity">Sort by Activity</SelectItem> */}
           </SelectContent>
         </Select>
       </div>

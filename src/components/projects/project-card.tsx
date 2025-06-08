@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/api/client-gateway";
 import { useUpdateProject, useProjectStats } from "@/api/queries";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Calendar, MoreHorizontal, Check } from "lucide-react";
@@ -35,7 +36,7 @@ export const ProjectCard = ({
 }: {
   project: any;
   onProjectDeleted?: () => void;
-  onProjectUpdated?: () => void;
+  onProjectUpdated?: (updatedProject: any) => void;
 }) => {
   const navigate = useNavigate();
   const [creator, setCreator] = useState<{
@@ -46,17 +47,14 @@ export const ProjectCard = ({
   const [currentStatus, setCurrentStatus] = useState(project.status);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
-
-  // Project update mutation
+  
   const updateProjectMutation = useUpdateProject();
 
-  // Obtener las estadísticas del proyecto (total, completados, progreso)
-  const {
-    data: projectStats = { total: 0, completed: 0, progress: 0 },
-    isLoading: loadingStats,
+  const { 
+    data: projectStats = { total: 0, completed: 0, progress: 0 }, 
+    isLoading: loadingStats
   } = useProjectStats(project.id);
 
-  // Solo cargar el creador del proyecto cuando el componente se monta
   useEffect(() => {
     const fetchCreator = async () => {
       if (project.createdBy) {
@@ -81,12 +79,10 @@ export const ProjectCard = ({
     fetchCreator();
   }, [project.createdBy]);
 
-  // Update local status when project prop changes
   useEffect(() => {
     setCurrentStatus(project.status);
   }, [project.status]);
 
-  // Obtener las iniciales del nombre completo del creador
   const getInitials = () => {
     if (!creator) return loading ? "" : "?";
 
@@ -96,7 +92,6 @@ export const ProjectCard = ({
     return (firstInitial + lastInitial).toUpperCase();
   };
 
-  // Obtener el nombre completo del creador
   const getCreatorName = () => {
     if (loading) return <Skeleton className="h-4 w-24" />;
     if (!creator) return "Unknown user";
@@ -121,10 +116,14 @@ export const ProjectCard = ({
     e.stopPropagation();
     const isCompleted = currentStatus === "completed";
     const newStatus = isCompleted ? "in-progress" : "completed";
-
-    // Update local state immediately
+    
     setCurrentStatus(newStatus);
-
+    
+    const updatedProject = {
+      ...project,
+      status: newStatus
+    };
+    
     updateProjectMutation.mutate(
       {
         id: project.id,
@@ -133,15 +132,40 @@ export const ProjectCard = ({
       },
       {
         onSuccess: () => {
-          toast.success(
-            `Project marked as ${
-              isCompleted ? "in progress" : "completed"
-            } successfully`
+          queryClient.setQueryData(
+            ["userProjects", project.createdBy],
+            (oldData: any) => {
+              if (!oldData) return oldData;
+              
+              if (oldData.projects) {
+                const updatedProjects = oldData.projects.map((p: any) =>
+                  p.id === project.id ? { ...p, status: newStatus } : p
+                );
+                return { ...oldData, projects: updatedProjects };
+              }
+              
+              if (Array.isArray(oldData)) {
+                return oldData.map((p: any) =>
+                  p.id === project.id ? { ...p, status: newStatus } : p
+                );
+              }
+              
+              return oldData;
+            }
           );
-          if (onProjectUpdated) onProjectUpdated();
+          
+          queryClient.setQueryData(
+            ["project", project.id],
+            (oldData: any) => {
+              if (!oldData) return oldData;
+              return { ...oldData, status: newStatus };
+            }
+          );
+          
+          if (onProjectUpdated) onProjectUpdated(updatedProject);
         },
         onError: (error) => {
-          // Revert local state if mutation fails
+          // Revertir el cambio en caso de error
           setCurrentStatus(currentStatus);
           console.error("Error updating project status:", error);
           toast.error(`Failed to update project status`);
@@ -262,8 +286,7 @@ export const ProjectCard = ({
         </CardFooter>
       </Card>
 
-      {/* Componentes de diálogo separados */}
-      <DeleteProjectDialog
+      <DeleteProjectDialog 
         project={project}
         open={showDeleteConfirmation}
         onOpenChange={setShowDeleteConfirmation}
@@ -274,7 +297,11 @@ export const ProjectCard = ({
         project={project}
         open={showEditForm}
         onOpenChange={setShowEditForm}
-        onProjectUpdated={onProjectUpdated}
+        onProjectUpdated={(updatedProject) => {
+          if (onProjectUpdated && updatedProject) {
+            onProjectUpdated(updatedProject);
+          }
+        }}
       />
     </>
   );

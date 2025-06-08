@@ -15,7 +15,6 @@ import { TeamsProvider } from "@/context/TeamsContext";
 import TeamDashboard from "@/pages/teams/dashboard/page";
 import RegisterPage from "@/pages/register/page";
 import TeamChatPage from "@/pages/teams/dashboard/TeamChatPage";
-import TimeTackingPage from "@/pages/teams/dashboard/TimeTackingPage";
 import Layout from "@/layouts/dashboard/layout";
 import ProjectsPage from "@/pages/projects/page";
 import ProjectManagement from "@/components/backlog/project-management";
@@ -77,7 +76,6 @@ function AppRoutes() {
         >
           <Route index element={<TeamDashboard />} />
           <Route path="chat" element={<TeamChatPage />} />
-          <Route path="time-tracking" element={<TimeTackingPage />} />
         </Route>
 
         <Route
@@ -112,11 +110,7 @@ function AppRoutes() {
 
         <Route
           path="/invitation"
-          element={
-            <PublicRoute>
-              <InvitationVerify />
-            </PublicRoute>
-          }
+          element={<InvitationVerify />}
         />
 
         <Route

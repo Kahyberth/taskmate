@@ -1,7 +1,6 @@
 import { Check } from 'lucide-react';
 import { ScrollReveal } from './scroll-reveal';
 
-// Tipos para las props del componente
 type FeatureCardProps = {
   title: string;
   description: string;
@@ -44,7 +43,6 @@ export const FeatureCard = ({
       hover:shadow-purple-900/20 dark:hover:shadow-purple-900/20 
       relative
     ">
-      {/* Decorative corner elements */}
       <div className={`absolute top-0 right-0 w-12 h-12 bg-gradient-to-br from-${decorativeColor}/20 dark:from-${decorativeColor}/10 to-transparent rounded-bl-3xl`}></div>
       <div className={`absolute bottom-0 left-0 w-8 h-8 border-b border-l border-${decorativeColor}/20 dark:border-${decorativeColor}/10 rounded-tr-xl`}></div>
 
@@ -80,7 +78,7 @@ export const FeatureCard = ({
               bg-${gradientFrom}/20 dark:bg-${gradientFrom}/10 
               text-${hoverTextColor}
             `}>
-              Nuevo
+              New
             </span>
           )}
         </h3>
@@ -99,7 +97,7 @@ export const FeatureCard = ({
         </ul>
       </div>
       
-      <div className="mt-auto">
+      {/* <div className="mt-auto">
         <div className="h-48 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-t from-gray-100 dark:from-[#170f3e] to-transparent z-10"></div>
           <img
@@ -108,7 +106,7 @@ export const FeatureCard = ({
             className="object-cover group-hover:scale-105 transition-transform duration-700"
           />
         </div>
-      </div>
+      </div> */}
     </div>
   </ScrollReveal>
 );

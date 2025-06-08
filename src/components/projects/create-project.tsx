@@ -20,7 +20,6 @@ import { useCreateProject } from "@/api/queries";
 export const CreateProjectForm = ({ onClose }: { onClose: () => void }) => {
   const [projectName, setProjectName] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState("SCRUM");
   const [tags, setTags] = useState("");
 
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
@@ -29,14 +28,10 @@ export const CreateProjectForm = ({ onClose }: { onClose: () => void }) => {
   const { user } = useContext(AuthContext);
   const { teams, loading } = useTeams();
 
-  // Usar el hook de mutación de React Query para crear proyectos
   const createProjectMutation = useCreateProject();
 
-  // Obtener el equipo seleccionado de la lista de equipos
   const currentTeam = selectedTeam ? teams?.find(team => team.id === selectedTeam) : null;
   
-  // Los miembros ya están disponibles en el team desde el context
-  // Filter out the current user from the team members list
   const teamMembers = currentTeam?.members?.filter(member => member.member.id !== user?.id) || [];
 
   const toggleMember = (id: string) => {
@@ -66,63 +61,54 @@ export const CreateProjectForm = ({ onClose }: { onClose: () => void }) => {
       return;
     }
 
-    try {
-      const notificationId = notifications.show({
-        loading: true,
-        title: "Creating Project...",
-        message: "Please wait while we create your project.",
-        color: "green",
-        autoClose: false,
-        withCloseButton: false,
-      });
+    const notificationId = notifications.show({
+      loading: true,
+      title: "Creating Project...",
+      message: "Please wait while we create your project.",
+      color: "green",
+      autoClose: false,
+      withCloseButton: false,
+    });
 
-      const projectData = {
-        name: projectName,
-        description,
-        created_by: user?.id,
-        team_id: selectedTeam,
-        tags: tags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter((tag) => tag),
-        type,
-        members: selectedMembers,
-      };
+    const projectData = {
+      name: projectName,
+      description,
+      created_by: user?.id,
+      team_id: selectedTeam,
+      tags: tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag),
+      type: "SCRUM",
+      members: selectedMembers,
+    };
 
-      // Usar la mutación de React Query para crear el proyecto
-      await createProjectMutation.mutateAsync(projectData, {
-        onSuccess: () => {
-          notifications.update({
-            id: notificationId,
-            title: "Project Created Successfully",
-            message: "Your project has been created successfully.",
-            color: "green",
-            autoClose: 2000,
-            withCloseButton: true,
-          });
-          // Cerrar el diálogo y notificar al padre que debe actualizar
-          onClose();
-        },
-        onError: (error) => {
-          console.error("Error creating project:", error);
-          notifications.update({
-            id: notificationId,
-            title: "Error",
-            message: "Failed to create project. Please try again.",
-            color: "red",
-            autoClose: 2000,
-            withCloseButton: true,
-          });
-        }
-      });
-    } catch (error) {
-      console.error("Error creating project:", error);
-      notifications.show({
-        title: "Error",
-        message: "Failed to create project. Please try again.",
-        color: "red",
-      });
-    }
+    await createProjectMutation.mutateAsync(projectData, {
+      onSuccess: () => {
+        notifications.update({
+          id: notificationId,
+          loading: false,
+          title: "Project Created Successfully",
+          message: "Your project has been created successfully.",
+          color: "green",
+          autoClose: 2000,
+          withCloseButton: true,
+        });
+        onClose();
+      },
+      onError: (error: any) => {
+        console.error("Error creating project:", error);
+        notifications.update({
+          id: notificationId,
+          loading: false,
+          title: "Error", 
+          message: error.response.data.message || "Failed to create project. Please try again.",
+          color: "red",
+          autoClose: 3000,
+          withCloseButton: true,
+        });
+      }
+    });
   };
 
   return (
@@ -148,7 +134,7 @@ export const CreateProjectForm = ({ onClose }: { onClose: () => void }) => {
         />
       </div>
 
-      <div className="space-y-2">
+      {/* <div className="space-y-2">
         <Label htmlFor="type">Project Type</Label>
         <Select value={type} onValueChange={setType}>
           <SelectTrigger id="type">
@@ -160,7 +146,7 @@ export const CreateProjectForm = ({ onClose }: { onClose: () => void }) => {
             <SelectItem value="WATERFALL">WATERFALL</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </div> */}
 
       <div className="space-y-2">
         <Label htmlFor="tags">Tags</Label>

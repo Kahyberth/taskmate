@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TaskChart } from "@/components/dashboard/widgets/task-chart";
 import { ProjectProgressChart } from "./project-progress-chart";
-import { TimeAllocationChart } from "./time-allocation-chart";
 import { UpcomingTasksChart } from "./upcoming-tasks-chart";
 import { WidgetMenu } from "@/components/dashboard/widgets/widget-menu";
 
@@ -13,6 +12,7 @@ interface WidgetProps {
   onRemove: () => void;
   widgetType: string;  
   label: string;
+  selectedProjectId: string | null;
 }
 
 export function Widget({
@@ -22,22 +22,19 @@ export function Widget({
   onRemove,
   widgetType,
   label,
+  selectedProjectId,
 }: WidgetProps) {
 
   const renderChart = () => {
     switch (widgetType) {
       case "taskCompletion":
-        return <TaskChart />;
+        return <TaskChart selectedProjectId={selectedProjectId} />;
       case "projectProgress":
-        return <ProjectProgressChart />;
+        return <ProjectProgressChart selectedProjectId={selectedProjectId} />;
       case "teamPerformance":
-        return <TaskChart />;
-      case "timeAllocation":
-        return <TimeAllocationChart size={size} />;
+        return <TaskChart selectedProjectId={selectedProjectId} />;
       case "upcomingTasks":
-        return <UpcomingTasksChart />;
-
-     
+        return <UpcomingTasksChart selectedProjectId={selectedProjectId} />;
     }
   };
 

@@ -21,7 +21,6 @@ export default function useTeamService(): UseTeamServiceResponse {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Función genérica para manejar las solicitudes
   const sendRequest = useCallback(async (callback: () => Promise<any>) => {
     setLoading(true);
     setError(null);
@@ -38,9 +37,7 @@ export default function useTeamService(): UseTeamServiceResponse {
   }, []);
 
 
-  // Obtener los equipos de un usuario
   const fetchTeamsByUser = useCallback(async (userId: string, page?: number): Promise<Team[]> => {
-    console.log("Fetching teams for user: ", userId);
     try {
       if(!page) page = 1;
 
@@ -61,7 +58,6 @@ export default function useTeamService(): UseTeamServiceResponse {
             const membersResponse = await apiClient.get(`/teams/get-members-by-team/${team.id}`);
             const members = membersResponse.data;
             
-            // Find the user's role in this team
             const userMembership = members.find((membership: any) => 
               membership.member?.id === userId
             );
@@ -98,7 +94,6 @@ export default function useTeamService(): UseTeamServiceResponse {
   }, []);
 
 
-  // Crear un equipo
   const createTeam = useCallback(
     async (team: CreateTeamDTO) => {
       await sendRequest(() => apiClient.post("/teams/create-team", team))
@@ -106,7 +101,6 @@ export default function useTeamService(): UseTeamServiceResponse {
     [sendRequest]
   );
 
-  // Actualizar un equipo
   const updateTeam = useCallback(
     async (team: UpdateTeamDto) => {
       await sendRequest(() => apiClient.patch(`/teams/update-team`, team))
@@ -114,10 +108,8 @@ export default function useTeamService(): UseTeamServiceResponse {
     [sendRequest]
   );
 
-  // Eliminar un equipo
   const deleteTeam = useCallback(
     async (teamId: string, requesterId: string) => {
-      console.log("Deleting team with id: ", teamId);
       await sendRequest(() => apiClient.delete(`/teams/delete-team/${teamId}`, 
         { data: 
           { requesterId } 
@@ -127,7 +119,6 @@ export default function useTeamService(): UseTeamServiceResponse {
     [sendRequest]
   );
 
-  // Abandonar un equipo
   const leaveTeam = useCallback(
     async (teamId: string, userId: string) => {
       await sendRequest(() => apiClient.post(`/teams/leave-team/${teamId}`, 

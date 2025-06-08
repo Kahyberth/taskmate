@@ -21,10 +21,8 @@ export default function InvitationVerify() {
   const [tokenData, setTokenData] = useState<TokenPayload>();
   const [errorMessage, setErrorMessage] = useState<string>("");
 
-  // Estados para el proceso de aceptación de la invitación
   const [acceptState, setAcceptState] = useState<"idle" | "loading" | "accepted" | "error">("idle");
   const [acceptErrorMessage, setAcceptErrorMessage] = useState<string>("");
-
 
 
   useEffect(() => {
@@ -32,26 +30,23 @@ export default function InvitationVerify() {
       try {
         const token = searchParams.get("token");
         if (!token) {
-          throw new Error("No se encontró el token de invitación");
+          throw new Error("Invitation token not found");
         }
-
-        console.log("token", token);
     
         await apiClient.post(`/teams/validate-invite-link`, { token });
         
         const parts = token.split(".");
         if (parts.length !== 3) {
-          throw new Error("Formato de token inválido");
+          throw new Error("Invalid token format");
         }
         const payload = parts[1];
         const decodedData = JSON.parse(atob(payload)) as TokenPayload;
-        console.log(decodedData);
         setTokenData(decodedData);
         setVerificationState("verified");
       } catch (error) {
         setVerificationState("invalid");
         setErrorMessage(
-          error instanceof Error ? error.message : "Error al verificar el token de invitación"
+          error instanceof Error ? error.message : "Error verifying invitation token"
         );
       }
     };
@@ -65,7 +60,7 @@ export default function InvitationVerify() {
       const token = searchParams.get("token");
 
       if (!token) {
-        throw new Error("No se encontró el token de invitación");
+        throw new Error("Invitation token not found");
       }
       
       await apiClient.post(`/teams/accept-invite`, { token, inviteeEmail: tokenData?.inviteeEmail, roleInTeam: tokenData?.roleInTeam });
@@ -73,7 +68,7 @@ export default function InvitationVerify() {
     } catch (error) {
       setAcceptState("error");
       setAcceptErrorMessage(
-        error instanceof Error ? error.message : "Error al aceptar la invitación"
+        error instanceof Error ? error.message : "Error accepting invitation"
       );
     }
   };
@@ -83,14 +78,14 @@ export default function InvitationVerify() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">TaskMate</CardTitle>
-          <CardDescription>Verificación de Invitación</CardDescription>
+          <CardDescription>Invitation Verification</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center space-y-6">
             {verificationState === "loading" && (
               <div className="flex flex-col items-center space-y-4">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Verificando el token de invitación...</p>
+                <p className="text-sm text-muted-foreground">Verifying invitation token...</p>
               </div>
             )}
 
@@ -100,9 +95,9 @@ export default function InvitationVerify() {
                   <>
                     <CheckCircle2 className="h-12 w-12 text-green-500" />
                     <div className="text-center space-y-2">
-                      <h3 className="font-semibold">Invitación Verificada</h3>
+                      <h3 className="font-semibold">Invitation Verified</h3>
                       <p className="text-sm text-muted-foreground">
-                        Has sido invitado a unirte al equipo <strong>{tokenData.teamId}</strong> como{" "}
+                        You have been invited to join team <strong>{tokenData.teamId}</strong> as{" "}
                         <strong>{tokenData.roleInTeam}</strong>.
                       </p>
                     </div>
@@ -116,11 +111,11 @@ export default function InvitationVerify() {
                         {acceptState === "loading" ? (
                           <Loader2 className="h-5 w-5 animate-spin" />
                         ) : (
-                          "Aceptar e Ingresar al Equipo"
+                          "Accept and Join Team"
                         )}
                       </Button>
                       <Button variant="outline" className="w-full" size="lg">
-                        Rechazar Invitación
+                        Decline Invitation
                       </Button>
                     </div>
                     {acceptState === "error" && (
@@ -130,9 +125,9 @@ export default function InvitationVerify() {
                 ) : (
                   <div className="flex flex-col items-center space-y-4">
                     <CheckCircle2 className="h-12 w-12 text-green-500" />
-                    <h3 className="font-semibold">¡Invitación Aceptada!</h3>
+                    <h3 className="font-semibold">Invitation Accepted!</h3>
                     <p className="text-sm text-muted-foreground">
-                      Te has unido exitosamente al equipo.
+                      You have successfully joined the team.
                     </p>
                   </div>
                 )}
@@ -143,11 +138,11 @@ export default function InvitationVerify() {
               <div className="flex flex-col items-center space-y-4">
                 <XCircle className="h-12 w-12 text-destructive" />
                 <div className="text-center space-y-2">
-                  <h3 className="font-semibold">Invitación Inválida</h3>
+                  <h3 className="font-semibold">Invalid Invitation</h3>
                   <p className="text-sm text-muted-foreground">{errorMessage}</p>
                 </div>
                 <Button variant="outline" className="mt-4" size="lg">
-                  Regresar al Inicio
+                  Return to Home
                 </Button>
               </div>
             )}

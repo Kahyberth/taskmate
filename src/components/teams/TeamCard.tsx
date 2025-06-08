@@ -4,16 +4,24 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Users, LinkIcon } from "lucide-react"
+import { Users, LinkIcon, AlertTriangle } from "lucide-react"
 import type { Team } from "@/lib/store"
 import { TeamActionsDropdown } from "@/components/teams/TeamActionsDropdown"
 import { InviteMembersDialog } from "@/components/teams/InviteMembersDialog"
 import { useContext, useState, useRef, useEffect } from "react"
 import { notifications } from "@mantine/notifications"
-import useTeamService from "@/hooks/useTeamService"
 import { AuthContext } from "@/context/AuthContext"
 import * as Tooltip from "@radix-ui/react-tooltip"
 import { useTeams } from "@/context/TeamsContext"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { useDeleteTeam, useLeaveTeam } from "@/api/queries"
 
 interface TeamCardProps {
   team: Team
@@ -25,11 +33,16 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
   const nameRef = useRef<HTMLDivElement>(null)
   const descRef = useRef<HTMLParagraphElement>(null)
   const [showInviteDialog, setShowInviteDialog] = useState<boolean>(false)
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<boolean>(false)
+  const [teamToDelete, setTeamToDelete] = useState<string | null>(null)
   const { user: user_data } = useContext(AuthContext)
-  const { deleteTeam, leaveTeam, loading, error } = useTeamService()
   const [isNameTruncated, setIsNameTruncated] = useState<boolean>(false)
   const [isDescTruncated, setIsDescTruncated] = useState<boolean>(false)
   const { removeTeam } = useTeams()
+  
+  const deleteTeamMutation = useDeleteTeam()
+  const leaveTeamMutation = useLeaveTeam()
+  const [isLeaving, setIsLeaving] = useState(false)
 
   useEffect(() => {
     if (nameRef.current) {
@@ -42,65 +55,83 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
 
   const handleCopyInviteLink = () => {
     notifications.show({
-      title: "Funcionalidad no disponible",
-      message: "Esta funcionalidad no está disponible aún",
+      title: "Feature not available",
+      message: "This feature is not available yet",
       color: "yellow",
     })
   }
 
-  const handleDeleteTeam = async (teamId: string) => {
-    if (!user_data?.id) {
+  const confirmDeleteTeam = (teamId: string) => {
+    setTeamToDelete(teamId)
+    setShowDeleteConfirmation(true)
+  }
+
+  const handleDeleteTeam = async () => {
+    if (!user_data?.id || !teamToDelete) {
       notifications.show({
-        title: "Error de autenticación",
-        message: "No se encontró el usuario. Inténtalo de nuevo.",
+        title: "Authentication error",
+        message: "User not found. Please try again.",
         color: "red",
       })
       return
     }
 
-    await deleteTeam(teamId, user_data.id)
+    try {
+      setShowDeleteConfirmation(false)
+      
 
-    if (!error) {
+      await deleteTeamMutation.mutateAsync({ 
+        teamId: teamToDelete, 
+        requesterId: user_data.id 
+      })
+      
+      removeTeam(teamToDelete)
+      
       notifications.show({
-        title: "Equipo eliminado",
-        message: "El equipo ha sido eliminado correctamente",
+        title: "Team deleted",
+        message: "The team has been successfully deleted",
         color: "green",
       })
-      removeTeam(teamId)
-    } else if (error) {
+    } catch (err: any) {
       notifications.show({
-        title: "Error al eliminar el equipo",
-        message: error,
+        title: "Error deleting team",
+        message: err?.message || "An unexpected error occurred",
         color: "red",
       })
+    } finally {
+      setTeamToDelete(null)
     }
   }
 
   const handleLeaveTeam = async (teamId: string) => {
     if (!user_data?.id) {
       notifications.show({
-        title: "Error de autenticación",
-        message: "No se encontró el usuario. Inténtalo de nuevo.",
+        title: "Authentication error",
+        message: "User not found. Please try again.",
         color: "red",
       })
       return
     }
 
-    await leaveTeam(teamId, user_data.id)
-
-    if (!error) {
+    try {
+      setIsLeaving(true)
+      console.log("Leaving team", teamId)
+      await leaveTeamMutation.mutateAsync({ teamId, userId: user_data.id })
+      removeTeam(teamId)
+      
       notifications.show({
-        title: "Saliste del equipo",
-        message: "Has salido del equipo correctamente",
+        title: "Left team",
+        message: "You have successfully left the team",
         color: "green",
       })
-      removeTeam(teamId)
-    } else {
+    } catch (err: any) {
       notifications.show({
-        title: "Error al salir del equipo",
-        message: error,
+        title: "Error leaving team",
+        message: err?.message || "An unexpected error occurred",
         color: "red",
       })
+    } finally {
+      setIsLeaving(false)
     }
   }
 
@@ -111,11 +142,13 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
         onClick={() => onClick && onClick(team)}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-violet-900/50 to-transparent h-32" />
-        <img
-          src={team.image || "/placeholder.svg?height=400&width=600"}
-          alt=""
-          className="absolute inset-0 h-32 w-full object-cover"
-        />
+        {team.image && (
+          <img
+            src={team.image}
+            alt=""
+            className="absolute inset-0 h-32 w-full object-cover"
+          />
+        )}
         <CardHeader className="relative pt-36">
           <div className="flex justify-between items-start">
             <div className="max-w-[90%]">
@@ -176,9 +209,9 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
               team={team}
               handleCopyInviteLink={handleCopyInviteLink}
               setTeamToEdit={setTeamToEdit}
-              handleDeleteTeam={handleDeleteTeam}
+              handleDeleteTeam={confirmDeleteTeam}
               handleLeaveTeam={handleLeaveTeam}
-              loading={loading}
+              loading={deleteTeamMutation.isPending || isLeaving}
             />
           </div>
         </CardHeader>
@@ -243,6 +276,36 @@ export const TeamCard = ({ team, setTeamToEdit, onClick }: TeamCardProps) => {
           )}
         </CardFooter>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Confirm Team Deletion
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this team? This action cannot be undone and all team data will be permanently lost.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteConfirmation(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteTeam}
+              disabled={deleteTeamMutation.isPending}
+            >
+              {deleteTeamMutation.isPending ? "Deleting..." : "Delete Team"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

@@ -7,6 +7,7 @@ import {
   verifyToken,
   fetchProfile,
   registerRequest,
+  updateProfile as updateProfileService,
 } from "@/service/authService";
 import { notifications } from "@mantine/notifications";
 import { UserProfile } from "@/interfaces/profile.interface";
@@ -127,6 +128,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const updateProfile = async (profileData: any) => {
+    try {
+      const response = await updateProfileService(profileData);
+      if (response.error) {
+        return { success: false, error: "Failed to update profile" };
+      }
+      await fetchUserProfile(user?.id || "");
+      return { success: true };
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      return { success: false, error: "An error occurred while updating profile" };
+    }
+  };
+
   useEffect(() => {
     verifyUser();
   }, []);
@@ -139,6 +154,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       login,
       register,
       fetchUserProfile,
+      updateProfile,
       userProfile,
       profileLoading,
       isAuthenticated,

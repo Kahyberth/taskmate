@@ -1,10 +1,4 @@
-export interface Projects {
-    id:           string;
-    name:         string;
-    description:  string;
-    status:       string;
-    type:         string;
-    createdBy:    string;
+export interface Projects extends Project {
     is_available: boolean;
     team_id:      string;
     project_key:  string;
@@ -17,6 +11,15 @@ export interface Projects {
     backlog:      null;
     sprint:       any[];
     logging:      any[];
+}
+
+export interface Project {
+    id: string;
+    name: string;
+    description: string;
+    status: string;
+    type: string;
+    createdBy: string;
 }
 
 export interface Member {

@@ -35,3 +35,18 @@ export const fetchProfile = async (user_id: string) => {
     };
   }
 }
+
+export const updateProfile = async (profileData: any) => {
+  try {
+    const response = await apiClient.patch('/auth/profile/update', profileData);
+    return {
+      error: false,
+      data: response.data,
+    };
+  } catch (error) {
+    return {
+      error: true,
+      data: null,
+    };
+  }
+}

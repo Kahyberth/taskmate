@@ -23,21 +23,21 @@ import { AuthContext } from "@/context/AuthContext";
 const formSchema = z
   .object({
     name: z.string().min(2, {
-      message: "El nombre debe tener al menos 2 caracteres.",
+      message: "Name must be at least 2 characters long.",
     }),
     lastName: z.string().min(2, {
-      message: "El apellido debe tener al menos 2 caracteres.",
+      message: "Last name must be at least 2 characters long.",
     }),
     email: z.string().email({
-      message: "Por favor, introduce un email válido.",
+      message: "Please enter a valid email address.",
     }),
     company: z.string().min(2, {
-      message: "El nombre de la empresa debe tener al menos 2 caracteres.",
+      message: "Company name must be at least 2 characters long.",
     }),
     password: z
       .string()
       .min(8, {
-        message: "La contraseña debe tener al menos 8 caracteres.",
+        message: "Password must be at least 8 characters long.",
       })
       .refine(
         (password) => {
@@ -50,13 +50,13 @@ const formSchema = z
         },
         {
           message:
-            "La contraseña debe incluir mayúsculas, minúsculas, números y símbolos.",
+            "Password must include uppercase, lowercase, numbers and symbols.",
         }
       ),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Las contraseñas no coinciden.",
+    message: "Passwords do not match.",
     path: ["confirmPassword"],
   });
 
@@ -122,7 +122,6 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0e0a29] via-[#170f3e] to-[#1e1248] relative overflow-hidden">
-      {/* Grain texture overlay */}
       <div
         className="fixed inset-0 z-10 pointer-events-none opacity-20"
         style={{
@@ -131,7 +130,6 @@ export default function RegisterPage() {
         }}
       ></div>
 
-      {/* Enhanced geometric shapes */}
       <GeometricShapes />
 
       <div className="container mx-auto px-4 py-16 relative z-20">
@@ -142,7 +140,7 @@ export default function RegisterPage() {
               className="inline-flex items-center text-white/70 hover:text-white transition-colors mb-8 group"
             >
               <ArrowLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-              Volver a inicio
+              Back to home
             </Link>
 
             <div className="flex items-center space-x-3 mb-8">
@@ -164,9 +162,7 @@ export default function RegisterPage() {
               </h1>
             </div>
 
-
             <div className="bg-white/5 backdrop-blur-md p-8 rounded-2xl border border-white/10 shadow-xl shadow-purple-900/10 relative overflow-hidden">
-              {/* Decorative corner shapes */}
               <div className="absolute top-0 left-0 w-16 h-16">
                 <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-violet-500/30"></div>
               </div>
@@ -174,34 +170,32 @@ export default function RegisterPage() {
                 <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-fuchsia-500/30"></div>
               </div>
 
-              {/* Success state */}
               {isSuccess ? (
                 <div className="flex flex-col items-center justify-center py-8">
                   <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mb-4 animate-bounce-slow">
                     <CheckCircle className="h-8 w-8 text-white" />
                   </div>
                   <h2 className="text-2xl font-bold text-white mb-2">
-                    ¡Registro exitoso!
+                    Registration successful!
                   </h2>
                   <p className="text-white/70 text-center mb-4">
-                    Tu cuenta ha sido creada correctamente. Serás redirigido en
-                    unos momentos.
+                    Your account has been created successfully. You will be redirected shortly.
                   </p>
                 </div>
               ) : (
                 <>
                   <h1 className="text-2xl font-bold text-white mb-2">
-                    Crear una cuenta
+                    Create an account
                   </h1>
                   <p className="text-white/70 mb-6">
-                    Completa el formulario para comenzar a usar TaskMate
-                    gratuitamente
+                    Complete the form to start using TaskMate for free
                   </p>
 
                   <Form {...form}>
                     <form
                       onSubmit={form.handleSubmit(onSubmit)}
                       className="space-y-5"
+                      noValidate
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <FormField
@@ -210,11 +204,11 @@ export default function RegisterPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-white/80">
-                                Nombre
+                                First Name
                               </FormLabel>
                               <FormControl>
                                 <Input
-                                  placeholder="Tu nombre"
+                                  placeholder="Your first name"
                                   {...field}
                                   className="bg-white/10 border-white/10 focus:border-violet-500 h-10 text-white placeholder:text-white/40"
                                 />
@@ -230,11 +224,11 @@ export default function RegisterPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-white/80">
-                                Apellido
+                                Last Name
                               </FormLabel>
                               <FormControl>
                                 <Input
-                                  placeholder="Tu apellido"
+                                  placeholder="Your last name"
                                   {...field}
                                   className="bg-white/10 border-white/10 focus:border-violet-500 h-10 text-white placeholder:text-white/40"
                                 />
@@ -256,7 +250,7 @@ export default function RegisterPage() {
                             <FormControl>
                               <Input
                                 type="email"
-                                placeholder="tucorreo@empresa.com"
+                                placeholder="youremail@company.com"
                                 {...field}
                                 className="bg-white/10 border-white/10 focus:border-violet-500 h-10 text-white placeholder:text-white/40"
                               />
@@ -272,11 +266,11 @@ export default function RegisterPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-white/80">
-                              Nombre de la empresa
+                              Company Name
                             </FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="Tu empresa"
+                                placeholder="Your company"
                                 {...field}
                                 className="bg-white/10 border-white/10 focus:border-violet-500 h-10 text-white placeholder:text-white/40"
                               />
@@ -292,7 +286,7 @@ export default function RegisterPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-white/80">
-                              Contraseña
+                              Password
                             </FormLabel>
                             <FormControl>
                               <div className="relative">
@@ -327,7 +321,7 @@ export default function RegisterPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-white/80">
-                              Confirmar contraseña
+                              Confirm Password
                             </FormLabel>
                             <FormControl>
                               <div className="relative">
@@ -367,10 +361,10 @@ export default function RegisterPage() {
                         {isSubmitting ? (
                           <span className="flex items-center">
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Registrando...
+                            Creating account...
                           </span>
                         ) : (
-                          "Crear cuenta"
+                          "Create account"
                         )}
                         <span className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0)_0%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0)_100%)] opacity-0 group-hover:opacity-100 animate-shine"></span>
                       </Button>
@@ -379,12 +373,12 @@ export default function RegisterPage() {
 
                   <div className="mt-6 text-center">
                     <p className="text-white/60 text-sm">
-                      ¿Ya tienes una cuenta?{" "}
+                      Already have an account?{" "}
                       <Link
                         to="/"
                         className="text-violet-400 hover:text-violet-300 transition-colors"
                       >
-                        Iniciar sesión
+                        Sign in
                       </Link>
                     </p>
                   </div>

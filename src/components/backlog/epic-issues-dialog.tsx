@@ -1,22 +1,18 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Task } from "@/interfaces/task.interface";
 import { Epic } from "@/interfaces/epic.interface";
 import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useEffect, useState } from "react";
-import { apiClient } from "@/api/client-gateway";
+import { getPriorityColor, getStatusColor, getStatusDisplayText } from "@/lib/utils";
 
 interface EpicIssuesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   epic: Epic | null;
+  issuesbyepic: Task[];
   onEditTask: (task: Task) => void;
   onStatusChange: (taskId: string, status: Task["status"]) => void;
-  getPriorityColor: (priority?: string) => string;
-  getTypeColor: (type?: string) => string;
-  getStatusColor: (status: string) => string;
-  getStatusDisplayText: (status: string) => string;
   getAssignedUser: (userId?: string) => { initials: string } | null;
 }
 
@@ -24,44 +20,37 @@ export function EpicIssuesDialog({
   open,
   onOpenChange,
   epic,
+  issuesbyepic,
   onEditTask,
-  getPriorityColor,
-  getStatusColor,
-  getStatusDisplayText,
   getAssignedUser,
 }: EpicIssuesDialogProps) {
   if (!epic) return null;
 
-  const [issuesbyepic, setIssuesbyepic] = useState<Task[]>([]);
-
-  useEffect(() => {
-    console.log("Fetching issues by epic:", epic.id); 
-    const fetchIssuesbyepic = async () => {
-      const response = await apiClient.get(`/issues/by-epic/${epic.id}`);
-      setIssuesbyepic(response.data);
-    }
-    fetchIssuesbyepic();
-  }, [epic]);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-4xl max-h-[80vh] overflow-y-auto"
+        aria-describedby="epic-issues-description"
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <div className="w-4 h-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600" />
             {epic.name}
           </DialogTitle>
+          <DialogDescription id="epic-issues-description">
+            Tasks associated with the epic {epic.name}
+          </DialogDescription>
         </DialogHeader>
-        
+
         <div className="mt-4">
           {issuesbyepic.length === 0 ? (
             <div className="text-center text-gray-500 dark:text-gray-400 py-4">
-              No hay tareas asociadas a esta épica
+              There are no tasks associated with this epic
             </div>
           ) : (
             <div className="space-y-2">
               {issuesbyepic.map((task) => (
-                <div 
+                <div
                   key={task.id}
                   className="flex items-center gap-4 p-3 border border-black/10 dark:border-white/10 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800/50"
                 >
@@ -104,4 +93,4 @@ export function EpicIssuesDialog({
       </DialogContent>
     </Dialog>
   );
-} 
+}

@@ -11,21 +11,20 @@ export function TeamsHeader() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Equipos</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Teams</h1>
           <p className="text-muted-foreground">
-            Gestiona tus equipos y colabora con otros miembros
+            Manage your teams and collaborate with other members
           </p>
         </div>
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Nuevo Equipo
+          New Team
         </Button>
       </div>
 
       <CreateTeamDialog
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
-        
       />
     </div>
   )

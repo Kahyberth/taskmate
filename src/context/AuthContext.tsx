@@ -21,7 +21,8 @@ export interface AuthContextType {
   loading: boolean;
   profileLoading: boolean;
   userProfile: UserProfile | null;
-  fetchUserProfile: (user_id: string) => Promise<void>
+  fetchUserProfile: (user_id: string) => Promise<void>;
+  updateProfile: (profileData: any) => Promise<{ success: boolean; error?: string | null }>;
 }
 
 
@@ -33,6 +34,7 @@ export const AuthContext = createContext<AuthContextType>({
   login: async () => ({ success: false }),
   register: async () => ({ success: false }),
   fetchUserProfile: async () => {},
+  updateProfile: async () => ({ success: false }),
   isAuthenticated: false,
   profileLoading: true,
   userProfile: null,

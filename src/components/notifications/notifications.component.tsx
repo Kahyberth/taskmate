@@ -76,11 +76,29 @@
 //   );
 // }; 
 
+import { Bell } from "lucide-react";
+import { Button } from "@/components/ui/button"; // Asegúrate de tener este import si usas un botón personalizado
+import { notifications } from "@mantine/notifications";
 
 export const NotificationsComponent = () => {
+  const handleClick = () => {
+    notifications.show({
+      title: "Feature not available",
+      message: "This functionality is not available yet",
+      color: "yellow",
+    });
+  };
+
   return (
     <div>
-      <h1>Notifications</h1>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handleClick}
+        className="hover:bg-black/10 dark:hover:bg-white/10 relative dark:text-white text-black"
+      >
+        <Bell className="h-5 w-5" />
+      </Button>
     </div>
   );
 };

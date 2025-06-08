@@ -17,7 +17,7 @@ export function EpicBadge({ epic }: EpicBadgeProps) {
           </div>
         </TooltipTrigger>
         <TooltipContent side="top" align="center" className="dark:bg-gray-800 dark:text-gray-200">
-          <p className="font-medium">Épica: {epic.name}</p>
+          <p className="font-medium">Epic: {epic.name}</p>
           {epic.description && <p className="text-xs dark:text-gray-400">{epic.description}</p>}
         </TooltipContent>
       </Tooltip>

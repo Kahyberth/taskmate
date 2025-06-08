@@ -17,7 +17,6 @@ export default function TeamDashboard() {
   const [teamInfo, setTeamInfo] = useState<any>(null);
   const { team_id } = useParams<{ team_id: string }>();
 
-  // Función para manejar la carga de un nuevo banner
   const handleBannerUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -30,7 +29,6 @@ export default function TeamDashboard() {
     }
   };
 
-  // Función para eliminar el banner
   const removeBanner = () => {
     setBannerImage(null);
   };
@@ -54,7 +52,6 @@ export default function TeamDashboard() {
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] pointer-events-none" />
 
       <div className="container max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Banner personalizable */}
         <div className="relative mb-8 rounded-xl overflow-hidden shadow-lg">
           <div
             className={`h-48 sm:h-56 md:h-64 w-full bg-gradient-to-r from-primary/30 to-primary/10 flex items-center justify-center relative ${
@@ -68,7 +65,7 @@ export default function TeamDashboard() {
               <div className="text-center">
                 <MountainIcon className="h-16 w-16 text-primary/40 mx-auto mb-2" />
                 <p className="text-muted-foreground">
-                  Banner personalizable del equipo
+                  Customizable team banner
                 </p>
               </div>
             )}
@@ -82,10 +79,10 @@ export default function TeamDashboard() {
                   <Upload className="h-8 w-8 text-primary" />
                 </label>
                 <p className="text-sm font-medium">
-                  Arrastra una imagen o haz clic para seleccionar
+                  Drag an image or click to select
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Recomendado: 1200 x 300 px
+                  Recommended: 1200 x 300 px
                 </p>
                 <input
                   id="banner-upload"
@@ -107,7 +104,7 @@ export default function TeamDashboard() {
                     onClick={() => setIsEditingBanner(true)}
                   >
                     <Camera className="h-4 w-4 mr-2" />
-                    Cambiar
+                    Change
                   </Button>
                   <Button
                     size="sm"
@@ -116,7 +113,7 @@ export default function TeamDashboard() {
                     onClick={removeBanner}
                   >
                     <X className="h-4 w-4 mr-2" />
-                    Eliminar
+                    Remove
                   </Button>
                 </>
               ) : (
@@ -127,7 +124,7 @@ export default function TeamDashboard() {
                   onClick={() => setIsEditingBanner(true)}
                 >
                   <Camera className="h-4 w-4 mr-2" />
-                  {isEditingBanner ? "Cancelar" : "Añadir banner"}
+                  {isEditingBanner ? "Cancel" : "Add banner"}
                 </Button>
               )}
             </div>
@@ -144,17 +141,17 @@ export default function TeamDashboard() {
           <div>
             <div className="flex items-center">
               <Badge className="mr-2 bg-primary/20 text-primary hover:bg-primary/30 transition-colors">
-                Equipo Activo
+                Active Team
               </Badge>
               <Badge variant="outline" className="bg-background">
-                12 miembros
+                12 members
               </Badge>
             </div>
             <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent mt-1">
               Team Dashboard
             </h1>
             <p className="text-muted-foreground mt-1">
-              Gestiona tu equipo, proyectos y colaboración efectiva
+              Manage your team, projects and effective collaboration
             </p>
           </div>
         </header>

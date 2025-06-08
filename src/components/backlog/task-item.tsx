@@ -1,7 +1,7 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Edit, Trash, ChevronDown, MoveRight, Loader2, Bug, FileText, Sparkles, GitBranch, BookOpen, Lightbulb } from "lucide-react";
+import { Edit, Trash, ChevronDown, MoveRight, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,7 +9,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Task } from "@/interfaces/task.interface";
-import { Epic } from "@/interfaces/epic.interface";
 import { useState } from "react";
 import {
   Tooltip,
@@ -29,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { EpicBadge } from "./epic-badge";
 import { IssueDetailModal } from "./issue-detail-modal";
+import { getTypeIcon, getPriorityColor, getStatusColor, getStatusDisplayText } from "@/lib/utils";
 
 interface TaskItemProps {
   task: Task;
@@ -38,14 +38,9 @@ interface TaskItemProps {
   onMoveToBacklog?: (taskId: string) => void;
   onDeleteTask?: (taskId: string) => void;
   availableSprints?: { id: string; name: string }[];
-  getPriorityColor: (priority?: string) => string;
-  getTypeColor: (type?: string) => string;
-  getStatusColor: (status: string) => string;
-  getStatusDisplayText: (status: string) => string;
   getAssignedUser: (userId?: string) => { initials: string; name?: string; lastName?: string } | null;
   onStatusChange: (taskId: string, status: Task["status"]) => void;
   onAssignUser?: (taskId: string, userId: string | undefined) => void;
-  getEpicById?: (epicId?: string) => Epic | null;
 }
 
 export function TaskItem({
@@ -55,12 +50,8 @@ export function TaskItem({
   onMoveToBacklog,
   onDeleteTask,
   availableSprints,
-  getPriorityColor,
-  getStatusColor,
-  getStatusDisplayText,
   getAssignedUser,
   onStatusChange,
-  getEpicById,
 }: TaskItemProps) {
   const [isMoving, setIsMoving] = useState(false);
   const [movingToSprintId, setMovingToSprintId] = useState<string | null>(null);
@@ -101,35 +92,12 @@ export function TaskItem({
     }
   };
 
-  // Get epic if task has epicId
-  const epic = getEpicById ? getEpicById(task.epicId) : null;
 
-  const getTypeIcon = (type?: string) => {
-    switch (type) {
-      case 'bug':
-        return <Bug size={14} className="text-red-500" />;
-      case 'feature':
-        return <Sparkles size={14} className="text-blue-500" />;
-      case 'task':
-        return <BookOpen size={14} className="text-yellow-500" />;
-      case 'refactor':
-        return <GitBranch size={14} className="text-purple-500" />;
-      case 'user_story':
-        return <Lightbulb size={14} className="text-green-500" />;
-      default:
-        return <FileText size={14} className="text-gray-500" />;
-    }
-  };
-
-  // Handle task update for issue detail modal
   const handleTaskUpdate = async (updatedTask: Partial<Task>) => {
-    // Use the existing edit handler but modify it to work with partial updates
     try {
-      // Create a merged task object with the updates
       const mergedTask = {
         ...task,
         ...updatedTask,
-        // Ensure required fields are present
         title: updatedTask.title || task.title,
         status: updatedTask.status || task.status,
         priority: updatedTask.priority || task.priority,
@@ -145,10 +113,9 @@ export function TaskItem({
     }
   };
 
-  // Handle opening the edit modal directly
   const handleOpenEditModal = (taskToEdit: Task) => {
-    setIsIssueDetailOpen(false); // Close the detail modal
-    onEdit(taskToEdit); // Use the existing onEdit function to open the edit modal
+    setIsIssueDetailOpen(false);
+    onEdit(taskToEdit);
   };
 
   return (
@@ -197,11 +164,11 @@ export function TaskItem({
                 {task.priority}
               </span>
             )}
-            {epic && <EpicBadge epic={epic} />}
+            {task.epic && <EpicBadge epic={task.epic} />}
             <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-2 py-0.5 rounded-full">
               {typeof task.storyPoints === 'number' && task.storyPoints > 0
                 ? `${task.storyPoints % 1 === 0 ? task.storyPoints : task.storyPoints.toFixed(1)} pts`
-                : "Sin estimar"}
+                : "Not estimated"}
             </span>
 
             {task.assignedTo ? (
@@ -216,7 +183,7 @@ export function TaskItem({
                     </TooltipTrigger>
                     <TooltipContent side="top" align="center" className="font-medium dark:bg-gray-800 dark:text-gray-200">
                       <p>
-                        {getAssignedUser(task.assignedTo)?.name || 'Usuario'}
+                        {getAssignedUser(task.assignedTo)?.name || 'User'}
                         {getAssignedUser(task.assignedTo)?.lastName ? 
                           ` ${getAssignedUser(task.assignedTo)?.lastName}` : 
                           ''}
@@ -226,7 +193,7 @@ export function TaskItem({
                 </TooltipProvider>
               ) : (
                 <span className="text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 px-2 py-0.5 rounded-full">
-                  Sin asignar
+                  Unassigned
                 </span>
               )}
         </div>
@@ -262,19 +229,19 @@ export function TaskItem({
             </DropdownMenuTrigger>
               <DropdownMenuContent onClick={(e) => e.stopPropagation()} className="dark:bg-gray-800 dark:border-gray-700">
                 <DropdownMenuItem onClick={() => onStatusChange(task.id, "to-do")} className="dark:text-gray-200 dark:hover:bg-gray-700">
-                Por hacer
+                To Do
               </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onStatusChange(task.id, "in-progress")} className="dark:text-gray-200 dark:hover:bg-gray-700">
-                En progreso
+                In Progress
               </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onStatusChange(task.id, "review")} className="dark:text-gray-200 dark:hover:bg-gray-700">
-                En revisión
+                In Review
               </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onStatusChange(task.id, "done")} className="dark:text-gray-200 dark:hover:bg-gray-700">
-                Completado
+                Done
               </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onStatusChange(task.id, "closed")} className="dark:text-gray-200 dark:hover:bg-gray-700">
-                Cerrado
+                Closed
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -292,19 +259,19 @@ export function TaskItem({
                   {isMoving ? (
                     <>
                       <Loader2 size={14} className="mr-1 animate-spin" />
-                      <span className="hidden sm:inline">Moviendo...</span>
+                      <span className="hidden sm:inline">Moving...</span>
                     </>
                   ) : (
                     <>
                       <MoveRight size={14} className="mr-1" />
-                      <span className="hidden sm:inline">Mover a sprint</span>
+                      <span className="hidden sm:inline">Move to sprint</span>
                     </>
                   )}
                 </Button>
               </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 dark:bg-gray-800 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
                 {availableSprints.length === 0 ? (
-                    <DropdownMenuItem disabled className="dark:text-gray-400">No hay sprints disponibles</DropdownMenuItem>
+                    <DropdownMenuItem disabled className="dark:text-gray-400">No sprints available</DropdownMenuItem>
                 ) : (
                   availableSprints.map((sprint) => (
                     <DropdownMenuItem 
@@ -316,7 +283,7 @@ export function TaskItem({
                       {movingToSprintId === sprint.id ? (
                         <>
                           <Loader2 size={14} className="mr-1 animate-spin" />
-                          Moviendo...
+                          Moving...
                         </>
                       ) : (
                         sprint.name
@@ -342,12 +309,12 @@ export function TaskItem({
               {isMoving ? (
                 <>
                   <Loader2 size={14} className="mr-1 animate-spin" />
-                  <span className="hidden sm:inline">Moviendo...</span>
+                  <span className="hidden sm:inline">Moving...</span>
                 </>
               ) : (
                 <>
                   <MoveRight size={14} className="mr-1" />
-                  <span className="hidden sm:inline">Al backlog</span>
+                  <span className="hidden sm:inline">To backlog</span>
                 </>
               )}
             </Button>
@@ -362,7 +329,7 @@ export function TaskItem({
               e.stopPropagation();
               setIsDeleteDialogOpen(true);
             }}
-            title="Eliminar tarea"
+            title="Delete task"
           >
             {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash size={14} />}
           </Button>
@@ -373,15 +340,15 @@ export function TaskItem({
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="dark:bg-gray-800 dark:border-gray-700">
           <AlertDialogHeader>
-            <AlertDialogTitle className="dark:text-gray-200">¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogTitle className="dark:text-gray-200">Are you sure?</AlertDialogTitle>
             <AlertDialogDescription className="dark:text-gray-400">
-              Esta acción eliminará permanentemente la tarea "{task.title}".
-              Esta acción no se puede deshacer.
+              This action will permanently delete the task "{task.title}".
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting} className="dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">
-              Cancelar
+              Cancel
             </AlertDialogCancel>
             <AlertDialogAction 
               onClick={(e) => {
@@ -394,17 +361,16 @@ export function TaskItem({
               {isDeleting ? (
                 <>
                   <Loader2 size={16} className="mr-2 animate-spin" />
-                  Eliminando...
+                  Deleting...
                 </>
               ) : (
-                'Eliminar'
+                'Delete'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Issue Detail Modal */}
       <IssueDetailModal
         isOpen={isIssueDetailOpen}
         onOpenChange={setIsIssueDetailOpen}
@@ -415,4 +381,4 @@ export function TaskItem({
       />
     </div>
   );
-} 
+}

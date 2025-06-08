@@ -96,7 +96,6 @@ export default function KanbanBoard() {
     (visibleColumns.review ? 1 : 0) + 
     (visibleColumns.closed ? 1 : 0)
 
-  // Configuración de sensores específica para móvil
   const mobileSensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -107,7 +106,6 @@ export default function KanbanBoard() {
     })
   )
 
-  // Configuración de sensores para desktop
   const desktopSensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -121,12 +119,10 @@ export default function KanbanBoard() {
     })
   )
 
-  // Función personalizada para detección de colisiones en móvil
   const mobileCollisionDetection: CollisionDetection = (args) => {
     return closestCorners(args)
   }
 
-  // Función personalizada para detección de colisiones en desktop
   const desktopCollisionDetection: CollisionDetection = (args) => {
     const pointerCollisions = pointerWithin(args)
     if (pointerCollisions.length > 0) {
@@ -141,7 +137,6 @@ export default function KanbanBoard() {
     return closestCenter(args)
   }
 
-  // Fetch sprints for the project
   const fetchSprints = async () => {
     if (!project_id) return
     
@@ -152,7 +147,6 @@ export default function KanbanBoard() {
       if (response.data && Array.isArray(response.data)) {
         setSprints(response.data)
         
-        // Seleccionar el sprint activo o el primero de la lista
         const activeSprint = response.data.find((sprint: Sprint) => sprint.status === 'active')
         const sprintToSelect = activeSprint || response.data[0]
         
@@ -174,7 +168,6 @@ export default function KanbanBoard() {
     }
   }
 
-  // Update tasks when sprint selection changes
   useEffect(() => {
     if (selectedSprintId) {
       const selectedSprint = sprints.find(sprint => sprint.id === selectedSprintId)
@@ -184,7 +177,6 @@ export default function KanbanBoard() {
     }
   }, [selectedSprintId, sprints])
 
-  // Manejar inicio de arrastre
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event
     const activeTaskItem = tasks.find((task) => task.id === active.id)
@@ -195,7 +187,6 @@ export default function KanbanBoard() {
     }
   }
 
-  // Actualizar el estado de una tarea en el backend
   const updateTaskStatus = async (taskId: string, newStatus: Task["status"]) => {
     console.log("Updating task status:", taskId, newStatus)
     try {
@@ -241,7 +232,6 @@ export default function KanbanBoard() {
     }
   }
 
-  // Manejar fin de arrastre
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
@@ -260,7 +250,6 @@ export default function KanbanBoard() {
       return
     }
 
-    // Verificar si estamos moviendo a una nueva columna
     if (targetStatusRef.current && targetStatusRef.current.id === active.id) {
       const newStatus = targetStatusRef.current.status
       
@@ -278,7 +267,6 @@ export default function KanbanBoard() {
         }
       }
     }
-    // Si estamos reordenando dentro de la misma columna
     else if (active.id !== over.id) {
       const activeIndex = tasks.findIndex((task) => task.id === active.id);
       const overIndex = tasks.findIndex((task) => task.id === over.id);
@@ -294,7 +282,6 @@ export default function KanbanBoard() {
     targetStatusRef.current = null;
   }
 
-  // Manejar soltar en una columna diferente
   const handleDragOver = (event: any) => {
     const { active, over } = event;
 
@@ -308,7 +295,6 @@ export default function KanbanBoard() {
     
     if (!activeTask) return;
 
-    // Si estamos sobre un contenedor (columna)
     if (over.data?.current?.type === "container") {
       const newStatus = over.data.current.status;
       setActiveColumn(newStatus);
@@ -319,7 +305,6 @@ export default function KanbanBoard() {
         targetStatusRef.current = null;
       }
     }
-    // Si estamos sobre un elemento dentro de una columna
     else if (over.id !== activeId) {
       const overTask = tasks.find((task) => task.id === over.id);
 
@@ -352,7 +337,6 @@ export default function KanbanBoard() {
     return { initials: 'U', name: 'Usuario', lastName: '' };
   }
 
-  // Función para cargar los miembros del proyecto
   const fetchProjectMembers = async () => {
     try {
       const response = await apiClient.get(`/projects/members/${project_id}`);
@@ -366,7 +350,6 @@ export default function KanbanBoard() {
     }
   };
 
-  // Cargar miembros del proyecto cuando se carga el componente
   useEffect(() => {
     if (project_id) {
       fetchProjectMembers();

@@ -9,16 +9,15 @@ import { notifications } from "@mantine/notifications"
 import { AuthContext } from "@/context/AuthContext"
 import { useTeams } from "@/context/TeamsContext"
 
-interface editTeamProps {
+interface EditTeamProps {
   teamToEdit: Team | null
   setTeamToEdit: (team: Team | null) => void
 }
 
-export const EditTeamComponent = ({ teamToEdit, setTeamToEdit }: editTeamProps) => {
-
+export const EditTeamComponent = ({ teamToEdit, setTeamToEdit }: EditTeamProps) => {
   const [name, setName] = useState<string>('')
   const [description, setDescription] = useState<string>('')
-  const [image, setImage] = useState< string | null >(null)
+  const [image, setImage] = useState<string | null>(null)
   const { user: user_data } = useContext(AuthContext)
 
   const { updateTeam, loading, error } = useTeamService()
@@ -30,65 +29,55 @@ export const EditTeamComponent = ({ teamToEdit, setTeamToEdit }: editTeamProps) 
       setDescription(teamToEdit.description)
       setImage(teamToEdit.image || null)
     }
-
   }, [teamToEdit])
 
   const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Entrando en Saving changes...");
-    console.log("teamToEdit: ", teamToEdit);
-  
-    if (!teamToEdit) return;
+    e.preventDefault()
+    if (!teamToEdit) return
 
-    if(!user_data) {
+    if (!user_data) {
       notifications.show({
-        title: "Error de autenticación",
-        message: "No se encontró el usuario. Inténtalo de nuevo.",
+        title: "Authentication Error",
+        message: "User not found. Please try again.",
         color: "red",
-      });
-      return;
+      })
+      return
     }
-  
-    const updatedFields: UpdateTeamDto = { teamId: teamToEdit.id };
-    console.log("updatedFields: ", updatedFields);
 
-    if (name !== teamToEdit.name) updatedFields.name = name;
-    if (description !== teamToEdit.description) updatedFields.description = description;
-    if (image !== teamToEdit.image) updatedFields.image = image;
+    const updatedFields: UpdateTeamDto = { teamId: teamToEdit.id }
 
-    // Verificar si hay cambios reales (excluyendo teamId)
-    const hasRealChanges = Object.keys(updatedFields).length > 1;
+    if (name !== teamToEdit.name) updatedFields.name = name
+    if (description !== teamToEdit.description) updatedFields.description = description
+    if (image !== teamToEdit.image) updatedFields.image = image
+    const hasRealChanges = Object.keys(updatedFields).length > 1
 
-  
     if (!hasRealChanges) {
       notifications.show({
-        title: "Sin cambios",
-        message: "No has modificado ningún campo.",
+        title: "No Changes",
+        message: "You haven't modified any fields.",
         color: "yellow",
-      });
-      return;
+      })
+      return
     }
-    
-    console.log("Actualizando equipo...", updatedFields);
-    await updateTeam(updatedFields);
+
+    await updateTeam(updatedFields)
+
     if (!error) {
       notifications.show({
-        title: "Equipo actualizado 🎉",
-        message: "El equipo se ha actualizado correctamente.",
+        title: "Team Updated 🎉",
+        message: "The team was updated successfully.",
         color: "green",
-      });
+      })
       fetchTeams()
-      handleClose();
+      handleClose()
     } else {
       notifications.show({
-        title: "Error al actualizar el equipo",
+        title: "Error Updating Team",
         message: error,
         color: "red",
-      });
+      })
     }
-  };
-  
-  
+  }
 
   const handleClose = () => {
     setImage(null)

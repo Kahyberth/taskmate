@@ -31,7 +31,6 @@ export function Sidebar({
   const isBoardRoute = pathname.startsWith("/projects/board");
   const isProjectDetailRoute = isBacklogRoute || isBoardRoute;
 
-  // Determinar los elementos del menú según la ruta
   const menuItems = 
   isTeamRoute 
   ? teamDashboardMenuItems 
@@ -39,10 +38,7 @@ export function Sidebar({
   ? dashboardMenuItems
   : isProjectDetailRoute
   ? projectsMenuItems.map(item => {
-      // Si estamos en una ruta de proyecto (backlog o board) y el ítem es Backlog o Board,
-      // modificamos la URL para incluir el ID del proyecto actual
       if ((item.title === "Backlog" || item.title === "Board") && project_id) {
-        // Buscar el proyecto actual en los proyectos recientes
         const currentProject = recentProjects.find(p => p.id === project_id);
         return {
           ...item,
@@ -61,14 +57,12 @@ export function Sidebar({
       setIsLoading(true);
       try {
         const response = await apiClient.get(`/projects/findAllByUser?userId=${user.id}`);
-        console.log("proyectos mas recientes", response.data);
 
         if (response.data && response.data.data && Array.isArray(response.data.data)) {
           const sortedProjects = response.data.data.sort((a: Projects, b: Projects) => {
             return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
           });
 
-          // Tomar solo los 3 más recientes
           setRecentProjects(sortedProjects.slice(0, 3));
         } else {
           console.warn('No projects found in response:', response.data);
@@ -85,9 +79,7 @@ export function Sidebar({
     fetchRecentProjects();
   }, [user?.id]);
 
-  // Función para determinar el color del proyecto usando los mismos colores que en los mocks
   const getProjectColor = (index: number) => {
-    // Usamos los mismos colores que tenían los proyectos mock
     const colors = ["bg-green-500", "bg-blue-500", "bg-purple-500"];
     return colors[index % colors.length];
   };
@@ -101,7 +93,6 @@ export function Sidebar({
       )}
     >
       <nav className="p-4">
-        {/* Navegación Principal */}
         <div className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -124,15 +115,14 @@ export function Sidebar({
           })}
         </div>
 
-        {/* Lista de Proyectos (solo en dashboard) */}
         {!isProjectRoute && (
           <div className="mt-8">
             <h3 className="mb-2 px-4 text-xs font-semibold dark:text-white/50 text-black/50">
-              PROYECTOS RECIENTES
+              RECENT PROJECTS
             </h3>
             <div className="space-y-1">
               {isLoading ? (
-                <div className="px-4 py-2 text-sm text-gray-500">Cargando proyectos...</div>
+                <div className="px-4 py-2 text-sm text-gray-500">Loading projects...</div>
               ) : recentProjects.length > 0 ? (
                 recentProjects.map((project, index) => (
                   <Link 
@@ -151,16 +141,14 @@ export function Sidebar({
                   </Link>
                 ))
               ) : (
-                <div className="px-4 py-2 text-sm text-gray-500">No hay proyectos recientes</div>
+                <div className="px-4 py-2 text-sm text-gray-500">No recent projects</div>
               )}
             </div>
           </div>
         )}
 
-        {/* Sección del AI Assistant */}
         <div className="mt-auto pt-8 relative">
           <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-700/90 to-purple-800/30 border border-white/20 shadow-lg hover:shadow-xl transition-transform duration-300 transform hover:scale-105">
-            {/* Capas de ondas */}
             <div className="absolute inset-0 wave-overlay wave-overlay-1 pointer-events-none"></div>
             <div className="absolute inset-0 wave-overlay wave-overlay-2 pointer-events-none"></div>
 

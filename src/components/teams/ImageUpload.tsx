@@ -45,8 +45,8 @@ export const ImageUpload = ({
   const handleFile = (file: File) => {
     if (file.size > 2 * 1024 * 1024) {
       notifications.show({
-        title: "Imagen demasiado grande",
-        message: "Por favor, sube una imagen de menos de 2MB",
+        title: "Image too large",
+        message: "Please upload an image smaller than 2MB",
         color: "red",
       })
       return
@@ -130,4 +130,3 @@ export const ImageUpload = ({
     </div>
   )
 }
-

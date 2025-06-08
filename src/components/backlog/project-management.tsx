@@ -46,9 +46,10 @@ export default function ProjectManagement() {
   // Epic state
   const [epics, setEpics] = useState<Epic[]>([]);
   const [isEpicDialogOpen, setIsEpicDialogOpen] = useState(false);
-  const [newUserStoryEpicId, setNewUserStoryEpicId] = useState<string | undefined>(undefined);
+  const [newUserStoryEpic, setNewUserStoryEpic] = useState<Epic | null>(null);
   const [selectedEpic, setSelectedEpic] = useState<Epic | null>(null);
   const [isEpicIssuesDialogOpen, setIsEpicIssuesDialogOpen] = useState(false);
+  const [epicIssues, setEpicIssues] = useState<Task[]>([]);
 
   const { user } = useContext(AuthContext);
   const { teams } = useTeams();
@@ -181,33 +182,10 @@ export default function ProjectManagement() {
       setIsLoading(true);
       const response = await apiClient.get(`/backlog/get-all-issues/${backlogId}`);
       console.log("Backlog tasks response:", response.data);
-      
-      if (response.data) {
-        console.log("Processing tasks:", response.data.length, "tasks found");
         
-        const mappedTasks = response.data.map((task: any) => ({
-          id: task.id,
-          title: task.title,
-          description: task.description || "",
-          type: task.type || "user_story",
-          status: task.status || "to-do",
-          code: task.code || "",
-          priority: task.priority || "medium",
-          createdBy: task.createdBy || user?.id,
-          acceptanceCriteria: task.acceptanceCriteria || "",
-          productBacklogId: task.productBacklogId || backlogId,
-          storyPoints: task.story_points || 0,
-          assignedTo: task.assignedTo,
-          createdAt: task.createdAt,
-          updatedAt: task.updatedAt,
-          doneAt: task.doneAt,
-          finishedAt: task.finishedAt
-        }));
-        
-        console.log("Tasks mapped successfully");
-        setBacklogTasks(mappedTasks);
-        setAllBacklogTasks(mappedTasks);
-      }
+      console.log("Tasks mapped successfully");
+      setBacklogTasks(response.data);
+      setAllBacklogTasks(response.data);
     } catch (error) {
       console.error("Error fetching backlog tasks:", error);
       notifications.show({
@@ -233,37 +211,12 @@ export default function ProjectManagement() {
       console.log("Sprints response:", response.data);
       
       if (response.data && Array.isArray(response.data)) {
-        const mappedSprints = response.data
-          .filter((sprint: any) => !sprint.isFinished)
-          .map((sprint: any) => ({
-            id: sprint.id,
-            name: sprint.name,
-            goal: sprint.goal || "",
-            isFinished: sprint.isFinished,
-            isStarted: sprint.isStarted,
-            startedAt: sprint.startedAt ? new Date(sprint.startedAt) : null,
-            fnishedAt: sprint.fnishedAt ? new Date(sprint.fnishedAt) : null,
-            project: sprint.project,
-            issues: sprint.issues ? sprint.issues.map((issue: any) => ({
-              id: issue.id,
-              title: issue.title,
-              description: issue.description || "",
-              type: issue.type || "user_story",
-              status: issue.status || "to-do",
-              priority: issue.priority || "medium",
-              createdBy: issue.createdBy || user?.id,
-              acceptanceCriteria: issue.acceptanceCriteria || "",
-              productBacklogId: issue.product_backlog?.id || backlogId,
-              storyPoints: issue.story_points || 0,
-              assignedTo: issue.assignedTo,
-              createdAt: issue.createdAt,
-              updatedAt: issue.updatedAt,
-              doneAt: issue.doneAt,
-              finishedAt: issue.finishedAt,
-              code: issue.code
-            })) : [],
-            status: sprint.status
-          }));
+        const mappedSprints = response.data.map((sprint: any) => ({
+          ...sprint,
+          startedAt: sprint.startedAt ? new Date(sprint.startedAt) : null,
+          fnishedAt: sprint.fnishedAt ? new Date(sprint.fnishedAt) : null,
+          issues: sprint.issues || []
+        }));
         
         console.log("Sprints mapped successfully:", mappedSprints.length, "sprints found");
         setSprints(mappedSprints);
@@ -355,8 +308,14 @@ export default function ProjectManagement() {
     return apiClient.post(`/sprints/start-sprint?sprintId=${sprintId}`)
       .then((response) => {
         if (response.data) {
+          // Ensure issues is an array
+          const responseWithIssues = {
+            ...response.data,
+            issues: response.data.issues || []
+          };
+          
           setSprints(prevSprints => prevSprints.map(sprint => 
-            sprint.id === sprintId ? response.data : sprint
+            sprint.id === sprintId ? responseWithIssues : sprint
           ));
 
           notifications.show({
@@ -384,26 +343,17 @@ export default function ProjectManagement() {
           const currentSprint = sprints.find(sprint => sprint.id === sprintId);
           if (!currentSprint) return;
 
-          if (response.data.id) {
-            setSprints(prevSprints => [
-              ...prevSprints.filter(s => s.id !== sprintId),
-              response.data
-            ]);
-
-            notifications.show({
-              title: "Sprint completado",
-              message: "Se ha completado el sprint y las tareas pendientes se han movido al nuevo sprint.",
-              color: "green"
-            });
-          } else {
-            setSprints(prevSprints => prevSprints.filter(s => s.id !== sprintId));
-            
-            notifications.show({
-              title: "Sprint completado",
-              message: "Todas las tareas fueron completadas exitosamente.",
-              color: "green"
-            });
-          }
+          // Remove the completed sprint first
+          setSprints(prevSprints => prevSprints.filter(s => s.id !== sprintId));
+          
+          // Then fetch the updated sprints list to get the new sprint with the moved tasks
+          fetchSprints();
+          
+          notifications.show({
+            title: "Sprint completado",
+            message: "Se ha completado el sprint y las tareas pendientes se han movido al nuevo sprint.",
+            color: "green"
+          });
         }
       })
       .catch((error) => {
@@ -446,14 +396,13 @@ export default function ProjectManagement() {
         type: updatedTask.type || editingTask.type,
         acceptanceCriteria: editingTask.acceptanceCriteria || "",
         story_points: null as number | null, 
-        epicId: updatedTask.epicId,
+        epicId: updatedTask.epic?.id,
       };
 
       if (updatedTask.storyPoints && updatedTask.storyPoints > 0) {
         taskData.story_points = updatedTask.storyPoints;
       }
 
-      // Actualización optimista
       const optimisticTask: Task = {
         ...editingTask,
         ...taskData,
@@ -462,7 +411,7 @@ export default function ProjectManagement() {
         priority: taskData.priority,
         status: taskData.status,
         type: taskData.type,
-        epicId: updatedTask.epicId,
+        epic: updatedTask.epic,
       };
 
       if (editingSprintId) {
@@ -485,7 +434,6 @@ export default function ProjectManagement() {
         ));
       }
 
-      // Usar el mutation hook para actualizar la tarea
       console.log("Sending task update to API:", taskData);
       updateIssue(taskData, {
         onSuccess: (data) => {
@@ -496,11 +444,10 @@ export default function ProjectManagement() {
             color: "green"
           });
 
-          // Actualizar el estado con la respuesta del servidor
           const taskModified: Task = {
             ...data,
             storyPoints: taskData.story_points,
-            epicId: updatedTask.epicId,
+            epic: updatedTask.epic,
             title: data.title || editingTask.title,
             description: data.description || editingTask.description,
             priority: data.priority || editingTask.priority,
@@ -528,7 +475,6 @@ export default function ProjectManagement() {
         onError: (error) => {
           console.error("Error updating task:", error);
           
-          // Revertir cambios en caso de error
           if (editingSprintId) {
             setSprints(sprints.map(sprint =>
               sprint.id === editingSprintId
@@ -562,7 +508,6 @@ export default function ProjectManagement() {
       });
     }
   };
-
 
   const handleSaveSprintEdit = (updatedSprint: Sprint) => {
     setSprints(sprints.map((s) => (s.id === updatedSprint.id ? updatedSprint : s)))
@@ -601,20 +546,23 @@ export default function ProjectManagement() {
         sprint.id === sprintId
           ? {
               ...sprint,
-              issues: sprint.issues.map((task: Task) =>
-                task.id === taskId
-                  ? {
-                      ...task,
-                      status: task.status === "to-do" || task.status === "in-progress" ? "done" : "to-do",
-                    } as Task
-                  : task
-              ),
+              issues: Array.isArray(sprint.issues)
+                ? sprint.issues.map((task: Task) =>
+                    task.id === taskId
+                      ? {
+                          ...task,
+                          status: task.status === "to-do" || task.status === "in-progress" ? "done" : "to-do",
+                        } as Task
+                      : task
+                  )
+                : []
             }
           : sprint
       )
     );
     const currentSprint = sprints.find(s => s.id === sprintId);
-    const taskDetails = currentSprint?.issues.find((t: Task) => t.id === taskId);
+    const sprintIssues = currentSprint && Array.isArray(currentSprint.issues) ? currentSprint.issues : [];
+    const taskDetails = sprintIssues.find((t: Task) => t.id === taskId);
     if (taskDetails) {
       notifications.show({
         title: "Tarea actualizada",
@@ -625,14 +573,12 @@ export default function ProjectManagement() {
   };
 
   const moveTaskToSprint = async (taskId: string, targetSprintId: string) => {
-    // Find the task in the backlog
     const taskToMove = backlogTasks.find((task) => task.id === taskId);
     if (!taskToMove) return;
 
     const taskCopy = { ...taskToMove };
     
     try {
-      // Optimistic update - remove from backlog immediately
       setBacklogTasks(prev => prev.filter(task => task.id !== taskId));
       setAllBacklogTasks(prev => prev.filter(task => task.id !== taskId));
       
@@ -640,11 +586,9 @@ export default function ProjectManagement() {
         const response = await apiClient.post(`/backlog/move-issue-to-sprint?issueId=${taskId}&sprintId=${targetSprintId}`);
 
         if (response.data) {
-          // Asegurarse de que la tarea tenga todos los campos necesarios
           const movedTask = {
             ...taskToMove,
             ...response.data,
-            // Asegurar que estos campos estén presentes
             productBacklogId: response.data.productBacklogId || backlogId,
             storyPoints: response.data.story_points || taskToMove.storyPoints || 0,
             status: response.data.status || taskToMove.status,
@@ -653,14 +597,16 @@ export default function ProjectManagement() {
             assignedTo: response.data.assignedTo || taskToMove.assignedTo,
             createdBy: response.data.createdBy || taskToMove.createdBy,
             acceptanceCriteria: response.data.acceptanceCriteria || taskToMove.acceptanceCriteria || "",
-            epicId: response.data.epicId || taskToMove.epicId
+            epic: response.data.epic || taskToMove.epic
           };
 
-          // Solo actualizar el sprint después de una respuesta exitosa
           setSprints(prevSprints => 
             prevSprints.map(sprint => 
               sprint.id === targetSprintId 
-                ? { ...sprint, issues: [...sprint.issues, movedTask] } 
+                ? { 
+                    ...sprint, 
+                    issues: Array.isArray(sprint.issues) ? [...sprint.issues, movedTask] : [movedTask]
+                  } 
                 : sprint
             )
           );
@@ -674,11 +620,9 @@ export default function ProjectManagement() {
       } catch (error: any) {
         console.error("Error moving task to sprint:", error);
         
-        // Revert changes on error - solo necesitamos restaurar el backlog ya que el sprint no se actualizó
         setBacklogTasks(prev => [...prev, taskCopy]);
         setAllBacklogTasks(prev => [...prev, taskCopy]);
         
-        // Mostrar mensaje específico según el error
         if (error.response?.status === 404) {
           notifications.show({
             title: "Error al mover tarea",
@@ -705,21 +649,31 @@ export default function ProjectManagement() {
 
   const moveTaskToBacklog = async (sprintId: string, taskId: string) => {
     try {
-      // Encontrar el sprint y la tarea antes de llamar a la API
       const sprint = sprints.find(s => s.id === sprintId);
-      const taskToMove = sprint?.issues.find((task: Task) => task.id === taskId);
+      if (!sprint) {
+        console.error("Sprint not found:", sprintId);
+        return;
+      }
       
-      if (!sprint || !taskToMove) {
-        console.error("Sprint or task not found:", sprintId, taskId);
+      // Ensure sprint.issues is an array
+      const sprintIssues = Array.isArray(sprint.issues) ? sprint.issues : [];
+      const taskToMove = sprintIssues.find((task: Task) => task.id === taskId);
+      
+      if (!taskToMove) {
+        console.error("Task not found in sprint:", taskId);
         return;
       }
       
       const taskCopy = { ...taskToMove };
       
-      // Optimistic update - remove from sprint immediately
       setSprints(prevSprints => prevSprints.map(sprint =>
         sprint.id === sprintId
-          ? { ...sprint, issues: sprint.issues.filter((task: Task) => task.id !== taskId) }
+          ? { 
+              ...sprint, 
+              issues: Array.isArray(sprint.issues) 
+                ? sprint.issues.filter((task: Task) => task.id !== taskId) 
+                : [] 
+            }
           : sprint
       ));
       
@@ -730,11 +684,9 @@ export default function ProjectManagement() {
         });
 
         if (response.data) {
-          // Asegurarse de que la tarea tenga todos los campos necesarios
           const movedTask = {
             ...taskToMove,
             ...response.data,
-            // Asegurar que estos campos estén presentes
             productBacklogId: response.data.productBacklogId || backlogId,
             storyPoints: response.data.story_points || taskToMove.storyPoints || 0,
             status: response.data.status || taskToMove.status,
@@ -743,10 +695,9 @@ export default function ProjectManagement() {
             assignedTo: response.data.assignedTo || taskToMove.assignedTo,
             createdBy: response.data.createdBy || taskToMove.createdBy,
             acceptanceCriteria: response.data.acceptanceCriteria || taskToMove.acceptanceCriteria || "",
-            epicId: response.data.epicId || taskToMove.epicId
+            epic: response.data.epic || taskToMove.epic
           };
 
-          // Add to backlog
           setBacklogTasks(prev => [...prev, movedTask]);
           setAllBacklogTasks(prev => [...prev, movedTask]);
         
@@ -759,14 +710,17 @@ export default function ProjectManagement() {
       } catch (error: any) {
         console.error("Error moving task to backlog:", error);
         
-        // Revert changes on error
         setSprints(prevSprints => prevSprints.map(s => 
           s.id === sprintId 
-            ? { ...s, issues: [...s.issues.filter((t: Task) => t.id !== taskId), taskCopy] }
+            ? { 
+                ...s, 
+                issues: Array.isArray(s.issues)
+                  ? [...s.issues.filter((t: Task) => t.id !== taskId), taskCopy]
+                  : [taskCopy]
+              }
             : s
         ));
         
-        // Mostrar mensaje específico según el error
         if (error.response?.status === 404) {
           notifications.show({
             title: "Error al mover tarea",
@@ -791,72 +745,9 @@ export default function ProjectManagement() {
     }
   };
 
-  const getTypeColor = (type?: string) => {
-    switch (type) {
-      case 'bug':
-        return 'bg-red-100 text-red-800';
-      case 'feature':
-        return 'bg-blue-100 text-blue-800';
-      case 'task':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'refactor':
-        return 'bg-purple-100 text-purple-800';
-      case 'user_story':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityColor = (priority?: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-red-100 text-red-800"
-      case "medium":
-        return "bg-yellow-100 text-yellow-800"
-      case "low":
-        return "bg-green-100 text-green-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "done":
-      case "closed":
-        return "bg-green-100 text-green-800";
-      case "in-progress":
-        return "bg-blue-100 text-blue-800";
-      case "review":
-        return "bg-yellow-100 text-yellow-800";
-      case "to-do":
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  }
-
-  const getStatusDisplayText = (status: string) => {
-    switch (status) {
-      case "to-do":
-        return "POR HACER";
-      case "in-progress":
-        return "EN PROGRESO";
-      case "done":
-        return "COMPLETADO";
-      case "closed":
-        return "CERRADO";
-      case "review":
-        return "EN REVISIÓN";
-      default:
-        return "POR HACER";
-    }
-  }
-
   const getAssignedUser = (userId?: string): AssignedUser | null => {
     if (!userId) return null;
     
-    // Buscar en los miembros del proyecto
     const projectMember = projectMembers.find((member) => member.userId === userId);
 
     if (projectMember) {
@@ -871,49 +762,41 @@ export default function ProjectManagement() {
     return { initials: 'U', name: 'Usuario', lastName: '' };
   }
 
-  // Funciones para actualizar el estado de tareas
-
-  /**
-   * Actualiza el estado de una tarea en un sprint
-   * @param sprintId ID del sprint que contiene la tarea
-   * @param taskId ID de la tarea a actualizar
-   * @param status Nuevo estado
-   */
   const handleSprintTaskStatusChange = async (sprintId: string, taskId: string, status: Task["status"]) => {
     console.log("Starting status change for task:", taskId, "to status:", status);
     
     try {
-      // Encontrar el sprint y la tarea
       const sprint = sprints.find((s) => s.id === sprintId);
       if (!sprint) {
         console.error("Sprint not found:", sprintId);
         return;
       }
       
-      const task = sprint.issues?.find((t) => t.id === taskId);
+      // Ensure sprint.issues is an array
+      const sprintIssues = Array.isArray(sprint.issues) ? sprint.issues : [];
+      const task = sprintIssues.find((t) => t.id === taskId);
       if (!task) {
         console.error("Task not found in sprint:", taskId);
         return;
       }
       
-      // Guardar el estado anterior para restaurarlo en caso de error
       const previousStatus = task.status;
       
-      // Actualización optimista
       setSprints(prevSprints => prevSprints.map(s => 
         s.id === sprintId 
           ? {
               ...s,
-              issues: s.issues?.map(t => 
-                t.id === taskId 
-                  ? { ...t, status } 
-                  : t
-              ) || []
+              issues: Array.isArray(s.issues) 
+                ? s.issues.map(t => 
+                    t.id === taskId 
+                      ? { ...t, status } 
+                      : t
+                  )
+                : []
             }
           : s
       ));
       
-      // Usar el mutation hook para actualizar la tarea
       updateIssue(
         {
           id: taskId,
@@ -925,11 +808,10 @@ export default function ProjectManagement() {
             console.log("Status update successful:", data);
             notifications.show({
               title: "Estado actualizado",
-              message: `El estado de "${task.title}" ha sido actualizado a ${getStatusDisplayText(status).toLowerCase()}.`,
+              message: `El estado de "${task.title}" ha sido actualizado a ${status}.`,
               color: "green"
             });
 
-            // Force refresh of project issues data
             if (project_id) {
               invalidateProjectIssues(queryClient, project_id);
             }
@@ -937,21 +819,21 @@ export default function ProjectManagement() {
           onError: (error: any) => {
             console.error("Error in mutation onError callback:", error);
             
-            // Restaurar el estado anterior
             setSprints(prevSprints => prevSprints.map(s => 
               s.id === sprintId 
                 ? {
                     ...s,
-                    issues: s.issues?.map(t => 
-                      t.id === taskId 
-                        ? { ...t, status: previousStatus } 
-                        : t
-                    ) || []
+                    issues: Array.isArray(s.issues)
+                      ? s.issues.map(t => 
+                          t.id === taskId 
+                            ? { ...t, status: previousStatus } 
+                            : t
+                        )
+                      : []
                   }
                 : s
             ));
             
-            // Mostrar mensaje de error específico según el tipo de error
             if (!error.response || error.message?.includes('Network Error') || error.message?.includes('Failed to fetch')) {
               notifications.show({
                 title: "Error de conexión",
@@ -999,7 +881,6 @@ export default function ProjectManagement() {
     console.log("Starting status change for task:", taskId, "to status:", status);
     
     try {
-      // Encontrar la tarea en el backlog
       const task = backlogTasks.find((t: Task) => t.id === taskId);
       if (!task) {
         console.error("Task not found in backlog:", taskId);
@@ -1011,18 +892,15 @@ export default function ProjectManagement() {
         return;
       }
       
-      // Guardar el estado anterior para restaurarlo en caso de error
       const previousStatus = task.status;
       console.log("Previous status:", previousStatus);
       
-      // Actualización optimista - actualizar UI inmediatamente
       const updatedTask = { ...task, status } as Task;
       setBacklogTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
       setAllBacklogTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
       
       console.log("Attempting to update task status via mutation...");
       
-        // Use the mutation hook instead of direct API call
       updateIssue(
         {
           id: taskId,
@@ -1034,14 +912,13 @@ export default function ProjectManagement() {
             console.log("Status update successful:", data);
             notifications.show({
               title: "Estado actualizado",
-              message: `El estado de "${task.title}" ha sido actualizado a ${getStatusDisplayText(status).toLowerCase()}.`,
+              message: `El estado de "${task.title}" ha sido actualizado a ${status}.`,
               color: "green"
             });
           },
           onError: (error: any) => {
             console.error("Error in mutation onError callback:", error);
             
-            // Restaurar el estado anterior
             console.log("Rolling back to previous status:", previousStatus);
             setBacklogTasks(prev => prev.map(t => 
               t.id === taskId ? { ...t, status: previousStatus } as Task : t
@@ -1050,7 +927,6 @@ export default function ProjectManagement() {
               t.id === taskId ? { ...t, status: previousStatus } as Task : t
             ));
             
-            // Mostrar mensaje de error específico según el tipo de error
             if (!error.response || error.message?.includes('Network Error') || error.message?.includes('Failed to fetch')) {
               console.error("Network error detected");
               notifications.show({
@@ -1086,7 +962,6 @@ export default function ProjectManagement() {
     } catch (error: any) {
       console.error("Unexpected error in handleBacklogTaskStatusChange:", error);
       
-      // Intentar restaurar el estado anterior si es posible
       const task = backlogTasks.find((t: Task) => t.id === taskId);
       if (task) {
         console.log("Attempting to restore previous state after error");
@@ -1113,7 +988,9 @@ export default function ProjectManagement() {
       return;
     }
     
-    const taskToDelete = sprint.issues?.find(issue => issue.id === taskId);
+    // Ensure sprint.issues is an array
+    const sprintIssues = Array.isArray(sprint.issues) ? sprint.issues : [];
+    const taskToDelete = sprintIssues.find(issue => issue.id === taskId);
     if (!taskToDelete) {
       console.error("Task not found:", taskId);
       return;
@@ -1121,7 +998,10 @@ export default function ProjectManagement() {
 
     setSprints(prevSprints => prevSprints.map(s => 
       s.id === sprintId
-        ? {...s, issues: s.issues.filter(issue => issue.id !== taskId)}
+        ? {
+            ...s, 
+            issues: Array.isArray(s.issues) ? s.issues.filter(issue => issue.id !== taskId) : []
+          }
         : s
     ));
 
@@ -1143,7 +1023,10 @@ export default function ProjectManagement() {
         
         setSprints(prevSprints => prevSprints.map(s => 
           s.id === sprintId
-            ? {...s, issues: [...s.issues, taskToDelete]}
+            ? {
+                ...s, 
+                issues: Array.isArray(s.issues) ? [...s.issues, taskToDelete] : [taskToDelete]
+              }
             : s
         ));
       });
@@ -1151,7 +1034,6 @@ export default function ProjectManagement() {
 
   const handleDeleteTask = async (taskId: string) => {
     try {
-      // Find the task to show its title in the toast
       const taskToDelete = backlogTasks.find(task => task.id === taskId);
       
       if (!taskToDelete) {
@@ -1159,12 +1041,10 @@ export default function ProjectManagement() {
         return;
       }
       
-      // Optimistic update - remove from UI immediately
       setBacklogTasks(prev => prev.filter(task => task.id !== taskId));
       setAllBacklogTasks(prev => prev.filter(task => task.id !== taskId));
       
       try {
-        // Call API to delete the task
         await apiClient.delete(`/issues/delete/${taskId}`);
         
         notifications.show({
@@ -1175,7 +1055,6 @@ export default function ProjectManagement() {
       } catch (error) {
         console.error("Error deleting task:", error);
         
-        // Revert the UI change on error
         setBacklogTasks(prev => [...prev, taskToDelete]);
         setAllBacklogTasks(prev => [...prev, taskToDelete]);
         
@@ -1195,19 +1074,10 @@ export default function ProjectManagement() {
     }
   };
 
-  // Helper function to get epic by ID
-  const getEpicById = (epicId?: string) => {
-    if (!epicId) return null;
-    return epics.find(epic => epic.id === epicId) || null;
-  };
-
-  // Function to refetch project members
   const refetchProjectMembers = async () => {
     await fetchProjectMembers();
   };
 
-  // Restore the project-related useEffect that was accidentally removed
-  // Find the team associated with the current project
   const currentTeam = useMemo(() => {
     if (!project || !teams) return null;
     return teams.find(team => team.id === project.team_id);
@@ -1219,11 +1089,25 @@ export default function ProjectManagement() {
 
     setSelectedEpic(epic);
     setIsEpicIssuesDialogOpen(true);
+
+    try {
+      const response = await apiClient.get(`/issues/by-epic/${epicId}`);
+      console.log("Epic issues:", response);
+      if (response.data) {
+        setEpicIssues(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching epic issues:", error);
+      notifications.show({
+        title: "Error",
+        message: "No se pudieron cargar las tareas de la épica",
+        color: "red"
+      });
+    }
   };
 
   const itemsPerPage = 15;
 
-  // Calcular las tareas filtradas y paginadas
   const filteredAndPaginatedTasks = useMemo(() => {
     const filteredTasks = allBacklogTasks.filter(task => {
       if (!searchTerm) return true;
@@ -1240,7 +1124,6 @@ export default function ProjectManagement() {
     return filteredTasks.slice(startIndex, endIndex);
   }, [allBacklogTasks, searchTerm, currentPage]);
 
-  // Calcular el total de páginas
   const totalPages = useMemo(() => {
     const filteredTasks = allBacklogTasks.filter(task => {
       if (!searchTerm) return true;
@@ -1257,7 +1140,7 @@ export default function ProjectManagement() {
   const handleSearchChange = (term: string) => {
     console.log('Search term changed:', term);
     setSearchTerm(term);
-    setCurrentPage(1); // Reset a la primera página cuando cambia la búsqueda
+    setCurrentPage(1);
   };
 
   const handlePageChange = (page: number) => {
@@ -1294,7 +1177,7 @@ export default function ProjectManagement() {
         acceptanceCriteria: "",
         productBacklogId: backlogId,
         assignedTo: user?.id,
-        epicId: newUserStoryEpicId,
+        epicId: newUserStoryEpic?.id,
       };
 
       const response = await createIssue.mutateAsync(newTask);
@@ -1303,13 +1186,14 @@ export default function ProjectManagement() {
         const newIssue = {
           ...response,
           storyPoints: response.story_points || 0,
+          epic: response.epic || newUserStoryEpic,
         };
         setBacklogTasks(prev => [...prev, newIssue]);
         setAllBacklogTasks(prev => [...prev, newIssue]);
       }
       
       setNewUserStoryTitle("");
-      setNewUserStoryEpicId(undefined);
+      setNewUserStoryEpic(null);
       notifications.show({
         title: "Historia de usuario creada",
         message: `Se ha añadido "${newTask.title}" al backlog.`,
@@ -1368,13 +1252,8 @@ export default function ProjectManagement() {
               setEditingSprint(sprint);
               setIsEditSprintOpen(true);
             }}
-            getPriorityColor={getPriorityColor}
-            getTypeColor={getTypeColor}
-            getStatusColor={getStatusColor}
-            getStatusDisplayText={getStatusDisplayText}
             getAssignedUser={getAssignedUser}
             onDeleteTask={handleDeleteTaskSprint}
-            getEpicById={getEpicById}
           />
         ))}
 
@@ -1399,18 +1278,13 @@ export default function ProjectManagement() {
           onNewUserStoryTypeChange={setNewUserStoryType}
           newUserStoryPriority={newUserStoryPriority}
           onNewUserStoryPriorityChange={setNewUserStoryPriority}
-          newUserStoryEpicId={newUserStoryEpicId}
-          onNewUserStoryEpicIdChange={setNewUserStoryEpicId}
+          newUserStoryEpic={newUserStoryEpic}
+          onNewUserStoryEpicChange={setNewUserStoryEpic}
           onCreateUserStory={handleCreateUserStory}
-          getPriorityColor={getPriorityColor}
-          getTypeColor={getTypeColor}
-          getStatusColor={getStatusColor}
-          getStatusDisplayText={getStatusDisplayText}
           getAssignedUser={getAssignedUser}
           onDeleteTask={handleDeleteTask}
           epics={epics}
           onOpenEpicDialog={() => setIsEpicDialogOpen(true)}
-          getEpicById={getEpicById}
           searchTerm={searchTerm}
           isLoading={isLoading}
         />
@@ -1455,12 +1329,9 @@ export default function ProjectManagement() {
         open={isEpicIssuesDialogOpen}
         onOpenChange={setIsEpicIssuesDialogOpen}
         epic={selectedEpic}
+        issuesbyepic={epicIssues}
         onEditTask={(task) => openEditTaskModal(task)}
         onStatusChange={handleBacklogTaskStatusChange}
-        getPriorityColor={getPriorityColor}
-        getTypeColor={getTypeColor}
-        getStatusColor={getStatusColor}
-        getStatusDisplayText={getStatusDisplayText}
         getAssignedUser={getAssignedUser}
       />
 
@@ -1470,7 +1341,6 @@ export default function ProjectManagement() {
         project={project}
         projectMembers={projectMembers}
         refetchMembers={refetchProjectMembers}
-        teams={teams}
         currentTeam={currentTeam}
       />
     </div>

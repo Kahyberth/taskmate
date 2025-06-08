@@ -29,19 +29,16 @@ export function SearchFilters({
 }: SearchFiltersProps) {
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
   
-  // Sincronizar el estado local con el prop externo
   useEffect(() => {
     setLocalSearchTerm(searchTerm);
   }, [searchTerm]);
 
-  // Manejar cambios en el input de búsqueda
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setLocalSearchTerm(value);
     onSearchChange(value);
   };
   
-  // Manejar la limpieza del campo de búsqueda
   const handleClearSearch = () => {
     setLocalSearchTerm('');
     onSearchChange('');
@@ -49,12 +46,11 @@ export function SearchFilters({
 
   return (
     <div className="flex flex-wrap items-center gap-3 p-3 border-b border-black/10 dark:border-white/10">
-      {/* Buscador */}
       <div className="relative flex-1 min-w-[200px]">
         <div className="relative flex items-center">
           <Search className="absolute left-3 text-gray-400 dark:text-gray-500" size={16} />
           <Input 
-            placeholder="Buscar en el backlog..." 
+            placeholder="Search in backlog..." 
             className="pl-10 h-9 pr-12 rounded-lg shadow-sm text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:placeholder:text-gray-500" 
             value={localSearchTerm}
             onChange={handleInputChange}
@@ -69,15 +65,13 @@ export function SearchFilters({
           )}
           {localSearchTerm && (
             <div className="absolute right-3 text-xs text-gray-500 dark:text-gray-400">
-              {filteredResultsCount} resultado{filteredResultsCount !== 1 ? 's' : ''}
+              {filteredResultsCount} result{filteredResultsCount !== 1 ? 's' : ''}
             </div>
           )}
         </div>
       </div>
       
-      {/* Filtros y acciones */}
       <div className="flex items-center gap-2 flex-wrap">
-        {/* Epic Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button 
@@ -85,7 +79,7 @@ export function SearchFilters({
               size="sm" 
               className="h-9 text-sm flex items-center gap-1 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-800"
             >
-              Épicas <ChevronDown size={14} />
+              Epics <ChevronDown size={14} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56 dark:bg-gray-800 dark:border-gray-700">
@@ -103,13 +97,12 @@ export function SearchFilters({
             ))}
             {epics.length === 0 && (
               <div className="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">
-                No hay épicas creadas
+                No epics created
               </div>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Create Epic Button */}
         <Button
           variant="outline"
           size="sm"
@@ -122,4 +115,4 @@ export function SearchFilters({
       </div>
     </div>
   );
-} 
+}

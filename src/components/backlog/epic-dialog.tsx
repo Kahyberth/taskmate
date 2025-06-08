@@ -12,10 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, Plus, Edit, Trash } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/api/client-gateway";
 import { Epic } from "@/interfaces/epic.interface";
-
+import { notifications } from "@mantine/notifications";
 
 interface EpicDialogProps {
   open: boolean;
@@ -34,14 +33,11 @@ export function EpicDialog({
   onEpicSelected,
   selectedEpicId 
 }: EpicDialogProps) {
-  const { toast } = useToast();
   const [epics, setEpics] = useState<Epic[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingEpic, setEditingEpic] = useState<Epic | null>(null);
-  
-  // Form state
   const [epicName, setEpicName] = useState("");
   const [epicDescription, setEpicDescription] = useState("");
   
@@ -52,26 +48,21 @@ export function EpicDialog({
   }, [open, backlogId]);
   
   const fetchEpics = async () => {
-    if (!backlogId) {
-      console.log("No backlogId available for fetching epics");
-      return;
-    }
+    if (!backlogId) return;
     
     try {
       setIsLoading(true);
-      console.log("Fetching epics with backlogId:", backlogId);
       const response = await apiClient.get(`/epics/get-by-backlog/${backlogId}`);
-      console.log("Epics response:", response.data);
       
       if (response.data) {
         setEpics(response.data);
       }
     } catch (error) {
       console.error("Error fetching epics:", error);
-      toast({
+      notifications.show({
         title: "Error",
-        description: "No se pudieron cargar las épicas",
-        variant: "destructive",
+        message: "Failed to load epics",
+        color: "red"
       });
     } finally {
       setIsLoading(false);
@@ -80,10 +71,10 @@ export function EpicDialog({
   
   const handleCreateEpic = async () => {
     if (!epicName.trim()) {
-      toast({
+      notifications.show({
         title: "Error",
-        description: "El título de la épica no puede estar vacío",
-        variant: "destructive",
+        message: "Epic title cannot be empty",
+        color: "red"
       });
       return;
     }
@@ -104,9 +95,10 @@ export function EpicDialog({
         resetForm();
         setShowCreateForm(false);
         
-        toast({
-          title: "Épica creada",
-          description: `La épica "${createdEpic.title}" ha sido creada exitosamente.`,
+        notifications.show({
+          title: "Epic created",
+          message: `Epic "${createdEpic.title}" has been created successfully.`,
+          color: "green"
         });
         
         if (onEpicCreated) {
@@ -115,10 +107,10 @@ export function EpicDialog({
       }
     } catch (error) {
       console.error("Error creating epic:", error);
-      toast({
+      notifications.show({
         title: "Error",
-        description: "No se pudo crear la épica",
-        variant: "destructive",
+        message: "Failed to create epic",
+        color: "red"
       });
     } finally {
       setIsCreating(false);
@@ -127,10 +119,10 @@ export function EpicDialog({
   
   const handleUpdateEpic = async () => {
     if (!editingEpic || !epicName.trim()) {
-      toast({
+      notifications.show({
         title: "Error",
-        description: "El título de la épica no puede estar vacío",
-        variant: "destructive",
+        message: "Epic title cannot be empty",
+        color: "red"
       });
       return;
     }
@@ -151,17 +143,18 @@ export function EpicDialog({
         resetForm();
         setEditingEpic(null);
         
-        toast({
-          title: "Épica actualizada",
-          description: `La épica "${updated.title}" ha sido actualizada exitosamente.`,
+        notifications.show({
+          title: "Epic updated",
+          message: `Epic "${updated.title}" has been updated successfully.`,
+          color: "green"
         });
       }
     } catch (error) {
       console.error("Error updating epic:", error);
-      toast({
+      notifications.show({
         title: "Error",
-        description: "No se pudo actualizar la épica",
-        variant: "destructive",
+        message: "Failed to update epic",
+        color: "red"
       });
     } finally {
       setIsCreating(false);
@@ -169,7 +162,7 @@ export function EpicDialog({
   };
   
   const handleDeleteEpic = async (epicId: string) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar esta épica? Esta acción no se puede deshacer.")) {
+    if (!confirm("Are you sure you want to delete this epic? This action cannot be undone.")) {
       return;
     }
     
@@ -178,9 +171,10 @@ export function EpicDialog({
       
       setEpics(epics.filter(epic => epic.id !== epicId));
       
-      toast({
-        title: "Épica eliminada",
-        description: "La épica ha sido eliminada exitosamente.",
+      notifications.show({
+        title: "Epic deleted",
+        message: "Epic has been deleted successfully.",
+        color: "green"
       });
       
       if (selectedEpicId === epicId && onEpicSelected) {
@@ -188,10 +182,10 @@ export function EpicDialog({
       }
     } catch (error) {
       console.error("Error deleting epic:", error);
-      toast({
+      notifications.show({
         title: "Error",
-        description: "No se pudo eliminar la épica",
-        variant: "destructive",
+        message: "Failed to delete epic",
+        color: "red"
       });
     }
   };
@@ -225,9 +219,9 @@ export function EpicDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Épicas del proyecto</DialogTitle>
+          <DialogTitle>Project Epics</DialogTitle>
           <DialogDescription>
-            Las épicas son grupos de historias de usuario relacionadas que representan una funcionalidad mayor.
+            Epics are groups of related user stories that represent a larger feature.
           </DialogDescription>
         </DialogHeader>
         
@@ -239,7 +233,7 @@ export function EpicDialog({
               onClick={() => setShowCreateForm(true)}
             >
               <Plus size={16} className="mr-2" />
-              Crear nueva épica
+              Create new epic
             </Button>
             
             {isLoading ? (
@@ -248,7 +242,7 @@ export function EpicDialog({
               </div>
             ) : epics.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                No hay épicas creadas para este proyecto.
+                No epics created for this project.
               </div>
             ) : (
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
@@ -260,8 +254,8 @@ export function EpicDialog({
                     }`}
                     onClick={() => handleSelectEpic(epic)}
                   >
-                    <div className="flex items-center space-x-3 ">
-                    <div className="w-4 h-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600" />
+                    <div className="flex items-center space-x-3">
+                      <div className="w-4 h-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600" />
                       <div>
                         <h4 className="font-medium">{epic.name}</h4>
                         {epic.description && (
@@ -303,27 +297,27 @@ export function EpicDialog({
             <div className="grid gap-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="epic-title" className="text-right">
-                  Nombre
+                  Name
                 </Label>
                 <Input
                   id="epic-title"
                   value={epicName}
                   onChange={(e) => setEpicName(e.target.value)}
                   className="col-span-3"
-                  placeholder="Nombre de la épica"
+                  placeholder="Epic name"
                 />
               </div>
               
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="epic-description" className="text-right">
-                  Descripción
+                  Description
                 </Label>
                 <Textarea
                   id="epic-description"
                   value={epicDescription}
                   onChange={(e) => setEpicDescription(e.target.value)}
                   className="col-span-3"
-                  placeholder="Descripción de la épica"
+                  placeholder="Epic description"
                   rows={3}
                 />
               </div>
@@ -335,7 +329,7 @@ export function EpicDialog({
           {showCreateForm ? (
             <>
               <Button variant="outline" onClick={handleCancel}>
-                Cancelar
+                Cancel
               </Button>
               <Button 
                 onClick={editingEpic ? handleUpdateEpic : handleCreateEpic} 
@@ -344,20 +338,20 @@ export function EpicDialog({
                 {isCreating ? (
                   <>
                     <Loader2 size={16} className="mr-2 animate-spin" />
-                    {editingEpic ? "Actualizando..." : "Creando..."}
+                    {editingEpic ? "Updating..." : "Creating..."}
                   </>
                 ) : (
-                  editingEpic ? "Actualizar épica" : "Crear épica"
+                  editingEpic ? "Update epic" : "Create epic"
                 )}
               </Button>
             </>
           ) : (
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cerrar
+              Close
             </Button>
           )} 
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-} 
+}

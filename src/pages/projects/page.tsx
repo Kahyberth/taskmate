@@ -3,8 +3,8 @@ import { Plus, Search, Filter, AlertCircle, ChevronDown, Circle } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/use-debounce";
-import { Badge } from "@/components/ui/badge";
 import { Pagination } from '@mantine/core';
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
   Dialog,
@@ -26,18 +26,9 @@ import { CreateProjectForm } from "@/components/projects/create-project";
 import { ProjectCard } from "@/components/projects/project-card";
 import { ProjectCardSkeleton } from "@/components/projects/project-card-skeleton";
 import { AuthContext } from "@/context/AuthContext";
-import { useProjectsByUser} from "@/api/queries";
-
-
-type Project = {
-  id: string;
-  name?: string;
-  description?: string;
-  status?: string;
-  createdBy?: string;
-};
-
-
+import { useProjectsByUser } from "@/api/queries";
+import { Project } from "@/interfaces/projects.interface";
+import { StatusBadge } from "@/components/backlog/status-badge";
 
 export default function ProjectsPage() {
   const { user } = useContext(AuthContext);
@@ -46,11 +37,11 @@ export default function ProjectsPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [localProjects, setLocalProjects] = useState<Project[]>([]);
   const itemsPerPage = 6;
+  const queryClient = useQueryClient();
   
- 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
-
 
   const { 
     data: projectsData = { projects: [], totalPages: 0, total: 0 }, 
@@ -61,36 +52,42 @@ export default function ProjectsPage() {
   const projects = projectsData.projects || [];
   const totalPages = projectsData.totalPages || 1;
 
-  // Reset to first page when search, filter, or tab changes
+  useEffect(() => {
+    if (projects.length > 0) {
+      setLocalProjects(projects);
+    }
+  }, [projects]);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearchQuery, statusFilter, activeTab]);
-
-  // Debug pagination info
-  useEffect(() => {
-    console.log("Pagination info:", {
-      currentPage,
-      totalPages,
-      projectsCount: projects.length,
-      itemsPerPage
-    });
-  }, [currentPage, totalPages, projects, itemsPerPage]);
 
   const handleCreateProjectSuccess = useCallback(() => {
     setCreateDialogOpen(false);
     refetch();
   }, [setCreateDialogOpen, refetch]);
 
-  // Memoize filtered projects to prevent recalculation on every render
+  const updateProjectLocally = useCallback((updatedProject: Project) => {
+    setLocalProjects(prevProjects => 
+      prevProjects.map(project => 
+        project.id === updatedProject.id ? updatedProject : project
+      )
+    );
+  }, []);
+
+  const removeProjectLocally = useCallback((projectId: string) => {
+    setLocalProjects(prevProjects => 
+      prevProjects.filter(project => project.id !== projectId)
+    );
+    refetch();
+  }, [refetch]);
+
   const filteredProjects = useMemo(() => {
-    // First filter by tab (all vs. my)
     const tabFiltered = activeTab === "all" 
-      ? projects 
-      : projects.filter((project: Project) => project.createdBy === user?.id);
+      ? localProjects 
+      : localProjects.filter((project: Project) => project.createdBy === user?.id);
     
-    // Then apply search and other filters
     return tabFiltered.filter((project: Project) => {
-      // Validar que project.name y project.description existan antes de usar toLowerCase
       const nameMatches = project.name && 
         project.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
       const descriptionMatches = project.description && 
@@ -101,7 +98,7 @@ export default function ProjectsPage() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [projects, debouncedSearchQuery, statusFilter, activeTab, user?.id]);
+  }, [localProjects, debouncedSearchQuery, statusFilter, activeTab, user?.id]);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -112,29 +109,10 @@ export default function ProjectsPage() {
   }, []);
 
   const handlePageChange = useCallback((newPage: number) => {
-    console.log("Changing to page:", newPage);
     setCurrentPage(newPage);
   }, []);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "not-started":
-        return "bg-gray-200 text-gray-800";
-      case "in-progress":
-        return "bg-blue-100 text-blue-800";
-      case "completed":
-        return "bg-green-100 text-green-800";
-      case "at-risk":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const resetFilters = () => {
-    setStatusFilter("all");
-    setSearchQuery("");
-  };
+  const STATUS_OPTIONS = ["in-progress", "completed"];
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -172,70 +150,54 @@ export default function ProjectsPage() {
         </div>
 
         <div className="flex gap-2 flex-wrap">
-          {/* Status filters with better visuals */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="flex items-center gap-2">
                 <Filter className="h-4 w-4" />
                 <span>Status</span>
                 {statusFilter !== "all" && (
-                  <Badge variant="outline" className={getStatusColor(statusFilter)}>
-                    {statusFilter.replace("-", " ")}
-                  </Badge>
+                  <StatusBadge status={statusFilter} />
                 )}
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[200px]">
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => handleStatusFilter("all")}
                 className="flex items-center justify-between"
               >
                 <span>All Statuses</span>
-                {statusFilter === "all" && <Circle className="h-2 w-2 fill-current" />}
+                {statusFilter === "all" && (
+                  <Circle className="h-2 w-2 fill-current" />
+                )}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={() => handleStatusFilter("not-started")}
-                className="flex items-center gap-2"
-              >
-                <Badge variant="outline" className="bg-gray-200 text-gray-800">Not Started</Badge>
-                {statusFilter === "not-started" && <Circle className="h-2 w-2 fill-current ml-auto" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleStatusFilter("in-progress")}
-                className="flex items-center gap-2"
-              >
-                <Badge variant="outline" className="bg-blue-100 text-blue-800">In Progress</Badge>
-                {statusFilter === "in-progress" && <Circle className="h-2 w-2 fill-current ml-auto" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleStatusFilter("completed")}
-                className="flex items-center gap-2"
-              >
-                <Badge variant="outline" className="bg-green-100 text-green-800">Completed</Badge>
-                {statusFilter === "completed" && <Circle className="h-2 w-2 fill-current ml-auto" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleStatusFilter("at-risk")}
-                className="flex items-center gap-2"
-              >
-                <Badge variant="outline" className="bg-red-100 text-red-800">At Risk</Badge>
-                {statusFilter === "at-risk" && <Circle className="h-2 w-2 fill-current ml-auto" />}
-              </DropdownMenuItem>
+              {STATUS_OPTIONS.map((option) => (
+                <DropdownMenuItem
+                  key={option}
+                  onClick={() => handleStatusFilter(option)}
+                  className="flex items-center gap-2"
+                >
+                  <StatusBadge status={option} />
+                  {statusFilter === option && (
+                    <Circle className="h-2 w-2 fill-current ml-auto" />
+                  )}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* Reset filters button - only show when filters are active */}
-          {(statusFilter !== "all" || searchQuery) && (
-            <Button variant="ghost" size="sm" onClick={resetFilters}>
-              Clear Filters
-            </Button>
-          )}
         </div>
       </div>
 
-      <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
+      <Tabs defaultValue="all" className="w-full" onValueChange={(value) => {
+        setActiveTab(value);
+        if (user?.id) {
+          queryClient.invalidateQueries({ 
+            queryKey: ["userProjects", user.id]
+          });
+          refetch();
+        }
+      }}>
         <TabsList>
           <TabsTrigger value="all">All Projects</TabsTrigger>
           <TabsTrigger value="my">My Projects</TabsTrigger>
@@ -265,6 +227,8 @@ export default function ProjectsPage() {
                   <ProjectCard
                     key={project.id}
                     project={project}
+                    onProjectUpdated={updateProjectLocally}
+                    onProjectDeleted={() => removeProjectLocally(project.id)}
                   />
                 ))}
               </div>
@@ -316,6 +280,8 @@ export default function ProjectsPage() {
                   <ProjectCard
                     key={project.id}
                     project={project}
+                    onProjectUpdated={updateProjectLocally}
+                    onProjectDeleted={() => removeProjectLocally(project.id)}
                   />
                 ))}
               </div>

@@ -5,11 +5,58 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { upcomingTasks } from "@/data/dashboard-data";
+import { useContext, useEffect, useState } from "react";
+import { AuthContext } from "@/context/AuthContext";
+import { useProjectIssues } from "@/api/queries";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export function UpcomingTasksChart() {
+interface UpcomingTasksChartProps {
+  selectedProjectId: string | null;
+}
+
+// Define the Issue interface to match the API response
+interface Issue {
+  id: string;
+  title?: string;
+  summary?: string;
+  status: string;
+  priority?: string;
+  dueDate?: string;
+  code?: string;
+}
+
+export function UpcomingTasksChart({ selectedProjectId }: UpcomingTasksChartProps) {
+  const { user } = useContext(AuthContext);
+  const [tasks, setTasks] = useState<any[]>([]);
+  
+  // Fetch project-specific issues when a project is selected
+  const { data: projectIssues, isLoading } = useProjectIssues(
+    selectedProjectId || undefined
+  );
+  
+  useEffect(() => {
+    if (selectedProjectId && projectIssues) {
+      // Format project issues to match the task format
+      const formattedTasks = projectIssues
+        .filter((issue: Issue) => issue.status !== 'done' && issue.status !== 'closed')
+        .slice(0, 5) // Take only the first 5 tasks for display
+        .map((issue: Issue) => ({
+          id: issue.id,
+          title: issue.title || issue.summary || `Task ${issue.code || '#'}`,
+          due: issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : 'No due date',
+          priority: issue.priority || 'medium',
+          completed: issue.status === 'done' || issue.status === 'closed'
+        }));
+      
+      setTasks(formattedTasks);
+    } else {
+      // If no project is selected, use the sample data
+      setTasks(upcomingTasks);
+    }
+  }, [selectedProjectId, projectIssues]);
   
   const getPriorityColor = (priority: string) => {
-    switch (priority) {
+    switch (priority.toLowerCase()) {
       case "high":
         return "bg-red-500 text-white";
       case "medium":
@@ -21,9 +68,31 @@ export function UpcomingTasksChart() {
     }
   };
 
+  if (isLoading && selectedProjectId) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+      </div>
+    );
+  }
+
+  if (tasks.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[250px] text-gray-500 dark:text-gray-400">
+        <p>No upcoming tasks available</p>
+        <Button className="mt-4 bg-black/10 dark:bg-white/10 hover:dark:bg-white/20 hover:bg-black/20 text-black dark:text-white">
+          <Plus className="mr-2 h-4 w-4" />
+          Add Task
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
-      {upcomingTasks.map((task) => (
+      {tasks.map((task) => (
         <div
           key={task.id}
           className={cn(

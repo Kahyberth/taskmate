@@ -42,8 +42,6 @@ export function IssueDetailModal({
   onOpenEditModal,
 }: IssueDetailModalProps) {
   const { user } = useContext(AuthContext);
-  
-  // States for the form
   const [description, setDescription] = useState("");
   const [acceptanceCriteria, setAcceptanceCriteria] = useState("");
   const [comments, setComments] = useState<Comment[]>([]);
@@ -93,7 +91,7 @@ export function IssueDetailModal({
       console.error("Error fetching comments:", error);
       notifications.show({
         title: 'Error',
-        message: 'No se pudieron cargar los comentarios',
+        message: 'Could not load comments',
         color: 'red',
       });
     } finally {
@@ -102,7 +100,7 @@ export function IssueDetailModal({
   };
 
   const formatAcceptanceCriteria = (criteria: string) => {
-    if (!criteria) return <p className="text-gray-500 dark:text-gray-400 italic">No se han definido criterios de aceptación</p>;
+    if (!criteria) return <p className="text-gray-500 dark:text-gray-400 italic">No acceptance criteria defined</p>;
     
     return (
       <ul className="list-inside space-y-1 text-sm dark:text-gray-300">
@@ -150,8 +148,8 @@ export function IssueDetailModal({
         await onTaskUpdate(updatedFields);
         
         notifications.show({
-          title: 'Éxito',
-          message: 'Cambios guardados correctamente',
+          title: 'Success',
+          message: 'Changes saved successfully',
           color: 'green',
         });
       }
@@ -161,7 +159,7 @@ export function IssueDetailModal({
       console.error("Error saving changes:", error);
       notifications.show({
         title: 'Error',
-        message: 'No se pudieron guardar los cambios',
+        message: 'Could not save changes',
         color: 'red',
       });
     } finally {
@@ -187,7 +185,7 @@ export function IssueDetailModal({
       console.error("Error submitting comment:", error);
       notifications.show({
         title: 'Error',
-        message: 'No se pudo añadir el comentario',
+        message: 'Could not add comment',
         color: 'red',
       });
     } finally {
@@ -215,13 +213,13 @@ export function IssueDetailModal({
         
         setEditComment(null);
       } else {
-        throw new Error("No se recibió confirmación del servidor");
+        throw new Error("No confirmation received from server");
       }
     } catch (error) {
       console.error("Error updating comment:", error);
       notifications.show({
         title: 'Error',
-        message: 'No se pudo actualizar el comentario',
+        message: 'Could not update comment',
         color: 'red',
       });
     } finally {
@@ -246,7 +244,7 @@ export function IssueDetailModal({
       console.error("Error deleting comment:", error);
       notifications.show({
         title: 'Error',
-        message: 'No se pudo eliminar el comentario',
+        message: 'Could not delete comment',
         color: 'red',
       });
     } finally {
@@ -273,7 +271,6 @@ export function IssueDetailModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Edit Button */}
           <div className="flex justify-end">
             <Button
               variant="outline" 
@@ -282,22 +279,21 @@ export function IssueDetailModal({
               className="dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             >
               <FileEdit className="h-4 w-4 mr-2" />
-              Editar
+              Edit
             </Button>
           </div>
 
-          {/* Description and Acceptance Criteria sections */}
           {editing ? (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="description" className="text-md font-medium dark:text-gray-200">
-                  Descripción
+                  Description
                 </Label>
                 <Textarea
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Añade una descripción detallada de la tarea..."
+                  placeholder="Add a detailed description of the task..."
                   className="min-h-[100px] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:placeholder:text-gray-500"
                   autoFocus
                 />
@@ -305,13 +301,13 @@ export function IssueDetailModal({
               
               <div className="space-y-2">
                 <Label htmlFor="acceptance-criteria" className="text-md font-medium dark:text-gray-200">
-                  Criterios de aceptación
+                  Acceptance criteria
                 </Label>
                 <Textarea
                   id="acceptance-criteria"
                   value={acceptanceCriteria}
                   onChange={(e) => setAcceptanceCriteria(e.target.value)}
-                  placeholder="Define los criterios para considerar esta tarea como completada (un criterio por línea)..."
+                  placeholder="Define the criteria to consider this task as completed (one criterion per line)..."
                   className="min-h-[100px] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:placeholder:text-gray-500"
                 />
               </div>
@@ -324,7 +320,7 @@ export function IssueDetailModal({
                   className="dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
                   disabled={saving}
                 >
-                  Cancelar
+                  Cancel
                 </Button>
                 <Button
                   size="sm"
@@ -335,12 +331,12 @@ export function IssueDetailModal({
                   {saving ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      <span>Guardando...</span>
+                      <span>Saving...</span>
                     </>
                   ) : (
                     <>
                       <Save className="h-4 w-4 mr-2" />
-                      <span>Guardar</span>
+                      <span>Save</span>
                     </>
                   )}
                 </Button>
@@ -351,7 +347,7 @@ export function IssueDetailModal({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="description" className="text-md font-medium dark:text-gray-200">
-                    Descripción
+                    Description
                   </Label>
                 </div>
                 
@@ -359,7 +355,7 @@ export function IssueDetailModal({
                   {description ? (
                     <p className="text-sm dark:text-gray-300 whitespace-pre-wrap">{description}</p>
                   ) : (
-                    <p className="text-gray-500 dark:text-gray-400 italic">No hay descripción</p>
+                    <p className="text-gray-500 dark:text-gray-400 italic">No description</p>
                   )}
                 </div>
               </div>
@@ -367,7 +363,7 @@ export function IssueDetailModal({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="acceptance-criteria" className="text-md font-medium dark:text-gray-200">
-                    Criterios de aceptación
+                    Acceptance criteria
                   </Label>
                 </div>
                 
@@ -382,7 +378,7 @@ export function IssueDetailModal({
 
           <div className="space-y-3">
             <Label className="text-md font-medium dark:text-gray-200">
-              Comentarios
+              Comments
             </Label>
             
             <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
@@ -401,7 +397,7 @@ export function IssueDetailModal({
                           </AvatarFallback>
                         </Avatar>
                         <span className="text-sm font-medium dark:text-gray-200">
-                          {getAssignedUser(comment.user_id)?.name || 'Usuario'}
+                          {getAssignedUser(comment.user_id)?.name || 'User'}
                         </span>
                         <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
                           {formatDate(comment.updatedAt)}
@@ -416,7 +412,7 @@ export function IssueDetailModal({
                             onClick={() => setEditComment({ id: comment.id, text: comment.comment })}
                             className="h-7 text-xs dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800"
                           >
-                            Editar
+                            Edit
                           </Button>
                           <Button
                             variant="ghost"
@@ -424,7 +420,7 @@ export function IssueDetailModal({
                             onClick={() => showDeleteConfirmation(comment.id)}
                             className="h-7 text-xs text-red-500 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-gray-800"
                           >
-                            Eliminar
+                            Delete
                           </Button>
                         </div>
                       )}
@@ -436,7 +432,7 @@ export function IssueDetailModal({
                           value={editComment.text}
                           onChange={(e) => setEditComment({ ...editComment, text: e.target.value })}
                           className="dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200"
-                          placeholder="Escribe tu comentario..."
+                          placeholder="Write your comment..."
                           autoFocus
                         />
                         <div className="flex justify-end gap-2">
@@ -447,7 +443,7 @@ export function IssueDetailModal({
                             className="dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
                             disabled={editingComment}
                           >
-                            Cancelar
+                            Cancel
                           </Button>
                           <Button
                             size="sm"
@@ -458,12 +454,12 @@ export function IssueDetailModal({
                             {editingComment ? (
                               <>
                                 <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                                <span>Guardando...</span>
+                                <span>Saving...</span>
                               </>
                             ) : (
                               <>
                                 <Save className="h-3.5 w-3.5 mr-1" />
-                                <span>Guardar</span>
+                                <span>Save</span>
                               </>
                             )}
                           </Button>
@@ -476,14 +472,14 @@ export function IssueDetailModal({
                 ))
               ) : (
                 <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                  <p>No hay comentarios aún.</p>
+                  <p>No comments yet.</p>
                 </div>
               )}
             </div>
             
             <div className="mt-4 space-y-2">
               <Textarea
-                placeholder="Añadir un comentario..."
+                placeholder="Add a comment..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 className="dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:placeholder:text-gray-500"
@@ -497,12 +493,12 @@ export function IssueDetailModal({
                   {submittingComment ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      <span>Enviando...</span>
+                      <span>Sending...</span>
                     </>
                   ) : (
                     <>
                       <Send className="h-4 w-4 mr-2" />
-                      <span>Enviar</span>
+                      <span>Send</span>
                     </>
                   )}
                 </Button>
@@ -517,7 +513,7 @@ export function IssueDetailModal({
             onClick={() => onOpenChange(false)}
             className="dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
           >
-            Cerrar
+            Close
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -525,11 +521,11 @@ export function IssueDetailModal({
       <Dialog open={deleteConfirmation?.isOpen} onOpenChange={(open) => !open && setDeleteConfirmation(null)}>
         <DialogContent className="sm:max-w-[425px] dark:bg-gray-800 dark:border-gray-700">
           <DialogHeader>
-            <DialogTitle className="dark:text-gray-200">Confirmar eliminación</DialogTitle>
+            <DialogTitle className="dark:text-gray-200">Confirm deletion</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              ¿Estás seguro de que deseas eliminar este comentario? Esta acción no se puede deshacer.
+              Are you sure you want to delete this comment? This action cannot be undone.
             </p>
           </div>
           <DialogFooter>
@@ -539,7 +535,7 @@ export function IssueDetailModal({
               className="dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
               disabled={deletingComment}
             >
-              Cancelar
+              Cancel
             </Button>
             <Button
               variant="destructive"
@@ -550,10 +546,10 @@ export function IssueDetailModal({
               {deletingComment ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  <span>Eliminando...</span>
+                  <span>Deleting...</span>
                 </>
               ) : (
-                "Eliminar"
+                "Delete"
               )}
             </Button>
           </DialogFooter>
@@ -561,4 +557,4 @@ export function IssueDetailModal({
       </Dialog>
     </Dialog>
   );
-} 
+}

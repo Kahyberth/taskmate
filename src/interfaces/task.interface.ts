@@ -1,3 +1,5 @@
+import { Epic } from "./epic.interface";
+
 export interface Task {
   id: string;
   title: string;
@@ -12,7 +14,7 @@ export interface Task {
   acceptanceCriteria?: string;
   isDeleted?: boolean;
   productBacklogId: string;
-  epicId?: string;
+  epic?: Epic | null;
   createdAt?: Date;
   updatedAt?: Date;
   resolvedAt?: Date;

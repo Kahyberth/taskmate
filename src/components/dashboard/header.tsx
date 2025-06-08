@@ -1,4 +1,4 @@
-import { Settings, Menu } from "lucide-react";
+import { Settings, Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 import { AuthContext } from "@/context/AuthContext";
 import { ThemeToggle } from "../ui/theme-toggle";
 import { NotificationsComponent } from "../notifications/notifications.component";
@@ -30,9 +30,6 @@ export function DashboardHeader({
     logout();
   };
 
-  useEffect(() => {
-    console.log("Se renderiza:");
-  }, []);
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between p-4 backdrop-blur-md bg-white dark:bg-black/20 border-b border-black/10 dark:border-white/10 ">
       <div className="flex items-center gap-2">
@@ -62,15 +59,6 @@ export function DashboardHeader({
 
         <ThemeToggle />
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="dark:hover:bg-white/10 hover:bg-black/10 dark:text-white text-black"
-        >
-          <Settings className="h-5 w-5" />
-          <span className="sr-only">Settings</span>
-        </Button>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -90,16 +78,22 @@ export function DashboardHeader({
                 <p className="text-xs leading-none text-muted-foreground">
                   {userProfile?.email}
                 </p>
-                <Badge className="mt-1 w-fit">{"User"}</Badge>
+                <Badge className="mt-1 w-fit">User</Badge>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <Link to="/dashboard/profile">
-                <span>Perfil</span>
+              <Link className="flex items-center gap-2" to="/dashboard/profile">
+                <User className="h-5 w-5" />
+                <span>Profile</span>
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem>
+              <Link className="flex items-center gap-2" to="/dashboard/settings">
+                <Settings className="h-5 w-5" />
+                <span>Settings</span>
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
           </DropdownMenuContent>

@@ -13,8 +13,8 @@ interface CreateIssueFormProps {
   onNewUserStoryTypeChange: (type: 'bug' | 'feature' | 'task' | 'refactor' | 'user_story') => void;
   newUserStoryPriority: 'low' | 'medium' | 'high' | 'critical';
   onNewUserStoryPriorityChange: (priority: 'low' | 'medium' | 'high' | 'critical') => void;
-  newUserStoryEpicId?: string;
-  onNewUserStoryEpicIdChange?: (epicId: string | undefined) => void;
+  newUserStoryEpic?: Epic | null;
+  onNewUserStoryEpicChange?: (epic: Epic | null) => void;
   epics: Epic[];
 }
 
@@ -26,8 +26,8 @@ export function CreateIssueForm({
   onNewUserStoryTypeChange,
   newUserStoryPriority,
   onNewUserStoryPriorityChange,
-  newUserStoryEpicId,
-  onNewUserStoryEpicIdChange,
+  newUserStoryEpic,
+  onNewUserStoryEpicChange,
   epics,
 }: CreateIssueFormProps) {
   const [isCreatingStory, setIsCreatingStory] = useState(false);
@@ -54,7 +54,7 @@ export function CreateIssueForm({
     <div className="flex flex-nowrap items-center gap-2 mb-4 mt-1 w-full">
       <Input
         type="text"
-        placeholder="Título de la historia"
+        placeholder="Story title"
         value={newUserStoryTitle}
         onChange={(e) => onNewUserStoryTitleChange(e.target.value)}
         className="flex-1 min-w-0 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:placeholder:text-gray-500"
@@ -63,7 +63,7 @@ export function CreateIssueForm({
       />
       <Select value={newUserStoryType} onValueChange={onNewUserStoryTypeChange} disabled={isCreatingStory}>
         <SelectTrigger className="w-[100px] min-w-[100px] text-xs dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200">
-          <SelectValue placeholder="Tipo" />
+          <SelectValue placeholder="Type" />
         </SelectTrigger>
         <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
           <SelectItem value="user_story" className="dark:text-gray-200">User Story</SelectItem>
@@ -75,29 +75,29 @@ export function CreateIssueForm({
       </Select>
       <Select value={newUserStoryPriority} onValueChange={onNewUserStoryPriorityChange} disabled={isCreatingStory}>
         <SelectTrigger className="w-[90px] min-w-[90px] text-xs dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200">
-          <SelectValue placeholder="Prioridad" />
+          <SelectValue placeholder="Priority" />
         </SelectTrigger>
         <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-          <SelectItem value="low" className="text-green-600 dark:text-green-400">Baja</SelectItem>
-          <SelectItem value="medium" className="text-yellow-600 dark:text-yellow-400">Media</SelectItem>
-          <SelectItem value="high" className="text-red-600 dark:text-red-400">Alta</SelectItem>
-          <SelectItem value="critical" className="text-purple-600 dark:text-purple-400">Crítica</SelectItem>
+          <SelectItem value="low" className="text-green-600 dark:text-green-400">Low</SelectItem>
+          <SelectItem value="medium" className="text-yellow-600 dark:text-yellow-400">Medium</SelectItem>
+          <SelectItem value="high" className="text-red-600 dark:text-red-400">High</SelectItem>
+          <SelectItem value="critical" className="text-purple-600 dark:text-purple-400">Critical</SelectItem>
         </SelectContent>
       </Select>
       <Select 
-        value={newUserStoryEpicId || "none"} 
+        value={newUserStoryEpic?.id || "none"} 
         onValueChange={(value) => {
-          if (onNewUserStoryEpicIdChange) {
-            onNewUserStoryEpicIdChange(value === "none" ? undefined : value);
+          if (onNewUserStoryEpicChange) {
+            onNewUserStoryEpicChange(value === "none" ? null : epics.find(epic => epic.id === value) || null);
           }
         }}
         disabled={isCreatingStory}
       >
         <SelectTrigger className="w-[100px] min-w-[100px] text-xs dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200">
-          <SelectValue placeholder="Épica" />
+          <SelectValue placeholder="Epic" />
         </SelectTrigger>
         <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-          <SelectItem value="none" className="dark:text-gray-200">Sin épica</SelectItem>
+          <SelectItem value="none" className="dark:text-gray-200">No epic</SelectItem>
           {epics.map((epic) => (
             <SelectItem key={epic.id} value={epic.id} className="dark:text-gray-200">
               <div className="flex items-center gap-2">
@@ -119,10 +119,10 @@ export function CreateIssueForm({
         {isCreatingStory ? (
           <>
             <Loader2 size={14} className="mr-1 animate-spin" />
-            Añadiendo...
+            Adding...
           </>
-        ) : 'Añadir'}
+        ) : 'Add'}
       </Button>
     </div>
   );
-} 
+}

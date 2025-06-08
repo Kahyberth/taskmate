@@ -16,7 +16,6 @@ interface InviteMembersDialogProps {
   project: any;
   projectMembers: any[];
   refetchMembers: () => Promise<void>;
-  teams?: Team[] | null;
   currentTeam?: Team | null;
 }
 
@@ -30,8 +29,6 @@ export function InviteMembersDialog({
 }: InviteMembersDialogProps) {
   const { user } = useContext(AuthContext);
   const [availableTeamMembers, setAvailableTeamMembers] = useState<any[]>([]);
-  
-
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [selectedTeamMember, setSelectedTeamMember] = useState<string>('');
   const [loadingMembers, setLoadingMembers] = useState(false);
@@ -45,11 +42,11 @@ export function InviteMembersDialog({
   }, [open, currentTeam?.id]);
 
   const fetchAvailableTeamMembers = async () => {
-    console.log("currentTeam",currentTeam);
+    console.log("currentTeam", currentTeam);
     if (!currentTeam?.id) {
       notifications.show({
         title: "Error",
-        message: "No se pudo obtener el ID del equipo",
+        message: "Could not get the team ID",
         color: "red"
       });
       return;
@@ -58,12 +55,12 @@ export function InviteMembersDialog({
     await apiClient.get(`/projects/team-members/unassigned?teamId=${currentTeam.id}&projectId=${project.id}`)
     .then((response) => {
       setAvailableTeamMembers(response.data);
-      console.log("availableTeamMembers",availableTeamMembers);
+      console.log("availableTeamMembers", availableTeamMembers);
     })
     .catch((error) => {
       notifications.show({
         title: "Error",
-        message: `Error al cargar los miembros disponibles: ${error}`,
+        message: `Error loading available members: ${error}`,
         color: "red"
       })
     })
@@ -71,7 +68,6 @@ export function InviteMembersDialog({
       setLoadingMembers(false);
     })
   }
-
 
   const handleAddTeamMember = async () => {
     if (!selectedTeamMember || isAddingMember) return;
@@ -92,8 +88,8 @@ export function InviteMembersDialog({
         setSelectedTeamMember('');
         
         notifications.show({
-          title: "Miembro añadido",
-          message: "El miembro ha sido añadido al proyecto exitosamente",
+          title: "Member Added",
+          message: "The member has been successfully added to the project",
           color: "green"
         });
       }
@@ -101,7 +97,7 @@ export function InviteMembersDialog({
     .catch((error) => {
       notifications.show({
         title: "Error",
-        message: error.response?.data?.message || "No se pudo añadir al miembro",
+        message: error.response?.data?.message || "Could not add the member",
         color: "red"
       });
     })
@@ -114,87 +110,86 @@ export function InviteMembersDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] dark:bg-gray-800 dark:border-gray-700">
         <DialogHeader>
-          <DialogTitle className="dark:text-gray-200">Miembros del Proyecto</DialogTitle>
+          <DialogTitle className="dark:text-gray-200">Project Members</DialogTitle>
           <DialogDescription className="dark:text-gray-400">
-            {`${projectMembers.length} miembro(s) en este proyecto`}
+            {`${projectMembers.length} member(s) in this project`}
             {currentTeam && (
               <span className="ml-1">
-                - Equipo: {currentTeam.name}
+                - Team: {currentTeam.name}
               </span>
             )}
           </DialogDescription>
         </DialogHeader>
         
-        {/* Selector de miembros del equipo */}
-          <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex flex-col gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="team-member-select" className="text-sm font-medium dark:text-gray-200">
-                  Seleccionar miembro del equipo
-                </Label>
-                <div className="flex gap-2">
-                  <Select
-                    value={selectedTeamMember}
-                    onValueChange={setSelectedTeamMember}
-                    disabled={isAddingMember}
-                  >
-                    <SelectTrigger id="team-member-select" className="flex-1 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200">
-                      <SelectValue placeholder="Seleccionar miembro" />
-                    </SelectTrigger>
-                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                      {availableTeamMembers.length > 0 ? (
-                        availableTeamMembers.map((teamMember) => (
-                          <SelectItem 
-                            key={teamMember.member.id} 
-                            value={teamMember.member.id}
-                            className="dark:text-gray-200"
-                          >
-                            {`${teamMember.member.name || ''} ${teamMember.member.lastName || ''}`.trim() || 'Usuario'} 
-                            <span className="ml-1 text-gray-500">({teamMember.role || 'Miembro del Equipo'})</span>
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="none" disabled className="dark:text-gray-400">
-                          No hay miembros disponibles
+        <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="team-member-select" className="text-sm font-medium dark:text-gray-200">
+                Select team member
+              </Label>
+              <div className="flex gap-2">
+                <Select
+                  value={selectedTeamMember}
+                  onValueChange={setSelectedTeamMember}
+                  disabled={isAddingMember}
+                >
+                  <SelectTrigger id="team-member-select" className="flex-1 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200">
+                    <SelectValue placeholder="Select member" />
+                  </SelectTrigger>
+                  <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                    {availableTeamMembers.length > 0 ? (
+                      availableTeamMembers.map((teamMember) => (
+                        <SelectItem 
+                          key={teamMember.member.id} 
+                          value={teamMember.member.id}
+                          className="dark:text-gray-200"
+                        >
+                          {`${teamMember.member.name || ''} ${teamMember.member.lastName || ''}`.trim() || 'User'} 
+                          <span className="ml-1 text-gray-500">({teamMember.role || 'Team Member'})</span>
                         </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <Button 
-                    onClick={handleAddTeamMember} 
-                    disabled={isAddingMember || !selectedTeamMember || selectedTeamMember === 'none'}
-                    className="dark:bg-blue-700 dark:text-white dark:hover:bg-blue-600"
-                  >
-                    {isAddingMember ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        <span>Añadiendo...</span>
-                      </>
+                      ))
                     ) : (
-                      <>
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        <span>Añadir</span>
-                      </>
+                      <SelectItem value="none" disabled className="dark:text-gray-400">
+                        No available members
+                      </SelectItem>
                     )}
-                  </Button>
-                </div>
-                {availableTeamMembers.length === 0 && (
-                  <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    No hay miembros del equipo disponibles para añadir al proyecto.
-                  </p>
-                  </div>
-                )}
-                {availableTeamMembers.length > 0 && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {`${availableTeamMembers.length} miembro(s) disponible(s) para añadir`}
-                  </p>
-                )}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={handleAddTeamMember} 
+                  disabled={isAddingMember || !selectedTeamMember || selectedTeamMember === 'none'}
+                  className="dark:bg-blue-700 dark:text-white dark:hover:bg-blue-600"
+                >
+                  {isAddingMember ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      <span>Add</span>
+                    </>
+                  )}
+                </Button>
               </div>
+              {availableTeamMembers.length === 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    No team members available to add to the project.
+                  </p>
+                </div>
+              )}
+              {availableTeamMembers.length > 0 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {`${availableTeamMembers.length} member(s) available to add`}
+                </p>
+              )}
             </div>
           </div>
+        </div>
         
-        {/* Lista de miembros actuales */}
+        {/* Current members list */}
         <div className="max-h-[280px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
           {loadingMembers ? (
             <div className="flex flex-col gap-2">
@@ -226,7 +221,7 @@ export function InviteMembersDialog({
                     <p className="text-sm font-medium dark:text-gray-200 truncate">
                       {member 
                         ? `${member.name || ''} ${member.lastName || ''}`.trim() 
-                        : 'Usuario'}
+                        : 'User'}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                       {member.email || member.id}
@@ -234,7 +229,7 @@ export function InviteMembersDialog({
                   </div>
                   <div className="ml-2 flex-shrink-0">
                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                      Miembro
+                      Member
                     </span>
                   </div>
                 </div>
@@ -243,8 +238,8 @@ export function InviteMembersDialog({
           ) : (
             <div className="text-center py-6 text-gray-500 dark:text-gray-400">
               <Users className="mx-auto h-12 w-12 opacity-30 mb-2" />
-              <p>No hay miembros en este proyecto.</p>
-              <p className="text-sm">Los miembros del proyecto aparecerán aquí cuando sean añadidos.</p>
+              <p>No members in this project.</p>
+              <p className="text-sm">Project members will appear here when added.</p>
             </div>
           )}
         </div>
@@ -255,10 +250,10 @@ export function InviteMembersDialog({
             onClick={() => onOpenChange(false)}
             className="dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
           >
-            Cerrar
+            Close
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-} 
+}

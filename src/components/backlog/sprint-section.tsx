@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { notifications } from "@mantine/notifications";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface SprintSectionProps {
   sprint: Sprint;
@@ -23,17 +24,12 @@ interface SprintSectionProps {
   onEditTask: (task: Task) => void;
   onMoveTaskToBacklog: (taskId: string) => void;
   onStatusChange: (sprintId: string, taskId: string, status: Task["status"]) => void;
-  onStartSprint: (sprintId: string) => void;
-  onCompleteSprint: (sprintId: string) => void;
+  onStartSprint: (sprintId: string) => Promise<void>;
+  onCompleteSprint: (sprintId: string) => Promise<void>;
   onDeleteSprint: (sprintId: string) => void;
   onEditSprint: (sprint: Sprint) => void;
-  getPriorityColor: (priority?: string) => string;
-  getTypeColor: (type?: string) => string;
-  getStatusColor: (status: string) => string;
-  getStatusDisplayText: (status: string) => string;
   getAssignedUser: (userId?: string) => AssignedUser | null;
   onDeleteTask: (taskId: string, sprintId: string) => void;
-  getEpicById: (epicId?: string) => Epic | null;
 }
 
 export function SprintSection({
@@ -48,15 +44,10 @@ export function SprintSection({
   onCompleteSprint,
   onDeleteSprint,
   onEditSprint,
-  getPriorityColor,
-  getTypeColor,
-  getStatusColor,
-  getStatusDisplayText,
   getAssignedUser,
   onDeleteTask,
-  getEpicById
 }: SprintSectionProps) {
-  const [isStartingSpring, setIsStartingSprint] = useState(false);
+  const [isStartingSprint, setIsStartingSprint] = useState(false);
   const [isCompletingSprint, setIsCompletingSprint] = useState(false);
   const [isDeletingSprint, setIsDeletingSprint] = useState(false);
 
@@ -105,8 +96,8 @@ export function SprintSection({
       }
     } else {
       notifications.show({
-        title: "No se puede eliminar",
-        message: "El sprint tiene tareas asignadas. Muévalas al backlog antes de eliminar el sprint.",
+        title: "Cannot delete",
+        message: "The sprint has assigned tasks. Move them to the backlog before deleting the sprint.",
         color: "red"
       });
     }
@@ -147,16 +138,16 @@ export function SprintSection({
               variant={sprint.isStarted ? "destructive" : "outline"}
               size="sm"
               onClick={sprint.isStarted ? handleCompleteSprint : handleStartSprint}
-              disabled={isStartingSpring || isCompletingSprint}
+              disabled={isStartingSprint || isCompletingSprint}
               className="h-7 text-xs dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800 min-w-[120px]"
             >
-              {isStartingSpring || isCompletingSprint ? (
+              {isStartingSprint || isCompletingSprint ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {sprint.isStarted ? "Completando..." : "Iniciando..."}
+                  {sprint.isStarted ? "Completing..." : "Starting..."}
                 </>
               ) : (
-                sprint.isStarted ? "Completar sprint" : "Iniciar sprint"
+                sprint.isStarted ? "Complete sprint" : "Start sprint"
               )}
             </Button>
 
@@ -169,7 +160,7 @@ export function SprintSection({
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => onEditSprint(sprint)}>
                   <Edit className="mr-2 h-4 w-4" />
-                  <span>Editar sprint</span>
+                  <span>Edit sprint</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -180,12 +171,12 @@ export function SprintSection({
                   {isDeletingSprint ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span>Eliminando...</span>
+                      <span>Deleting...</span>
                     </>
                   ) : (
                     <>
                       <Trash className="mr-2 h-4 w-4" />
-                      <span>Eliminar sprint</span>
+                      <span>Delete sprint</span>
                     </>
                   )}
                 </DropdownMenuItem>
@@ -204,18 +195,13 @@ export function SprintSection({
                 onEdit={() => onEditTask(task)}
                 onMoveToBacklog={() => onMoveTaskToBacklog(task.id)}
                 onStatusChange={(taskId, status) => onStatusChange(sprint.id, taskId, status)}
-                getPriorityColor={getPriorityColor}
-                getTypeColor={getTypeColor}
-                getStatusColor={getStatusColor}
-                getStatusDisplayText={getStatusDisplayText}
                 getAssignedUser={getAssignedUser}
                 onDeleteTask={(taskId) => onDeleteTask(taskId, sprint.id)}
-                getEpicById={getEpicById}
               />
             ))}
             {!sprint.issues?.length && (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                No hay tareas en este sprint
+                No tasks in this sprint
               </div>
             )}
           </div>
@@ -224,13 +210,13 @@ export function SprintSection({
         {isExpanded && sprint.issues?.length > 0 && (
           <div className="flex items-center justify-center py-4 text-gray-400 dark:text-gray-500">
             <span className="text-sm">
-              Estimación total: {sprint.issues.reduce((sum, task) => sum + (task.storyPoints || 0), 0).toFixed(1).replace(/\.0$/, '')} puntos
+              Total estimation: {sprint.issues.reduce((sum, task) => sum + (task.storyPoints || 0), 0).toFixed(1).replace(/\.0$/, '')} points
               {sprint.issues.some(task => task.storyPoints === 0 || task.storyPoints === undefined) && 
-                " (algunas tareas sin estimar)"}
+                " (some tasks not estimated)"}
             </span>
           </div>
         )}
       </div>
     </div>
   );
-} 
+}

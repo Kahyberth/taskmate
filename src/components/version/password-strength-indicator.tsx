@@ -17,30 +17,20 @@ export function PasswordStrengthIndicator({ password }: PasswordStrengthIndicato
 
     let currentStrength = 0
 
-    // Length check
     if (password.length >= 8) currentStrength += 1
-
-    // Uppercase check
     if (/[A-Z]/.test(password)) currentStrength += 1
-
-    // Lowercase check
     if (/[a-z]/.test(password)) currentStrength += 1
-
-    // Number check
     if (/[0-9]/.test(password)) currentStrength += 1
-
-    // Special character check
     if (/[^A-Za-z0-9]/.test(password)) currentStrength += 1
 
     setStrength(currentStrength)
 
-    // Set message based on strength
     if (currentStrength <= 2) {
-      setMessage("Débil")
+      setMessage("Weak")
     } else if (currentStrength <= 4) {
-      setMessage("Media")
+      setMessage("Medium")
     } else {
-      setMessage("Fuerte")
+      setMessage("Strong")
     }
   }, [password])
 
@@ -70,8 +60,7 @@ export function PasswordStrengthIndicator({ password }: PasswordStrengthIndicato
           />
         ))}
       </div>
-      <p className={`text-xs ${getTextColor()}`}>{message && `Seguridad: ${message}`}</p>
+      <p className={`text-xs ${getTextColor()}`}>{message && `Strength: ${message}`}</p>
     </div>
   )
 }
-

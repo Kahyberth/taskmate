@@ -5,6 +5,7 @@ import { useContext, useEffect, useState } from "react"
 import { AuthContext } from "@/context/AuthContext"
 import { useQuery } from "@tanstack/react-query"
 import { apiClient } from "@/api/client-gateway"
+import { useProjectIssues, useProjectById } from "@/api/queries"
 
 interface DashboardStat {
   title: string
@@ -27,13 +28,16 @@ interface Issue {
   updatedAt: string;
 }
 
-export function StatsCards() {
+interface StatsCardsProps {
+  selectedProjectId: string | null;
+}
+
+export function StatsCards({ selectedProjectId }: StatsCardsProps) {
   const { user } = useContext(AuthContext);
   const [stats, setStats] = useState<DashboardStat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-
-  const { data: userIssues, isLoading: isLoadingIssues } = useQuery({
+  const { data: userIssues, isLoading: isLoadingUserIssues } = useQuery({
     queryKey: ['userIssues', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
@@ -45,86 +49,101 @@ export function StatsCards() {
         return [];
       }
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !selectedProjectId,
   });
   
-  // Calculate percentage changes (simulated for now)
+
+  const { data: projectIssues, isLoading: isLoadingProjectIssues } = useProjectIssues(
+    selectedProjectId || undefined
+  );
+  
+  const { data: projectData, isLoading: isLoadingProject } = useProjectById(
+    selectedProjectId || undefined
+  );
+  
   const calculateChange = (current: number, previous: number): string => {
     if (previous === 0) return "0%";
     const change = ((current - previous) / previous) * 100;
     return `${Math.abs(Math.round(change))}%`;
   }
   
-  // Update stats when data is loaded
   useEffect(() => {
-    if (userIssues && !isLoadingIssues) {
-      // Calculate statistics from user issues
-      const total = userIssues.length;
-      const completed = userIssues.filter(issue => 
+
+    const issues = selectedProjectId ? projectIssues : userIssues;
+    const isDataLoading = selectedProjectId 
+      ? (isLoadingProjectIssues || isLoadingProject) 
+      : isLoadingUserIssues;
+    
+    if (issues && !isDataLoading) {
+      const total = issues.length;
+      const completed = issues.filter((issue: any) => 
         issue.status === 'done' || issue.status === 'closed'
       ).length;
-      const inProgress = userIssues.filter(issue => 
+      const inProgress = issues.filter((issue: any) => 
         issue.status === 'in-progress'
       ).length;
       
       const completedPercentage = total > 0 ? Math.round((completed / total) * 100) : 0;
       const inProgressPercentage = total > 0 ? Math.round((inProgress / total) * 100) : 0;
       
-    
-      const previousTotal = total - Math.floor(total * 0.12);
-      const previousCompleted = completed - Math.floor(completed * 0.08);
-      const previousInProgress = inProgress - Math.floor(inProgress * 0.03);
+      const previousTotal = total > 0 ? total - Math.floor(total * 0.12) : 0;
+      const previousCompleted = completed > 0 ? completed - Math.floor(completed * 0.08) : 0;
+      const previousInProgress = inProgress > 0 ? inProgress - Math.floor(inProgress * 0.03) : 0;
       
       const totalChange = calculateChange(total, previousTotal);
       const completedChange = calculateChange(completed, previousCompleted);
       const inProgressChange = calculateChange(inProgress, previousInProgress);
 
+      const totalTrend = total >= previousTotal ? "up" : "down";
+      const completedTrend = completed >= previousCompleted ? "up" : "down";
+      const inProgressTrend = inProgress <= previousInProgress ? "down" : "up";
       
-      const totalTrend = total > previousTotal ? "up" : "down";
-      const completedTrend = completed > previousCompleted ? "up" : "down";
+      const isTotalTrendPositive = totalTrend === "up";
+      const isCompletedTrendPositive = completedTrend === "up";
+      const isInProgressTrendPositive = inProgressTrend === "down";
       
-      const inProgressTrend = inProgress < previousInProgress ? "down" : "up";
+      const titlePrefix = selectedProjectId && projectData 
+        ? `${projectData[0].name}: ` 
+        : "";
       
-      const isTotalTrendPositive = totalTrend === "up"; 
-      const isCompletedTrendPositive = completedTrend === "up"; 
-      const isInProgressTrendPositive = inProgressTrend === "down"; 
+        console.log("totalprefix",titlePrefix,  "projectData", projectData, "selectedProjectId", selectedProjectId)
       
       setStats([
         {
-          title: "Total Tasks",
+          title: `${titlePrefix}Total Tasks`,
           value: total.toString(),
           change: totalChange,
           trend: totalTrend,
-          progressValue: 100, // Always full for visualization
+          progressValue: 100,
           progressClass: "bg-gradient-to-r from-indigo-500 to-purple-500",
           changeColor: isTotalTrendPositive ? "text-green-500 dark:text-green-400" : "text-amber-500 dark:text-amber-400",
-          progressLabel: `${total} tareas asignadas`
+          progressLabel: `${total} ${selectedProjectId ? 'project tasks' : 'assigned tasks'}`
         },
         {
-          title: "Completed",
+          title: `${titlePrefix}Completed`,
           value: completed.toString(),
           change: completedChange,
           trend: completedTrend,
           progressValue: completedPercentage,
           progressClass: "bg-gradient-to-r from-green-500 to-emerald-500",
           changeColor: isCompletedTrendPositive ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400",
-          progressLabel: `${completedPercentage}% del total`
+          progressLabel: `${completedPercentage}% of total`
         },
         {
-          title: "In Progress",
+          title: `${titlePrefix}In Progress`,
           value: inProgress.toString(),
           change: inProgressChange,
           trend: inProgressTrend,
           progressValue: inProgressPercentage,
           progressClass: "bg-gradient-to-r from-blue-500 to-cyan-500",
           changeColor: isInProgressTrendPositive ? "text-green-500 dark:text-green-400" : "text-yellow-500 dark:text-yellow-400",
-          progressLabel: `${inProgressPercentage}% del total`
+          progressLabel: `${inProgressPercentage}% of total`
         }
       ]);
       
       setIsLoading(false);
     }
-  }, [userIssues, isLoadingIssues]);
+  }, [userIssues, isLoadingUserIssues, projectIssues, isLoadingProjectIssues, projectData, isLoadingProject, selectedProjectId]);
 
   if (isLoading) {
     return (
@@ -169,19 +188,22 @@ export function StatsCards() {
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {stat.value}
               </div>
-              <div className={`text-sm ${stat.changeColor} flex items-center`}>
+              {/* <div className={`text-sm ${stat.changeColor} flex items-center`}>
                 {stat.trend === "up" ? (
                   <ChevronUp className="h-4 w-4 mr-1" />
                 ) : (
                   <ChevronDown className="h-4 w-4 mr-1" />
                 )}
                 {stat.change}
-              </div>
+              </div> */}
             </div>
-            <Progress 
-              value={stat.progressValue} 
-              className={`mt-2 h-1 ${stat.progressClass}`}
-            />
+
+            <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+              <div 
+                className={`h-1.5 rounded-full ${stat.progressClass}`}
+                style={{ width: `${stat.progressValue}%` }}
+              ></div>
+            </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {stat.progressLabel}
             </div>

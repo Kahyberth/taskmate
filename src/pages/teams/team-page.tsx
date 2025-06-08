@@ -12,32 +12,18 @@ import { useNavigate } from "react-router-dom";
 import { Pagination } from '@mantine/core';
 
 export default function TeamsPage() {
-  // Estados para búsqueda, filtros y ordenamiento
   const [searchQuery, setSearchQuery] = useState("");
   const [filterValue, setFilterValue] = useState("all");
   const [sortBy, setSortBy] = useState("name");
   const [teamToEdit, setTeamToEdit] = useState<Team | null>(null);
   
-  // Get the pagination functionality from context
   const { teams, loading, currentPage, setCurrentPage, totalPages } = useTeams();
   const navigate = useNavigate();
- 
-  // Debug info on each render
-  useEffect(() => {
-    console.log("TeamPage rendered with:", {
-      currentPage,
-      totalPages,
-      teamsCount: teams?.length || 0
-    });
-  }, [currentPage, totalPages, teams]);
   
-  // Wrap setCurrentPage with debugging
   const handlePageChange = useCallback((newPage: number) => {
-    console.log("Pagination clicked on TeamPage, changing to page:", newPage);
     setCurrentPage(newPage);
   }, [setCurrentPage]);
   
-  // useMemo para filtrar y ordenar equipos
   const filteredTeams = useMemo(() => {
     return (teams ?? [])
       .filter((team) => {

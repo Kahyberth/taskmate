@@ -73,7 +73,7 @@ export function ProjectHeader({
             {projectMembers.length > 0 && (
               <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
                 {projectMembers.length}{" "}
-                {projectMembers.length === 1 ? "miembro" : "miembros"}
+                {projectMembers.length === 1 ? "member" : "members"}
               </span>
             )}
           </div>
