@@ -116,18 +116,16 @@ export default function TeamChat({
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [chatGroups, setChatGroups] = useState<ChatGroup[]>(channels);
-  const [selectedGroupId, setSelectedGroupId] = useState<string>(
-    channels[0]?.id || ""
-  );
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(channels[0]?.id || "");
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
+  const [fileUploads, setFileUploads] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewGroupDialog, setShowNewGroupDialog] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupDescription, setNewGroupDescription] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [fileUploads, setFileUploads] = useState<File[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isMobileView, setIsMobileView] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -142,86 +140,97 @@ export default function TeamChat({
   }, [channels]);
 
   useEffect(() => {
-    if (chatGroups.length > 0) {
-      const exists = chatGroups.some((group) => group.id === selectedGroupId);
-      if (!exists) {
-        setSelectedGroupId(chatGroups[0].id);
-      }
+    if (chatGroups.length > 0 && !chatGroups.some(g => g.id === selectedGroupId)) {
+      setSelectedGroupId(chatGroups[0].id);
     }
   }, [chatGroups, selectedGroupId]);
 
-  const getCurrentTime = () => {
-    const now = new Date();
-    return now.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
+  const getCurrentTime = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
   const transformMessage = (data: any): Message => {
-    const uid = data.user_id || data.userId;
+    console.log('[FRONTEND] Transformando mensaje:', data);
+    const timestamp = data.timestamp
+      ? new Date(data.timestamp).toLocaleTimeString([], { 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          hour12: true,
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone // Usar zona horaria local
+        })
+      : getCurrentTime();
+    console.log('[FRONTEND] Timestamp transformado:', timestamp);
+    
     return {
       id: data.id,
       sender: {
-        id: uid,
+        id: data.userId || data.user_id,
         name: data.userName,
         avatar: data.avatar,
         initials: data.userName ? data.userName.slice(0, 2).toUpperCase() : "",
-        status: "online",
+        status: "online" as "online",
       },
-      content: data.value,
-      timestamp: data.timestamp
-        ? new Date(data.timestamp).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-          })
-        : getCurrentTime(),
-      isCurrentUser: userProfile
-        ? String(uid) === String(userProfile.id)
-        : false,
+      content: data.value || data.message,
+      timestamp,
+      isCurrentUser: userProfile ? String(data.userId || data.user_id) === String(userProfile.id) : false,
+      attachments: [],
     };
   };
 
-  
-
+  // 1) Conectar socket una sola vez y registrar handlers con logs
   useEffect(() => {
-    console.log("User profile", userProfile);
-    console.log("Selected group", selectedGroup);
-    if (!userProfile || !selectedGroup) return;
-
-
-    console.log(` VARIABLES DE ENTORNO ${import.meta.env.VITE_CHAT_WS}`)
-    
-    const socket = io(`${import.meta.env.VITE_CHAT_WS}`, { auth: { userProfile } });
-
-    console.log("Chat socket", socket);
-
-    socket.emit("join", selectedGroup.id);
-
-    socket.on("messages", (data: any) => {
-      if (Array.isArray(data)) {
-        const transformed = data.map((msg: any) => transformMessage(msg));
-        setMessages((prev) => ({
-          ...prev,
-          [selectedGroup.id]: transformed,
-        }));
-      } else {
-        const transformed = transformMessage(data);
-        setMessages((prev) => ({
-          ...prev,
-          [selectedGroup.id]: [...(prev[selectedGroup.id] || []), transformed],
-        }));
-      }
-    });
-
+    if (!userProfile) return;
+    const socket = io(import.meta.env.VITE_CHAT_WS, { auth: { userProfile } });
     socketRef.current = socket;
 
-    return () => {
-      socket.disconnect();
-    };
-  }, [userProfile, selectedGroup]);
+    socket.on('messageHistory', ({ channelId, messages }: { channelId: string, messages: any[] }) => {
+      console.log('[SOCKET] messageHistory recibido para canal:', channelId, messages);
+      const msgs = messages.map(transformMessage);
+      setMessages(prev => ({ ...prev, [channelId]: msgs }));
+    });
+
+    socket.on('newMessage', (data: any) => {
+      console.log('[SOCKET] newMessage recibido:', data);
+      const transformed = transformMessage(data);
+      setMessages(prev => {
+        // Busca el canal correcto desde el mensaje recibido
+        const channelId = data.channelId || selectedGroupId;
+        const current = prev[channelId] || [];
+        // busca y reemplaza optimista o concatena
+        const idx = current.findIndex(msg =>
+          msg.isCurrentUser &&
+          msg.content === transformed.content &&
+          (!msg.id.match(/^[0-9a-fA-F-]{36}$/))
+        );
+        if (idx !== -1) {
+          const copy = [...current];
+          copy[idx] = transformed;
+          return { ...prev, [channelId]: copy };
+        }
+        if (!current.some(msg => msg.id === transformed.id)) {
+          return { ...prev, [channelId]: [...current, transformed] };
+        }
+        return prev;
+      });
+    });
+
+    socket.on('joined', (channel) => {
+      console.log('[SOCKET] joined a channel:', channel);
+    });
+
+    return () => { socket.disconnect(); };
+  }, [userProfile]);
+
+  // 2) Unirse a canal sin recrear socket
+  useEffect(() => {
+    if (socketRef.current && selectedGroupId) {
+      console.log('[SOCKET] Emitiendo join para canal:', selectedGroupId);
+      socketRef.current.emit('join', selectedGroupId);
+    }
+  }, [selectedGroupId]);
+
+  // Mantener scroll al final
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, selectedGroupId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -243,78 +252,96 @@ export default function TeamChat({
 
     if (newMessage.trim() || fileUploads.length > 0) {
       setIsSending(true);
-      setTimeout(() => {
-        const fileAttachments: FileAttachment[] = fileUploads.map(
-          (file, index) => {
-            let type: "image" | "pdf" | "document" | "other" = "other";
-            if (file.type.startsWith("image/")) {
-              type = "image";
-            } else if (file.type === "application/pdf") {
-              type = "pdf";
-            } else if (
-              file.type.includes("document") ||
-              file.type.includes("sheet") ||
-              file.type.includes("text")
-            ) {
-              type = "document";
-            }
-            return {
-              id: Date.now() + index,
-              name: file.name,
-              size: formatFileSize(file.size),
-              type,
-              url: URL.createObjectURL(file),
-              thumbnailUrl:
-                type === "image" ? URL.createObjectURL(file) : undefined,
-            };
+      // Timeout de seguridad para evitar bloqueo eterno
+      const timeout = setTimeout(() => setIsSending(false), 7000); // 7 segundos
+
+      const fileAttachments: FileAttachment[] = fileUploads.map(
+        (file, index) => {
+          let type: "image" | "pdf" | "document" | "other" = "other";
+          if (file.type.startsWith("image/")) {
+            type = "image";
+          } else if (file.type === "application/pdf") {
+            type = "pdf";
+          } else if (
+            file.type.includes("document") ||
+            file.type.includes("sheet") ||
+            file.type.includes("text")
+          ) {
+            type = "document";
           }
-        );
+          return {
+            id: Date.now() + index,
+            name: file.name,
+            size: formatFileSize(file.size),
+            type,
+            url: URL.createObjectURL(file),
+            thumbnailUrl:
+              type === "image" ? URL.createObjectURL(file) : undefined,
+          };
+        }
+      );
 
-        const newMsg: Message = {
-          id: Date.now().toString(),
-          sender: {
-            id: userProfile?.id || "",
-            name: userProfile?.name || "",
-            avatar: userProfile?.profile.profile_picture || "",
-            initials: userProfile?.name.slice(0, 2).toUpperCase() || "",
-            status: "online",
-          },
-          content: newMessage.trim(),
-          timestamp: getCurrentTime(),
-          isCurrentUser: true,
-          attachments: fileAttachments.length > 0 ? fileAttachments : undefined,
-        };
-        setMessages((prev) => ({
-          ...prev,
-          [selectedGroupId]: [...(prev[selectedGroupId] || []), newMsg],
-        }));
+      const tempMessage: Message = {
+        id: Date.now().toString(),
+        sender: {
+          id: userProfile?.id || "",
+          name: userProfile?.name || "",
+          avatar: userProfile?.profile.profile_picture || "",
+          initials: userProfile?.name.slice(0, 2).toUpperCase() || "",
+          status: "online" as "online",
+        },
+        content: newMessage.trim(),
+        timestamp: getCurrentTime(),
+        isCurrentUser: true,
+        attachments: fileAttachments.length > 0 ? fileAttachments : undefined,
+      };
 
-        socketRef.current?.emit("message", {
+      setMessages((prev) => ({
+        ...prev,
+        [selectedGroupId]: [...(prev[selectedGroupId] || []), tempMessage],
+      }));
+
+      setChatGroups((prev) =>
+        prev.map((group) =>
+          group.id === selectedGroupId
+            ? {
+                ...group,
+                lastMessage: {
+                  content:
+                    newMessage.trim() ||
+                    (fileAttachments.length > 0
+                      ? `Envió ${fileAttachments.length} archivo(s)`
+                      : ""),
+                  timestamp: getCurrentTime(),
+                },
+              }
+            : group
+        )
+      );
+
+      socketRef.current?.emit(
+        "message",
+        {
           channel: selectedGroup.id,
-          value: newMsg.content,
-        });
+          value: newMessage.trim(),
+        },
+        (response: any) => {
+          clearTimeout(timeout);
+          setIsSending(false);
+          if (response && response.error) {
+            // Si hay error, elimina el mensaje temporal
+            setMessages((prev) => ({
+              ...prev,
+              [selectedGroupId]: prev[selectedGroupId].filter(msg => msg.id !== tempMessage.id)
+            }));
+            // Opcional: muestra un toast o alerta
+            console.error("Error sending message:", response.error);
+          }
+        }
+      );
 
-        setChatGroups((prev) =>
-          prev.map((group) =>
-            group.id === selectedGroupId
-              ? {
-                  ...group,
-                  lastMessage: {
-                    content:
-                      newMessage.trim() ||
-                      (fileAttachments.length > 0
-                        ? `Envió ${fileAttachments.length} archivo(s)`
-                        : ""),
-                    timestamp: getCurrentTime(),
-                  },
-                }
-              : group
-          )
-        );
-        setNewMessage("");
-        setFileUploads([]);
-        setIsSending(false);
-      }, 500);
+      setNewMessage("");
+      setFileUploads([]);
     }
   };
 
@@ -396,7 +423,7 @@ export default function TeamChat({
               name: member?.name || "",
               avatar: member?.name.slice(0, 2).toUpperCase() || "",
               initials: member?.name.slice(0, 2).toUpperCase() || "",
-              status: "online",
+              status: "online" as "online",
             };
           }),
           unreadCount: 0,
@@ -466,6 +493,14 @@ export default function TeamChat({
         );
     }
   };
+
+  if (!selectedGroup || !team_data) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader color="violet" type="bars" />
+      </div>
+    );
+  }
 
   return (
     <div className={`flex h-[calc(100vh-120px)] ${isMobileView ? 'flex-col' : 'flex-row'}`}>
@@ -629,7 +664,7 @@ export default function TeamChat({
                     <MessageSquare className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">{team_data.name}</CardTitle>
+                    <CardTitle className="text-xl">{team_data?.name || "Cargando..."}</CardTitle>
                     <CardDescription>
                       {isExpanded
                         ? "Real-time communication"
@@ -716,7 +751,7 @@ export default function TeamChat({
                         </Avatar>
                         <div>
                           <p className="font-medium text-sm">
-                            {selectedGroup.name}
+                            {selectedGroup.name || "Cargando..."}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {selectedGroup.members.length} members
