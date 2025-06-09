@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useContext, useState } from "react"
 import { Sparkles, ThumbsUp, ThumbsDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { AuthContext } from "@/context/AuthContext"
+import { apiClient } from "@/api/client-gateway"
 
 interface AIAssistantDialogProps {
   open: boolean
@@ -21,42 +23,32 @@ export function AIAssistantDialog({ open, onOpenChange }: AIAssistantDialogProps
   const [aiQuery, setAiQuery] = useState("")
   const [aiResponse, setAiResponse] = useState("")
   const [aiIsThinking, setAiIsThinking] = useState(false)
+  const { user } = useContext(AuthContext)
 
-
-  const handleAiQuery = () => {
-    if (!aiQuery.trim()) return
+  const handleAiQuery = async () => {
+    if (!aiQuery.trim() || !user?.id) return
 
     setAiIsThinking(true)
     setAiResponse("")
 
-    
-    setTimeout(() => {
-      setAiIsThinking(false)
+    try {
+      const response = await apiClient.post(`/projects/ai-response`, {
+          query: aiQuery,
+          userId: user.id
+      })
 
-     
-      if (aiQuery.toLowerCase().includes("productivity")) {
-        setAiResponse(
-          "Based on your recent activity, I recommend focusing on the API Integration project today. Your productivity peaks between 9-11 AM, making this an ideal time for complex tasks. Would you like me to block this time on your calendar?",
-        )
-      } else if (aiQuery.toLowerCase().includes("report") || aiQuery.toLowerCase().includes("summary")) {
-        setAiResponse(
-          "This week, you completed 45 tasks (up 12% from last week) and spent 28 hours on active work. Your most productive day was Tuesday. Team collaboration has increased by 15%. Would you like a detailed report sent to your email?",
-        )
-      } else if (aiQuery.toLowerCase().includes("meeting") || aiQuery.toLowerCase().includes("schedule")) {
-        setAiResponse(
-          "I've analyzed your team's availability and found that Wednesday at 2 PM has the highest attendance probability. Based on the meeting topic, I recommend limiting it to 30 minutes. Would you like me to schedule this meeting?",
-        )
-      } else {
-        setAiResponse(
-          "I've analyzed your question and found relevant insights. Your current project is 65% complete, with an estimated completion date of next Friday. The main bottleneck appears to be the API integration task. Would you like suggestions on how to optimize this workflow?",
-        )
-      }
-    }, 2000)
+      setAiResponse(response.data.response)
+    } catch (error) {
+      console.error('Error fetching AI response:', error)
+      setAiResponse("Lo siento, hubo un error al procesar tu consulta. Por favor, intenta de nuevo.")
+    } finally {
+      setAiIsThinking(false)
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-slate-900 border-white/10 text-white">
+      <DialogContent className="sm:max-w-[500px] bg-slate-900 border-white/10 text-white max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <Sparkles className="mr-2 h-5 w-5 text-purple-400" />
@@ -64,7 +56,7 @@ export function AIAssistantDialog({ open, onOpenChange }: AIAssistantDialogProps
           </DialogTitle>
           <DialogDescription>Ask me anything about your tasks, projects, or productivity insights.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="flex-1 overflow-y-auto space-y-4 py-4">
           <div className="bg-white/5 rounded-lg p-4 text-sm">
             <p className="font-medium text-purple-300">Try asking:</p>
             <ul className="mt-2 space-y-1 text-white/70">
@@ -128,14 +120,14 @@ export function AIAssistantDialog({ open, onOpenChange }: AIAssistantDialogProps
                   <Sparkles className="h-4 w-4 text-purple-400" />
                   <span className="font-medium text-purple-300">TaskMate AI</span>
                 </div>
-                <p className="text-sm">{aiResponse}</p>
+                <div className="text-sm prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: aiResponse.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') }} />
                 <div className="mt-4 flex justify-end space-x-2">
-                  <Button variant="outline" size="sm" className="text-xs">
-                    <ThumbsUp className="mr-1 h-3 w-3" />
+                  <Button variant="ghost" size="sm" className="text-xs">
+                    <ThumbsUp className="h-4 w-4" />
                     Helpful
                   </Button>
-                  <Button variant="outline" size="sm" className="text-xs">
-                    <ThumbsDown className="mr-1 h-3 w-3" />
+                  <Button variant="ghost" size="sm" className="text-xs">
+                    <ThumbsDown className="h-4 w-4" />
                     Not Helpful
                   </Button>
                 </div>
@@ -146,9 +138,9 @@ export function AIAssistantDialog({ open, onOpenChange }: AIAssistantDialogProps
         <DialogFooter className="flex items-center justify-between">
           <div className="text-xs text-white/50 flex items-center">
             <Badge variant="outline" className="mr-2 border-purple-500/30 text-purple-300">
-              TaskMate AI 2.0
+              TaskMate AI
             </Badge>
-            Powered by advanced machine learning
+            Powered by DeepSeek
           </div>
           <Button onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>
