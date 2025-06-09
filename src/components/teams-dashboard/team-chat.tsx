@@ -184,10 +184,19 @@ export default function TeamChat({
     };
   };
 
+  
+
   useEffect(() => {
+    console.log("User profile", userProfile);
+    console.log("Selected group", selectedGroup);
     if (!userProfile || !selectedGroup) return;
 
+
+    console.log(` VARIABLES DE ENTORNO ${import.meta.env.VITE_CHAT_WS}`)
+    
     const socket = io(`${import.meta.env.VITE_CHAT_WS}`, { auth: { userProfile } });
+
+    console.log("Chat socket", socket);
 
     socket.emit("join", selectedGroup.id);
 
