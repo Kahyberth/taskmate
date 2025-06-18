@@ -19,6 +19,7 @@ import Layout from "@/layouts/dashboard/layout";
 import ProjectsPage from "@/pages/projects/page";
 import ProjectManagement from "@/components/backlog/project-management";
 import ProjectBoardPage from "@/pages/board/page";
+import ProfileViewPage from "@/pages/profile/profile-view";
 
 function AppRoutes() {
   return (
@@ -36,6 +37,7 @@ function AppRoutes() {
         >
           <Route index element={<DashboardPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="profile/:id" element={<ProfileViewPage />} />
           <Route path="planning-poker" element={<PlanningPokerPageGuard />} />
           <Route
             path="planning-poker/room/:id"

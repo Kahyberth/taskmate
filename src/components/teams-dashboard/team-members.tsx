@@ -2,8 +2,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Users, Github, Linkedin, Mail, User } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { useContext } from "react"
+import { AuthContext } from "@/context/AuthContext"
 
 export default function TeamMembers({ teamMembers }: { teamMembers: any[] }) {
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+
+  const handleMemberClick = (memberId: string) => {
+    if (user && user.id === memberId) {
+      navigate("/dashboard/profile");
+    } else {
+      navigate(`/dashboard/profile/${memberId}`);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -13,7 +26,11 @@ export default function TeamMembers({ teamMembers }: { teamMembers: any[] }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {teamMembers.map((member, index) => (
-          <Card key={member.id || index} className="hover:shadow-lg transition-shadow duration-200 bg-card/50 backdrop-blur-sm">
+          <Card 
+            key={member.id || index} 
+            className="hover:shadow-lg transition-shadow duration-200 bg-card/50 backdrop-blur-sm cursor-pointer"
+            onClick={() => handleMemberClick(member.id)}
+          >
             <CardHeader className="text-center pb-3">
               <Avatar className="h-12 w-12 mx-auto mb-2">
                 <AvatarImage src={member.avatar} alt={member.name} />
