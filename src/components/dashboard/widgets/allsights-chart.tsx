@@ -53,8 +53,11 @@ export function AIInsightsWidget({
     } else if (!selectedProjectId && aiInsights) {
       // Use general insights
       setInsights(aiInsights);
+    } else if (!selectedProjectId && !insightsLoading) {
+      // Si no hay proyecto seleccionado y no está cargando, significa que no hay datos
+      setInsights([]);
     }
-  }, [selectedProjectId, aiInsights, projectIssues, projectData]);
+  }, [selectedProjectId, aiInsights, projectIssues, projectData, insightsLoading]);
 
   const getInsightIcon = (type: string) => {
     switch (type) {

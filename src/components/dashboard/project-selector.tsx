@@ -25,7 +25,14 @@ export function ProjectSelector({ selectedProjectId, onProjectChange }: ProjectS
   }
 
   if (!projectsData?.projects || projectsData.projects.length === 0) {
-    return <div className="text-sm text-muted-foreground">No projects available</div>;
+    return (
+      <div className="flex items-center space-x-2">
+        <span className="text-sm font-medium">Project:</span>
+        <div className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md">
+          No projects available
+        </div>
+      </div>
+    );
   }
 
   return (

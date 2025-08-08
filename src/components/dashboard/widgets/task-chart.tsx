@@ -36,6 +36,7 @@ export function TaskChart({ selectedProjectId }: TaskChartProps) {
     } else if (!selectedProjectId && allTaskCompletionData) {
       setChartData(allTaskCompletionData);
     } else {
+      // Si no hay datos, establecemos un array vacío para evitar el estado de carga infinito
       setChartData([]);
     }
   }, [selectedProjectId, projectIssues, allTaskCompletionData]);

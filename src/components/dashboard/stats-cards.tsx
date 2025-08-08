@@ -72,14 +72,15 @@ export function StatsCards({ selectedProjectId }: StatsCardsProps) {
       ? (isLoadingProjectIssues || isLoadingProject) 
       : isLoadingUserIssues;
     
-    if (issues && !isDataLoading) {
-      const total = issues.length;
-      const completed = issues.filter((issue: any) => 
+    // Si no hay datos cargando y tenemos una respuesta (aunque sea vacía)
+    if (!isDataLoading) {
+      const total = issues?.length || 0;
+      const completed = issues?.filter((issue: any) => 
         issue.status === 'done' || issue.status === 'closed'
-      ).length;
-      const inProgress = issues.filter((issue: any) => 
+      ).length || 0;
+      const inProgress = issues?.filter((issue: any) => 
         issue.status === 'in-progress'
-      ).length;
+      ).length || 0;
       
       const completedPercentage = total > 0 ? Math.round((completed / total) * 100) : 0;
       const inProgressPercentage = total > 0 ? Math.round((inProgress / total) * 100) : 0;
@@ -101,10 +102,10 @@ export function StatsCards({ selectedProjectId }: StatsCardsProps) {
       const isInProgressTrendPositive = inProgressTrend === "down";
       
       const titlePrefix = selectedProjectId && projectData 
-        ? `${projectData[0].name}: ` 
+        ? `${projectData[0]?.name || 'Project'}: ` 
         : "";
       
-        console.log("totalprefix",titlePrefix,  "projectData", projectData, "selectedProjectId", selectedProjectId)
+      console.log("totalprefix",titlePrefix,  "projectData", projectData, "selectedProjectId", selectedProjectId)
       
       setStats([
         {

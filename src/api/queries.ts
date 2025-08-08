@@ -200,37 +200,42 @@ export const useProjectsByUser = (userId: string | undefined, page: number = 1, 
       
       console.log('%c[API Request] Obteniendo proyectos para el usuario:', 'color: #2196F3; font-weight: bold', userId, 'página:', page, 'límite:', limit);
       
-      const response = await apiClient.get(`/projects/findAllByUser?userId=${userId}&page=${page}&limit=${limit}`);
-      
-      if (!response.data) {
+      try {
+        const response = await apiClient.get(`/projects/findAllByUser?userId=${userId}&page=${page}&limit=${limit}`);
+        
+        if (!response.data) {
+          return { projects: [], totalPages: 0, total: 0 };
+        }
+        
+        let projectsData;
+        let totalPages = 1;
+        let total = 0;
+        
+        // Handle response format with data and meta properties
+        if (response.data.data && response.data.meta) {
+          projectsData = response.data.data;
+          totalPages = response.data.meta.totalPages || 1;
+          total = response.data.meta.total || 0;
+        } else {
+          projectsData = response.data;
+          total = projectsData.length;
+          totalPages = Math.ceil(total / limit);
+        }
+        
+        const projectsWithProgress = projectsData.map((project: any) => ({
+          ...project,
+          progress: calculateProgress(project),
+        }));
+        
+        return { 
+          projects: projectsWithProgress, 
+          totalPages,
+          total
+        };
+      } catch (error) {
+        console.error("Error fetching user projects:", error);
         return { projects: [], totalPages: 0, total: 0 };
       }
-      
-      let projectsData;
-      let totalPages = 1;
-      let total = 0;
-      
-      // Handle response format with data and meta properties
-      if (response.data.data && response.data.meta) {
-        projectsData = response.data.data;
-        totalPages = response.data.meta.totalPages || 1;
-        total = response.data.meta.total || 0;
-      } else {
-        projectsData = response.data;
-        total = projectsData.length;
-        totalPages = Math.ceil(total / limit);
-      }
-      
-      const projectsWithProgress = projectsData.map((project: any) => ({
-        ...project,
-        progress: calculateProgress(project),
-      }));
-      
-      return { 
-        projects: projectsWithProgress, 
-        totalPages,
-        total
-      };
     },
     enabled: Boolean(userId),
     refetchOnWindowFocus: false,
@@ -542,6 +547,7 @@ export const useTaskCompletionStats = (userId: string | undefined) => {
         return calculateTaskStatsByDay(issues);
       } catch (error) {
         console.error("Error fetching task completion stats:", error);
+        return [];
       }
     },
     enabled: Boolean(userId),
@@ -599,11 +605,7 @@ const calculateTaskStatsByDay = (issues: any[]) => {
     };
   });
   
-  const hasData = statsByDay.some(day => day.total > 0);
-  if (!hasData) {
-    return [];
-  }
-  
+  // Always return the data structure, even if empty
   return statsByDay;
 };
 
@@ -804,6 +806,22 @@ export const useAIInsights = (userId: string | undefined) => {
           projects = projectsResponse.data.data;
         } else if (Array.isArray(projectsResponse.data)) {
           projects = projectsResponse.data;
+        }
+        
+        // Si no hay datos suficientes, retornamos insights básicos
+        if (issues.length === 0 && projects.length === 0) {
+          return [
+            {
+              id: 1,
+              insight: "¡Bienvenido a TaskMate! Comienza creando tu primer proyecto para recibir insights personalizados.",
+              type: "productivity"
+            },
+            {
+              id: 2,
+              insight: "No tienes tareas asignadas aún. Crea algunas tareas para empezar a trabajar.",
+              type: "workflow"
+            }
+          ];
         }
         
         // Generamos insights basados en los datos

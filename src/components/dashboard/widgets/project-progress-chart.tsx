@@ -85,11 +85,12 @@ export function ProjectProgressChart({ selectedProjectId }: ProjectProgressChart
     } else if (!selectedProjectId && projectProgressData) {
       setChartData(projectProgressData);
       setDebugInfo("");
-    } else {
+    } else if (!selectedProjectId && !isLoadingAllProjects) {
+      // Si no hay proyecto seleccionado y no está cargando, significa que no hay datos
       setChartData([]);
       setDebugInfo("");
     }
-  }, [selectedProjectId, projectData, backlogId, epicsData, epicsError, isLoadingEpics, projectProgressData]);
+  }, [selectedProjectId, projectData, backlogId, epicsData, epicsError, isLoadingEpics, projectProgressData, isLoadingAllProjects]);
 
   // Function to process epic progress using the backend endpoints
   const processEpicProgress = async () => {
