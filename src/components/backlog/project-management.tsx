@@ -88,6 +88,8 @@ export default function ProjectManagement() {
   const handleCreateSprint = async (sprintData: {
     name: string;
     goal: string;
+    startDate?: Date;
+    endDate?: Date;
   }) => {
     try {
       if (!project_id) {
@@ -102,7 +104,9 @@ export default function ProjectManagement() {
       const newSprintData = {
         name: sprintData.name,
         goal: sprintData.goal || "",
-        projectId: project_id
+        projectId: project_id,
+        startDate: sprintData.startDate?.toISOString(),
+        endDate: sprintData.endDate?.toISOString()
       };
 
       const response = await apiClient.post(`/sprints/create`, newSprintData);
@@ -183,9 +187,16 @@ export default function ProjectManagement() {
       const response = await apiClient.get(`/backlog/get-all-issues/${backlogId}`);
       console.log("Backlog tasks response:", response.data);
         
+      // Mapear story_points a storyPoints para compatibilidad con el frontend
+      const mappedTasks = response.data.map((task: any) => ({
+        ...task,
+        storyPoints: task.story_points || 0
+      }));
+      
       console.log("Tasks mapped successfully");
-      setBacklogTasks(response.data);
-      setAllBacklogTasks(response.data);
+      console.log("Backlog tasks with storyPoints:", mappedTasks.map((t: any) => ({ id: t.id, title: t.title, storyPoints: t.storyPoints, story_points: t.story_points })));
+      setBacklogTasks(mappedTasks);
+      setAllBacklogTasks(mappedTasks);
     } catch (error) {
       console.error("Error fetching backlog tasks:", error);
       notifications.show({
@@ -215,10 +226,14 @@ export default function ProjectManagement() {
           ...sprint,
           startedAt: sprint.startedAt ? new Date(sprint.startedAt) : null,
           fnishedAt: sprint.fnishedAt ? new Date(sprint.fnishedAt) : null,
-          issues: sprint.issues || []
+          issues: (sprint.issues || []).map((issue: any) => ({
+            ...issue,
+            storyPoints: issue.story_points || 0
+          }))
         }));
         
-        console.log("Sprints mapped successfully:", mappedSprints.length, "sprints found");
+                  console.log("Sprints mapped successfully:", mappedSprints.length, "sprints found");
+          console.log("Issues with storyPoints:", mappedSprints.flatMap(s => s.issues).map(i => ({ id: i.id, title: i.title, storyPoints: i.storyPoints, story_points: i.story_points })));
         setSprints(mappedSprints);
       } else {
         console.log("No sprints found");
@@ -304,6 +319,14 @@ export default function ProjectManagement() {
     }
   }, [isMembersDialogOpen]);
 
+  // Debug useEffect para monitorear cambios en el estado
+  useEffect(() => {
+    console.log("=== DEBUG: Estado actual ===");
+    console.log("Sprints:", sprints.map(s => ({ id: s.id, name: s.name, issuesCount: s.issues?.length || 0 })));
+    console.log("Backlog tasks:", backlogTasks.map(t => ({ id: t.id, title: t.title, storyPoints: t.storyPoints })));
+    console.log("========================");
+  }, [sprints, backlogTasks]);
+
   const handleStartSprint = (sprintId: string) => {
     return apiClient.post(`/sprints/start-sprint?sprintId=${sprintId}`)
       .then((response) => {
@@ -348,6 +371,14 @@ export default function ProjectManagement() {
           
           // Then fetch the updated sprints list to get the new sprint with the moved tasks
           fetchSprints();
+          
+          // Forzar invalidación del cache de React Query para el burndown chart
+          console.log("Sprint completed, invalidating cache...");
+          
+          // Invalidar todas las queries relacionadas con sprints
+          queryClient.invalidateQueries({ queryKey: ["sprints"] });
+          queryClient.invalidateQueries({ queryKey: ["sprintBurndown"] });
+          queryClient.invalidateQueries({ queryKey: ["sprints", "project"] });
           
           notifications.show({
             title: "Sprint completado",
@@ -412,6 +443,7 @@ export default function ProjectManagement() {
         status: taskData.status,
         type: taskData.type,
         epic: updatedTask.epic,
+        storyPoints: taskData.story_points || 0, // Asegurar que los story points se actualicen
       };
 
       if (editingSprintId) {
@@ -435,18 +467,14 @@ export default function ProjectManagement() {
       }
 
       console.log("Sending task update to API:", taskData);
+      console.log("Optimistic task with story points:", optimisticTask.storyPoints);
       updateIssue(taskData, {
         onSuccess: (data) => {
           console.log("API response data:", data);
-          notifications.show({
-            title: "Cambios guardados",
-            message: "Los cambios han sido guardados exitosamente.",
-            color: "green"
-          });
-
+          
           const taskModified: Task = {
             ...data,
-            storyPoints: taskData.story_points,
+            storyPoints: taskData.story_points || data.story_points || 0, // Priorizar los story points actualizados
             epic: updatedTask.epic,
             title: data.title || editingTask.title,
             description: data.description || editingTask.description,
@@ -454,6 +482,13 @@ export default function ProjectManagement() {
             status: data.status || editingTask.status,
             type: data.type || editingTask.type,
           };
+          
+          console.log("Task modified with story points:", taskModified.storyPoints);
+          notifications.show({
+            title: "Cambios guardados",
+            message: "Los cambios han sido guardados exitosamente.",
+            color: "green"
+          });
 
           if (editingSprintId) {
             setSprints(sprints.map(sprint =>
@@ -509,14 +544,53 @@ export default function ProjectManagement() {
     }
   };
 
-  const handleSaveSprintEdit = (updatedSprint: Sprint) => {
-    setSprints(sprints.map((s) => (s.id === updatedSprint.id ? updatedSprint : s)))
+  const handleSaveSprintEdit = async (updatedSprint: Sprint) => {
+    try {
+      // Preparar los datos para la API (sin incluir el id en el body)
+      const sprintData = {
+        name: updatedSprint.name,
+        goal: updatedSprint.goal || "",
+        startDate: updatedSprint.startedAt ? new Date(updatedSprint.startedAt).toISOString() : null,
+        endDate: updatedSprint.fnishedAt ? new Date(updatedSprint.fnishedAt).toISOString() : null
+      };
 
-    notifications.show({
-      title: "Sprint actualizado",
-      message: `El sprint "${updatedSprint.name}" ha sido actualizado exitosamente.`,
-      color: "green"
-    });
+      // Llamar a la API para actualizar el sprint
+      const response = await apiClient.patch(`/sprints/update/${updatedSprint.id}`, sprintData);
+
+      if (response.data) {
+        // Actualizar el estado local con la respuesta de la API
+        const updatedSprintFromAPI = {
+          ...updatedSprint,
+          ...response.data,
+          startedAt: response.data.startedAt || response.data.startDate,
+          fnishedAt: response.data.fnishedAt || response.data.endDate
+        };
+
+        setSprints(sprints.map((s) => (s.id === updatedSprint.id ? updatedSprintFromAPI : s)));
+
+        notifications.show({
+          title: "Sprint actualizado",
+          message: `El sprint "${updatedSprint.name}" ha sido actualizado exitosamente.`,
+          color: "green"
+        });
+      }
+    } catch (error: any) {
+      console.error("Error updating sprint:", error);
+      
+      // Mostrar mensaje de error más específico
+      let errorMessage = "No se pudo actualizar el sprint. Inténtalo de nuevo.";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      notifications.show({
+        title: "Error al actualizar sprint",
+        message: errorMessage,
+        color: "red"
+      });
+    }
   }
 
   const handleToggleBacklogTaskCompletion = (taskId: string) => {

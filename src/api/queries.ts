@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client-gateway";
 import { Team, CreateTeamDTO, UpdateTeamDto } from "@/lib/store";
 
-// Claves para las queries
 export const queryKeys = {
   teams: "teams",
   team: (id: string) => ["team", id],
@@ -23,61 +22,55 @@ export const queryKeys = {
 
 // ====================== TEAMS API ======================
 
-// Obtener equipos por usuario
 export const useTeamsByUser = (userId: string | undefined, page: number = 1) => {
   console.log("useTeamsByUser called with page:", page);
-  
+
   return useQuery({
     queryKey: [queryKeys.teams, userId, page],
     queryFn: async () => {
       if (!userId) return { teams: [], totalPages: 0 };
-      
+
       console.log('%c[API Request] Obteniendo equipos para el usuario:', 'color: #2196F3; font-weight: bold', userId, 'página:', page);
-      // Ensure the page parameter is included in the URL - make sure leading slash is consistent
       const url = `/teams/get-team-by-user/${userId}?page=${page}`;
       console.log("Full API URL:", url);
-      
+
       const response = await apiClient.get(url);
-      
+
       console.log("API Response:", response.data);
-      
+
       if (!response.data) {
         return { teams: [], totalPages: 0 };
       }
-      
-      // Extract data and pagination metadata from response
+
       let teamsData;
       let totalPages = 1;
       let total = 0;
-      
-      // Handle the new response format with data and meta properties
+
       if (response.data.data && response.data.meta) {
         teamsData = response.data.data;
         totalPages = response.data.meta.totalPages || 1;
         total = response.data.meta.total || 0;
       } else {
-        // Handle the old format for backwards compatibility
+
         teamsData = response.data;
       }
-      
-      console.log('%c[API Response] Datos recibidos de equipos:', 'color: #4CAF50; font-weight: bold', 
-        'teams:', teamsData.length, 
-        'totalPages:', totalPages, 
+
+      console.log('%c[API Response] Datos recibidos de equipos:', 'color: #4CAF50; font-weight: bold',
+        'teams:', teamsData.length,
+        'totalPages:', totalPages,
         'total:', total);
-      
-      // Obtener miembros para cada equipo en paralelo
+
       const teamsWithMembers = await Promise.all(
         teamsData.map(async (team: Team) => {
           try {
             console.log('%c[API Request] Obteniendo miembros para equipo:', 'color: #2196F3; font-weight: bold', team.id);
             const membersResponse = await apiClient.get(`/teams/get-members-by-team/${team.id}`);
             const members = membersResponse.data;
-            
-            // Find the user's role in this team
-            const userMembership = members.find((membership: any) => 
+
+            const userMembership = members.find((membership: any) =>
               membership.member?.id === userId
             );
-            
+
             const userRole = userMembership?.role;
 
             return {
@@ -98,21 +91,19 @@ export const useTeamsByUser = (userId: string | undefined, page: number = 1) => 
           }
         })
       );
-      
-      return { 
-        teams: teamsWithMembers, 
+
+      return {
+        teams: teamsWithMembers,
         totalPages,
         total
       };
     },
     enabled: Boolean(userId),
-    // Make sure React Query refetches when the page changes
     refetchOnWindowFocus: false,
-    staleTime: 0, // Don't cache the data to ensure fresh data on page change
+    staleTime: 0,
   });
 };
 
-// Obtener miembros de un equipo
 export const useTeamMembers = (teamId: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.teamMembers(teamId || ""),
@@ -128,7 +119,7 @@ export const useTeamMembers = (teamId: string | undefined) => {
 // Crear un equipo
 export const useCreateTeam = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (team: CreateTeamDTO) => {
       const response = await apiClient.post("/teams/create-team", team);
@@ -140,10 +131,9 @@ export const useCreateTeam = () => {
   });
 };
 
-// Actualizar un equipo
 export const useUpdateTeam = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (team: UpdateTeamDto) => {
       const response = await apiClient.patch(`/teams/update-team`, team);
@@ -161,7 +151,7 @@ export const useUpdateTeam = () => {
 export const useLeaveTeam = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({teamId, userId}: {teamId: string; userId: string}) => {
+    mutationFn: async ({ teamId, userId }: { teamId: string; userId: string }) => {
       const response = await apiClient.post(`/teams/leave-team/${teamId}`, { teamId, userId });
       return response.data;
     },
@@ -172,10 +162,9 @@ export const useLeaveTeam = () => {
 };
 
 
-// Eliminar un equipo
 export const useDeleteTeam = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ teamId, requesterId }: { teamId: string; requesterId: string }) => {
       const response = await apiClient.delete(`/teams/delete-team/${teamId}`, {
@@ -191,27 +180,25 @@ export const useDeleteTeam = () => {
 
 // ====================== PROJECTS API ======================
 
-// Obtener proyectos donde el usuario es miembro 
 export const useProjectsByUser = (userId: string | undefined, page: number = 1, limit: number = 6) => {
   return useQuery({
     queryKey: [queryKeys.userProjects(userId || ""), page, limit],
     queryFn: async () => {
       if (!userId) return { projects: [], totalPages: 0, total: 0 };
-      
+
       console.log('%c[API Request] Obteniendo proyectos para el usuario:', 'color: #2196F3; font-weight: bold', userId, 'página:', page, 'límite:', limit);
-      
+
       try {
         const response = await apiClient.get(`/projects/findAllByUser?userId=${userId}&page=${page}&limit=${limit}`);
-        
+
         if (!response.data) {
           return { projects: [], totalPages: 0, total: 0 };
         }
-        
+
         let projectsData;
         let totalPages = 1;
         let total = 0;
-        
-        // Handle response format with data and meta properties
+
         if (response.data.data && response.data.meta) {
           projectsData = response.data.data;
           totalPages = response.data.meta.totalPages || 1;
@@ -221,14 +208,14 @@ export const useProjectsByUser = (userId: string | undefined, page: number = 1, 
           total = projectsData.length;
           totalPages = Math.ceil(total / limit);
         }
-        
+
         const projectsWithProgress = projectsData.map((project: any) => ({
           ...project,
           progress: calculateProgress(project),
         }));
-        
-        return { 
-          projects: projectsWithProgress, 
+
+        return {
+          projects: projectsWithProgress,
           totalPages,
           total
         };
@@ -244,7 +231,6 @@ export const useProjectsByUser = (userId: string | undefined, page: number = 1, 
   });
 };
 
-// Obtener issues de un proyecto para calcular progreso
 export const useProjectIssues = (projectId: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.projectIssues(projectId || ""),
@@ -252,14 +238,17 @@ export const useProjectIssues = (projectId: string | undefined) => {
       if (!projectId) return [];
       try {
         console.log("Fetching issues for project:", projectId);
-        
+
         // Use the new endpoint to get all issues for a project
         const response = await apiClient.get(`/issues/by-project/${projectId}`);
-        
+
         console.log("Project issues API response:", response.data);
-        
+
         if (Array.isArray(response.data)) {
-          return response.data;
+          return response.data.map((issue: any) => ({
+            ...issue,
+            storyPoints: issue.story_points || 0
+          }));
         } else {
           console.warn("Unexpected API response format:", response.data);
           return [];
@@ -270,8 +259,7 @@ export const useProjectIssues = (projectId: string | undefined) => {
       }
     },
     enabled: Boolean(projectId),
-    // Setting a short staleTime to refresh data more frequently
-    staleTime: 30000, // 30 seconds
+    staleTime: 30000,
   });
 };
 
@@ -291,10 +279,9 @@ export const useProjectById = (projectId: string | undefined) => {
   });
 };
 
-// Crear un proyecto
 export const useCreateProject = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (projectData: any) => {
       const response = await apiClient.post("/projects/create", projectData);
@@ -302,8 +289,8 @@ export const useCreateProject = () => {
     },
     onSuccess: (_, variables) => {
       if (variables.createdBy) {
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.userProjects(variables.createdBy) 
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.userProjects(variables.createdBy)
         });
       }
       queryClient.invalidateQueries({ queryKey: [queryKeys.projects] });
@@ -311,10 +298,9 @@ export const useCreateProject = () => {
   });
 };
 
-// Actualizar un proyecto
 export const useUpdateProject = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (projectData: any) => {
       const response = await apiClient.patch(`/projects/update/${projectData.id}`, projectData);
@@ -323,8 +309,8 @@ export const useUpdateProject = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.project(variables.id) });
       if (variables.createdBy) {
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.userProjects(variables.createdBy) 
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.userProjects(variables.createdBy)
         });
       }
     },
@@ -334,7 +320,7 @@ export const useUpdateProject = () => {
 
 export const useDeleteProject = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (projectId: string) => {
       const response = await apiClient.delete(`/projects/delete/${projectId}`);
@@ -342,12 +328,12 @@ export const useDeleteProject = () => {
     },
     onSuccess: (_, projectId) => {
       queryClient.invalidateQueries({ queryKey: [queryKeys.projects] });
-      
+
       queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
-      
+
       const queryCache = queryClient.getQueryCache();
       const queries = queryCache.findAll();
-      
+
       queries.forEach(query => {
         const queryKey = query.queryKey;
         if (Array.isArray(queryKey) && queryKey[0] === queryKeys.userProjects("")[0]) {
@@ -360,10 +346,9 @@ export const useDeleteProject = () => {
 
 // ====================== ISSUES API ======================
 
-// Crear un issue
 export const useCreateIssue = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (issueData: any) => {
       const { productBacklogId, ...issueDataWithoutProductBacklogId } = issueData;
@@ -372,17 +357,14 @@ export const useCreateIssue = () => {
       return response.data;
     },
     onMutate: async (newIssue) => {
-      // Cancelar cualquier refetch pendiente
-      await queryClient.cancelQueries({ 
-        queryKey: queryKeys.backlogIssues(newIssue.productBacklogId) 
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.backlogIssues(newIssue.productBacklogId)
       });
 
-      // Obtener el caché actual
       const previousIssues = queryClient.getQueryData(
         queryKeys.backlogIssues(newIssue.productBacklogId)
       );
 
-      // Actualizar el caché optimistamente
       queryClient.setQueryData(
         queryKeys.backlogIssues(newIssue.productBacklogId),
         (old: any) => {
@@ -399,11 +381,9 @@ export const useCreateIssue = () => {
         }
       );
 
-      // Retornar el contexto con el caché anterior
       return { previousIssues };
     },
     onError: (_, newIssue, context) => {
-      // Si hay un error, revertir al caché anterior
       if (context?.previousIssues) {
         queryClient.setQueryData(
           queryKeys.backlogIssues(newIssue.productBacklogId),
@@ -412,43 +392,50 @@ export const useCreateIssue = () => {
       }
     },
     onSettled: (_, __, variables) => {
-      // Invalidar y refetch después de que la mutación se complete
       if (variables.productBacklogId) {
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.backlogIssues(variables.productBacklogId) 
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.backlogIssues(variables.productBacklogId)
         });
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.project(variables.productBacklogId) 
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.project(variables.productBacklogId)
         });
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.projectIssues(variables.productBacklogId) 
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projectIssues(variables.productBacklogId)
         });
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.projectStats(variables.productBacklogId) 
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projectStats(variables.productBacklogId)
         });
       }
     },
   });
 };
 
-// Actualizar un issue
+
 export const useUpdateIssue = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (updateData: any) => {
       const { projectId, ...apiUpdateData } = updateData;
       console.log("updateData", updateData);
       const response = await apiClient.patch(`/issues/update?id=${updateData.id}`, apiUpdateData);
-      return response.data;
+
+      const mappedResponse = {
+        ...response.data,
+        storyPoints: response.data.story_points || 0
+      };
+
+      console.log("Original response from backend:", response.data);
+      console.log("Mapped response with storyPoints:", mappedResponse);
+      return mappedResponse;
     },
     onSuccess: (_, variables: any) => {
       let projectId = variables.projectId;
-      
+
       if (!projectId && variables.id) {
         const queryCache = queryClient.getQueryCache();
         const queries = queryCache.findAll();
-        
+
         for (const query of queries) {
           const queryKey = query.queryKey;
           if (Array.isArray(queryKey) && queryKey[0] === "backlogIssues") {
@@ -466,37 +453,72 @@ export const useUpdateIssue = () => {
           }
         }
       }
-      
+
+      /**
+       * Invalidar todas las queries relacionadas con issues, sin importar el projectId
+       */
+      console.log("Invalidating all issue-related queries after update");
+
+      queryClient.invalidateQueries({
+        queryKey: ["backlogIssues"]
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["projectIssues"]
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["projectStats"]
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["sprints"]
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["sprints", "project"]
+      });
+
+      queryClient.refetchQueries({
+        queryKey: ["sprints"]
+      });
+
+      queryClient.refetchQueries({
+        queryKey: ["backlogIssues"]
+      });
+
+
+      /**
+       * Actualizar el caché de las estadísticas del proyecto, issues del proyecto, proyecto y issues del backlog
+       */
       if (projectId) {
-        // Actualizar el caché de las estadísticas del proyecto
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.projectStats(projectId) 
+        console.log("Invalidating specific project queries for projectId:", projectId);
+
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projectStats(projectId)
         });
-        
-        // Actualizar el caché de los issues del proyecto
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.projectIssues(projectId) 
+
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projectIssues(projectId)
         });
-        
-        // Actualizar el caché del proyecto
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.project(projectId) 
+
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.project(projectId)
         });
-        
-        // Actualizar el caché de los issues del backlog
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.backlogIssues(projectId) 
+
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.backlogIssues(projectId)
         });
       }
     },
   });
 };
 
-// Utility function to invalidate project issues cache
+
 export const invalidateProjectIssues = (queryClient: any, projectId: string | undefined) => {
   if (projectId) {
-    queryClient.invalidateQueries({ 
-      queryKey: queryKeys.projectIssues(projectId) 
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.projectIssues(projectId)
     });
   }
 };
@@ -521,12 +543,12 @@ export const useProjectStats = (projectId: string | undefined) => {
   });
 };
 
-// Utility function to invalidate project stats cache
+
 export const invalidateProjectStats = (queryClient: any, projectId: string | undefined) => {
   if (projectId) {
     console.log("Invalidating project stats cache for project:", projectId);
-    queryClient.invalidateQueries({ 
-      queryKey: queryKeys.projectStats(projectId) 
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.projectStats(projectId)
     });
   }
 };
@@ -543,7 +565,7 @@ export const useTaskCompletionStats = (userId: string | undefined) => {
         const issuesResponse = await apiClient.get(`/issues/user/${userId}`);
         const issues = issuesResponse.data || [];
         console.log(`Processing ${issues.length} issues for task completion stats`);
-        
+
         return calculateTaskStatsByDay(issues);
       } catch (error) {
         console.error("Error fetching task completion stats:", error);
@@ -558,24 +580,24 @@ export const useTaskCompletionStats = (userId: string | undefined) => {
 const calculateTaskStatsByDay = (issues: any[]) => {
   const today = new Date();
   today.setHours(23, 59, 59, 999);
-  
+
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  
-  const lastSevenDays = Array.from({length: 7}, (_, i) => {
+
+  const lastSevenDays = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(today);
     date.setDate(today.getDate() - (6 - i));
     const startDate = new Date(date);
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(date);
     endDate.setHours(23, 59, 59, 999);
-    
+
     return {
       date: startDate,
       endDate: endDate,
       name: dayNames[date.getDay()]
     };
   });
-  
+
   const statsByDay = lastSevenDays.map(day => {
     const completedThatDay = issues.filter(issue => {
       if (issue.updatedAt && (issue.status === 'done' || issue.status === 'closed')) {
@@ -584,7 +606,7 @@ const calculateTaskStatsByDay = (issues: any[]) => {
       }
       return false;
     }).length;
-    
+
     const pendingThatDay = issues.filter(issue => {
       const createdDate = new Date(issue.createdAt);
       if (createdDate <= day.endDate) {
@@ -596,7 +618,7 @@ const calculateTaskStatsByDay = (issues: any[]) => {
       }
       return false;
     }).length;
-    
+
     return {
       name: day.name,
       completed: completedThatDay,
@@ -604,12 +626,11 @@ const calculateTaskStatsByDay = (issues: any[]) => {
       total: completedThatDay + pendingThatDay
     };
   });
-  
-  // Always return the data structure, even if empty
+
   return statsByDay;
 };
 
-// Obtener estadísticas de progreso de proyectos para el dashboard
+
 export const useProjectProgressStats = (userId: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.projectProgressStats(userId || ""),
@@ -617,28 +638,27 @@ export const useProjectProgressStats = (userId: string | undefined) => {
       if (!userId) return [];
       try {
         console.log("Fetching project progress stats for user:", userId);
-        
-        // Primero obtenemos los proyectos del usuario
+
         const projectsResponse = await apiClient.get(`/projects/findAllByUser?userId=${userId}`);
         let projects = [];
-        
+
         if (projectsResponse.data && projectsResponse.data.data) {
           projects = projectsResponse.data.data;
         } else if (Array.isArray(projectsResponse.data)) {
           projects = projectsResponse.data;
         }
-        
-        // Limitamos a los 5 proyectos más recientes o activos
+
+
         const recentProjects = projects.slice(0, 5);
-        
-        // Para cada proyecto, obtenemos estadísticas consolidadas de todas sus issues
+
+
         const projectsWithStats = await Promise.all(
           recentProjects.map(async (project: any) => {
             try {
-              // 1. Intentamos el endpoint de estadísticas existente primero
+
               let progress = 0;
               let hasFetchedStats = false;
-              
+
               try {
                 const statsResponse = await apiClient.get(`/backlog/project-stats/${project.id}`);
                 if (statsResponse.data && typeof statsResponse.data.progress === 'number') {
@@ -649,22 +669,22 @@ export const useProjectProgressStats = (userId: string | undefined) => {
               } catch (error) {
                 console.log(`Stats endpoint failed for project ${project.id}, calculating manually`);
               }
-              
-              // 2. Si el endpoint falló o no devolvió datos válidos, calculamos manualmente
+
+
               if (!hasFetchedStats) {
-                // Obtenemos issues de todas las fuentes
+
                 const allIssues = await getAllProjectIssues(project.id);
-                
+
                 if (allIssues.length > 0) {
                   const completedIssues = allIssues.filter(
                     issue => issue.status === 'done' || issue.status === 'closed'
                   ).length;
-                  
+
                   progress = Math.round((completedIssues / allIssues.length) * 100);
                   console.log(`Calculated progress for project ${project.id}:`, progress, `(${completedIssues}/${allIssues.length})`);
                 }
               }
-              
+
               return {
                 name: project.name,
                 progress: progress,
@@ -682,8 +702,7 @@ export const useProjectProgressStats = (userId: string | undefined) => {
             }
           })
         );
-        
-        // Ordenamos los proyectos por progreso (de menor a mayor)
+
         return projectsWithStats.sort((a, b) => a.progress - b.progress);
       } catch (error) {
         console.error("Error fetching project progress stats:", error);
@@ -691,22 +710,20 @@ export const useProjectProgressStats = (userId: string | undefined) => {
       }
     },
     enabled: Boolean(userId),
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 1000 * 60 * 5,
   });
 };
 
-// Función auxiliar para obtener todas las issues de un proyecto
 const getAllProjectIssues = async (projectId: string): Promise<any[]> => {
   try {
     let allIssues: any[] = [];
-    
-    // 1. Intentamos obtener issues del backlog
+
     try {
       const backlogResponse = await apiClient.get(`/backlog/get-backlog-by-project/${projectId}`);
       if (backlogResponse.data && backlogResponse.data.id) {
         const backlogId = backlogResponse.data.id;
         const backlogIssuesResponse = await apiClient.get(`/backlog/get-all-issues/${backlogId}`);
-        
+
         if (backlogIssuesResponse.data && Array.isArray(backlogIssuesResponse.data)) {
           allIssues = [...allIssues, ...backlogIssuesResponse.data];
           console.log(`Found ${backlogIssuesResponse.data.length} issues in backlog for project ${projectId}`);
@@ -715,21 +732,19 @@ const getAllProjectIssues = async (projectId: string): Promise<any[]> => {
     } catch (error) {
       console.log(`No backlog found or error fetching backlog issues for project ${projectId}`);
     }
-    
-    // 2. Intentamos obtener issues de los sprints
+
     try {
       const sprintsResponse = await apiClient.get(`/sprints/get-sprints-by-project/${projectId}`);
-      
+
       if (sprintsResponse.data && Array.isArray(sprintsResponse.data)) {
         const sprints = sprintsResponse.data;
-        
-        // Para cada sprint, obtenemos sus issues
+
         for (const sprint of sprints) {
           try {
             const sprintIssuesResponse = await apiClient.get(
               `/sprints/get-sprint-backlog-issues?sprintId=${sprint.id}`
             );
-            
+
             if (sprintIssuesResponse.data && Array.isArray(sprintIssuesResponse.data)) {
               allIssues = [...allIssues, ...sprintIssuesResponse.data];
               console.log(`Found ${sprintIssuesResponse.data.length} issues in sprint ${sprint.id} for project ${projectId}`);
@@ -742,14 +757,12 @@ const getAllProjectIssues = async (projectId: string): Promise<any[]> => {
     } catch (error) {
       console.log(`No sprints found or error fetching sprints for project ${projectId}`);
     }
-    
-    // 3. Como alternativa, intentamos obtener todas las issues del proyecto directamente
+
     if (allIssues.length === 0) {
       try {
         const projectIssuesResponse = await apiClient.get(`/projects/issues/${projectId}`);
-        
+
         if (projectIssuesResponse.data) {
-          // El endpoint puede devolver diferentes formatos
           if (Array.isArray(projectIssuesResponse.data)) {
             allIssues = projectIssuesResponse.data;
           } else if (projectIssuesResponse.data.issues && Array.isArray(projectIssuesResponse.data.issues)) {
@@ -761,21 +774,24 @@ const getAllProjectIssues = async (projectId: string): Promise<any[]> => {
         console.log(`Error fetching issues directly for project ${projectId}`);
       }
     }
-    
-    // Eliminamos duplicados basados en ID
-    const uniqueIssues = allIssues.filter((issue, index, self) => 
+
+    const uniqueIssues = allIssues.filter((issue, index, self) =>
       index === self.findIndex(i => i.id === issue.id)
     );
-    
-    console.log(`Total unique issues for project ${projectId}: ${uniqueIssues.length}`);
-    return uniqueIssues;
+
+    const mappedIssues = uniqueIssues.map((issue: any) => ({
+      ...issue,
+      storyPoints: issue.story_points || 0
+    }));
+
+    console.log(`Total unique issues for project ${projectId}: ${mappedIssues.length}`);
+    return mappedIssues;
   } catch (error) {
     console.error(`Error in getAllProjectIssues for project ${projectId}:`, error);
     return [];
   }
 };
 
-// Obtener insights de IA para el dashboard
 export const useAIInsights = (userId: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.aiInsights(userId || ""),
@@ -783,8 +799,7 @@ export const useAIInsights = (userId: string | undefined) => {
       if (!userId) return [];
       try {
         console.log("Fetching AI insights for user:", userId);
-        
-        // Intentamos obtener los insights del backend si existe el endpoint
+
         try {
           const response = await apiClient.get(`/ai/insights/${userId}`);
           if (response.data && Array.isArray(response.data)) {
@@ -793,13 +808,10 @@ export const useAIInsights = (userId: string | undefined) => {
         } catch (error) {
           console.log("AI insights endpoint not available, generating locally");
         }
-        
-        // Si no hay endpoint o falla, generamos insights basados en los datos locales
-        // Obtenemos las tareas del usuario
+
         const issuesResponse = await apiClient.get(`/issues/user/${userId}`);
         const issues = issuesResponse.data || [];
-        
-        // Obtenemos los proyectos del usuario
+
         const projectsResponse = await apiClient.get(`/projects/findAllByUser?userId=${userId}`);
         let projects = [];
         if (projectsResponse.data && projectsResponse.data.data) {
@@ -807,8 +819,7 @@ export const useAIInsights = (userId: string | undefined) => {
         } else if (Array.isArray(projectsResponse.data)) {
           projects = projectsResponse.data;
         }
-        
-        // Si no hay datos suficientes, retornamos insights básicos
+
         if (issues.length === 0 && projects.length === 0) {
           return [
             {
@@ -823,22 +834,20 @@ export const useAIInsights = (userId: string | undefined) => {
             }
           ];
         }
-        
-        // Generamos insights basados en los datos
+
         const insights = [];
-        
-        // Insight 1: Productividad por día de la semana
-        const issuesByDay = [0, 0, 0, 0, 0, 0, 0]; // Dom, Lun, Mar, Mié, Jue, Vie, Sáb
+
+        const issuesByDay = [0, 0, 0, 0, 0, 0, 0];
         issues.forEach((issue: any) => {
           if (issue.status === 'done' || issue.status === 'closed') {
             const updatedAt = new Date(issue.updatedAt);
             issuesByDay[updatedAt.getDay()]++;
           }
         });
-        
+
         const mostProductiveDay = issuesByDay.indexOf(Math.max(...issuesByDay));
         const dayNames = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
-        
+
         if (Math.max(...issuesByDay) > 0) {
           insights.push({
             id: 1,
@@ -846,16 +855,14 @@ export const useAIInsights = (userId: string | undefined) => {
             type: "productivity"
           });
         }
-        
-        // Insight 2: Proyectos en riesgo
+
         const projectsAtRisk = projects.filter((project: any) => {
-          // Verificamos si el proyecto tiene estadísticas
           if (project.stats && project.stats.progress < 50) {
             return true;
           }
           return false;
         });
-        
+
         if (projectsAtRisk.length > 0) {
           insights.push({
             id: 2,
@@ -863,8 +870,7 @@ export const useAIInsights = (userId: string | undefined) => {
             type: "risk"
           });
         }
-        
-        // Insight 3: Distribución de tipos de tareas
+
         const taskTypes: Record<string, number> = {};
         issues.forEach((issue: any) => {
           if (!taskTypes[issue.type]) {
@@ -872,40 +878,39 @@ export const useAIInsights = (userId: string | undefined) => {
           }
           taskTypes[issue.type]++;
         });
-        
+
         const mostCommonType = Object.entries(taskTypes).sort((a, b) => b[1] - a[1])[0];
         if (mostCommonType) {
           const [type, count] = mostCommonType;
           const percentage = Math.round((count / issues.length) * 100);
-          
+
           insights.push({
             id: 3,
             insight: `El ${percentage}% de tus tareas son de tipo "${type}". Considera diversificar tus habilidades trabajando en diferentes tipos de tareas.`,
             type: "workflow"
           });
         }
-        
-        // Insight 4: Tiempo promedio para completar tareas
-        const completedIssues = issues.filter((issue: any) => 
+
+        const completedIssues = issues.filter((issue: any) =>
           issue.status === 'done' || issue.status === 'closed'
         );
-        
+
         if (completedIssues.length > 0) {
           const completionTimes = completedIssues.map((issue: any) => {
             const createdAt = new Date(issue.createdAt).getTime();
             const updatedAt = new Date(issue.updatedAt).getTime();
-            return (updatedAt - createdAt) / (1000 * 60 * 60 * 24); // días
+            return (updatedAt - createdAt) / (1000 * 60 * 60 * 24);
           });
-          
+
           const avgCompletionTime = completionTimes.reduce((a: number, b: number) => a + b, 0) / completionTimes.length;
-          
+
           insights.push({
             id: 4,
             insight: `En promedio, completas tus tareas en ${avgCompletionTime.toFixed(1)} días. Establecer plazos más cortos podría mejorar tu productividad.`,
             type: "time"
           });
         }
-        
+
         return insights;
       } catch (error) {
         console.error("Error fetching AI insights:", error);
@@ -913,11 +918,10 @@ export const useAIInsights = (userId: string | undefined) => {
       }
     },
     enabled: Boolean(userId),
-    staleTime: 1000 * 60 * 30, // 30 minutos
+    staleTime: 1000 * 60 * 30,
   });
 };
 
-// Obtener issues por épica
 export const useIssuesByEpic = (epicId: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.epicIssues(epicId || ""),
@@ -933,11 +937,10 @@ export const useIssuesByEpic = (epicId: string | undefined) => {
       }
     },
     enabled: Boolean(epicId),
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 1000 * 60 * 5,
   });
 };
 
-// Obtener épicas por product backlog
 export const useEpicsByProductBacklog = (productBacklogId: string | undefined) => {
   return useQuery({
     queryKey: queryKeys.epics(productBacklogId || ""),
@@ -964,18 +967,128 @@ export const useEpicsByProductBacklog = (productBacklogId: string | undefined) =
           data: error.response?.data,
           message: error.message
         });
-        throw error; // Re-throw to let React Query handle the error
+        throw error;
       }
     },
     enabled: Boolean(productBacklogId),
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 1000 * 60 * 5,
     retry: (failureCount, error: any) => {
-      // Don't retry on 404 errors
       if (error?.response?.status === 404) {
         return false;
       }
       return failureCount < 3;
     },
     retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+};
+
+// ====================== SPRINTS API ======================
+
+
+export const useSprintsByProject = (projectId: string | undefined, includeCompleted: boolean = true) => {
+  return useQuery({
+    queryKey: ["sprints", "project", projectId, includeCompleted],
+    queryFn: async () => {
+      if (!projectId) {
+        console.log("No projectId provided, returning empty array");
+        return [];
+      }
+      try {
+        console.log("Fetching sprints for project:", projectId, "includeCompleted:", includeCompleted);
+        const response = await apiClient.get(`/sprints/get-sprints-by-project/${projectId}?includeCompleted=${includeCompleted}`);
+        console.log("Sprints response:", response.data);
+        return response.data || [];
+      } catch (error: any) {
+        console.error("Error fetching project sprints:", error);
+        // Log more details about the error
+        if (error.response) {
+          console.error("Error response:", {
+            status: error.response.status,
+            statusText: error.response.statusText,
+            data: error.response.data
+          });
+        }
+        // Return empty array to prevent the component from crashing
+        return [];
+      }
+    },
+    enabled: Boolean(projectId),
+    staleTime: 1000 * 30,
+    retry: (failureCount, error: any) => {
+      // Don't retry on 500 errors as they're likely server issues
+      if (error?.response?.status === 500) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 5000),
+  });
+};
+
+export const useSprintBacklogIssues = (
+  sprintId: string | undefined,
+  pagination?: { page: number; limit: number },
+  filters?: { status: string; type: string }
+) => {
+  return useQuery({
+    queryKey: ["sprintBacklogIssues", sprintId, pagination, filters],
+    queryFn: async () => {
+      if (!sprintId) return { issues: [], total: 0 };
+      try {
+        console.log("Fetching sprint backlog issues for sprint:", sprintId);
+        const params = new URLSearchParams();
+        params.append('sprintId', sprintId);
+
+        if (pagination) {
+          params.append('pagination', JSON.stringify(pagination));
+        }
+        if (filters) {
+          params.append('filters', JSON.stringify(filters));
+        }
+
+        const response = await apiClient.get(`/sprints/get-sprint-backlog-issues?${params.toString()}`);
+        return response.data || { issues: [], total: 0 };
+      } catch (error) {
+        console.error("Error fetching sprint backlog issues:", error);
+        return { issues: [], total: 0 };
+      }
+    },
+    enabled: Boolean(sprintId),
+    staleTime: 1000 * 60 * 2,
+  });
+};
+
+export const useSprintBurndownData = (sprintId: string | undefined) => {
+  return useQuery({
+    queryKey: ["sprintBurndown", sprintId],
+    queryFn: async () => {
+      if (!sprintId) return null;
+      try {
+        console.log("Fetching burndown data for sprint:", sprintId);
+        const response = await apiClient.get(`/sprints/get-burndown-data/${sprintId}`);
+        return response.data;
+      } catch (error: any) {
+        console.error("Error fetching sprint burndown data:", error);
+        // Log more details about the error
+        if (error.response) {
+          console.error("Burndown error response:", {
+            status: error.response.status,
+            statusText: error.response.statusText,
+            data: error.response.data
+          });
+        }
+        return null;
+      }
+    },
+    enabled: Boolean(sprintId),
+    staleTime: 1000 * 30,
+    retry: (failureCount, error: any) => {
+      // Don't retry on 500 errors as they're likely server issues
+      if (error?.response?.status === 500) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
 }; 

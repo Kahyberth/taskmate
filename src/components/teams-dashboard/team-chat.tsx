@@ -1,1118 +1,946 @@
-import type React from "react";
-import { useState, useRef, useEffect, useContext } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  SendIcon,
-  PaperclipIcon,
-  SmileIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-  ImageIcon,
-  MicIcon,
-  MoreHorizontalIcon,
-  MessageSquare,
-  Users,
   Plus,
   Search,
+  MoreVertical,
+  Paperclip,
+  Smile,
+  Send,
+  Info,
+  HelpCircle,
+  Users,
   X,
-  FileIcon,
-  FileTextIcon,
-  FileImageIcon,
-  FileIcon as FilePdfIcon,
-  Settings,
-  LogOut,
   ChevronRight,
-  ArrowLeft,
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { io, type Socket } from "socket.io-client";
-import { AuthContext } from "@/context/AuthContext";
-import { apiClient } from "@/api/client-gateway";
-import type { Members } from "@/interfaces/members.interface";
-import { Loader } from "@mantine/core";
+  ChevronDown,
+  MessageSquare,
+} from "lucide-react"
+import { useChatSocket } from "@/hooks/useChatSocket"
+import { getChannels, getMessages, Message as ApiMessage } from "@/api/channels"
+import { AuthContext } from "@/context/AuthContext"
 
-type ChatGroup = {
-  id: string;
-  name: string;
-  description?: string;
-  avatar?: string;
-  initials: string;
-  members: ChatMember[];
-  unreadCount: number;
-  lastMessage?: {
-    content: string;
-    timestamp: string;
-  };
-};
-
-type ChatMember = {
-  id: string;
-  name: string;
-  avatar: string;
-  initials: string;
-  status: "online" | "offline" | "away";
-};
-
-type FileAttachment = {
-  id: number;
-  name: string;
-  size: string;
-  type: "image" | "pdf" | "document" | "other";
-  url: string;
-  thumbnailUrl?: string;
-};
+type Room = {
+  id: string
+  name: string
+  description?: string
+  parentId?: string | null
+  members?: number
+  lastMessage?: string
+  time?: string
+  unread?: number
+}
 
 type Message = {
-  id: string;
-  sender: ChatMember;
-  content: string;
-  timestamp: string;
-  isCurrentUser: boolean;
-  attachments?: FileAttachment[];
-};
+  id: string
+  roomId: string
+  text: string
+  time: string
+  fromMe: boolean
+  userName?: string
+  avatar?: string
+}
 
-const isMobile = () => window.innerWidth < 768;
+type Member = {
+  id: string
+  name: string
+  status: "online" | "offline"
+}
 
-export default function TeamChat({
-  channels,
-  teamMembers,
-  team_data,
-}: {
-  channels: any[];
-  teamMembers: Members[];
-  team_data: { name: string; [key: string]: any };
-}) {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [showSidebar, setShowSidebar] = useState(true);
-  const [newMessage, setNewMessage] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [chatGroups, setChatGroups] = useState<ChatGroup[]>(channels);
-  const [selectedGroupId, setSelectedGroupId] = useState<string>(channels[0]?.id || "");
-  const [messages, setMessages] = useState<Record<string, Message[]>>({});
-  const [fileUploads, setFileUploads] = useState<File[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isMobileView, setIsMobileView] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showNewGroupDialog, setShowNewGroupDialog] = useState(false);
-  const [newGroupName, setNewGroupName] = useState("");
-  const [newGroupDescription, setNewGroupDescription] = useState("");
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+export default function Page({ team_id }: { team_id: string }) {
+  const [rooms, setRooms] = useState<Room[]>([])
+  const [selectedId, setSelectedId] = useState<string>("")
+  const [isLoadingChannels, setIsLoadingChannels] = useState(true)
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false)
+  const [messages, setMessages] = useState<Message[]>([])
+  const { userProfile, loading } = useContext(AuthContext);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const socketRef = useRef<Socket>();
-  const { userProfile } = useContext(AuthContext);
+  const realUser = useMemo(() => {
+    if (!userProfile) return null;
 
-  const selectedGroup =
-    chatGroups.find((group) => group.id === selectedGroupId) || chatGroups[0];
-
-  useEffect(() => {
-    setChatGroups(channels);
-  }, [channels]);
-
-  useEffect(() => {
-    if (chatGroups.length > 0 && !chatGroups.some(g => g.id === selectedGroupId)) {
-      setSelectedGroupId(chatGroups[0].id);
-    }
-  }, [chatGroups, selectedGroupId]);
-
-  const getCurrentTime = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-
-  const transformMessage = (data: any): Message => {
-    console.log('[FRONTEND] Transformando mensaje:', data);
-    const timestamp = data.timestamp
-      ? new Date(data.timestamp).toLocaleTimeString([], { 
-          hour: '2-digit', 
-          minute: '2-digit', 
-          hour12: true,
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone // Usar zona horaria local
-        })
-      : getCurrentTime();
-    console.log('[FRONTEND] Timestamp transformado:', timestamp);
-    
     return {
-      id: data.id,
-      sender: {
-        id: data.userId || data.user_id,
-        name: data.userName,
-        avatar: data.avatar,
-        initials: data.userName ? data.userName.slice(0, 2).toUpperCase() : "",
-        status: "online" as "online",
+      id: userProfile.id,
+      name: userProfile.name,
+      lastName: userProfile.lastName,
+      phone: userProfile.phone,
+      email: userProfile.email,
+      password: userProfile.password,
+      language: userProfile.language,
+      createdAt: userProfile.createdAt,
+      updatedAt: userProfile.updatedAt,
+      lastLogin: userProfile.lastLogin,
+      company: userProfile.company,
+      isActive: userProfile.isActive,
+      isAvailable: userProfile.isAvailable,
+      profile: {
+        id: userProfile.profile.id,
+        userId: userProfile.profile.userId,
+        profile_picture: userProfile.profile.profile_picture,
+        profile_banner: userProfile.profile.profile_banner,
+        bio: userProfile.profile.bio,
+        updatedAt: userProfile.profile.updatedAt,
+        availabilityStatus: userProfile.profile.availabilityStatus,
+        isVerified: userProfile.profile.isVerified,
+        isBlocked: userProfile.profile.isBlocked,
+        skills: userProfile.profile.skills,
+        location: userProfile.profile.location,
+        social_links: userProfile.profile.social_links,
+        experience: userProfile.profile.experience,
+        education: userProfile.profile.education,
+        timezone: userProfile.profile.timezone,
       },
-      content: data.value || data.message,
-      timestamp,
-      isCurrentUser: userProfile ? String(data.userId || data.user_id) === String(userProfile.id) : false,
-      attachments: [],
     };
-  };
-
-  // 1) Conectar socket una sola vez y registrar handlers con logs
-  useEffect(() => {
-    if (!userProfile) return;
-    const socket = io(import.meta.env.VITE_CHAT_WS, { auth: { userProfile } });
-    socketRef.current = socket;
-
-    socket.on('messageHistory', ({ channelId, messages }: { channelId: string, messages: any[] }) => {
-      console.log('[SOCKET] messageHistory recibido para canal:', channelId, messages);
-      const msgs = messages.map(transformMessage);
-      setMessages(prev => ({ ...prev, [channelId]: msgs }));
-    });
-
-    socket.on('newMessage', (data: any) => {
-      console.log('[SOCKET] newMessage recibido:', data);
-      const transformed = transformMessage(data);
-      setMessages(prev => {
-        // Busca el canal correcto desde el mensaje recibido
-        const channelId = data.channelId || selectedGroupId;
-        const current = prev[channelId] || [];
-        // busca y reemplaza optimista o concatena
-        const idx = current.findIndex(msg =>
-          msg.isCurrentUser &&
-          msg.content === transformed.content &&
-          (!msg.id.match(/^[0-9a-fA-F-]{36}$/))
-        );
-        if (idx !== -1) {
-          const copy = [...current];
-          copy[idx] = transformed;
-          return { ...prev, [channelId]: copy };
-        }
-        if (!current.some(msg => msg.id === transformed.id)) {
-          return { ...prev, [channelId]: [...current, transformed] };
-        }
-        return prev;
-      });
-    });
-
-    socket.on('joined', (channel) => {
-      console.log('[SOCKET] joined a channel:', channel);
-    });
-
-    return () => { socket.disconnect(); };
   }, [userProfile]);
 
-  // 2) Unirse a canal sin recrear socket
+
+  const socketAuth = useMemo(() => {
+    if (!realUser || !selectedId) return null;
+
+    return {
+      room: selectedId,
+      user: realUser
+    };
+  }, [selectedId, realUser]);
+
+  const socketUrl = import.meta.env.VITE_CHAT_WS || 'http://localhost:3001';
+
+  const {
+    socket,
+    isConnected,
+    onlineUsers,
+    offlineUsers,
+    joinChannel,
+    sendMessage: sendSocketMessage
+  } = useChatSocket(socketUrl, socketAuth);
+
+  const onlineMembers = useMemo(() => {
+    return onlineUsers.map(user => ({
+      id: user.id,
+      name: `${user.name} ${user.lastName}`,
+      status: "online" as const
+    }));
+  }, [onlineUsers]);
+
+  const offlineMembers = useMemo(() => {
+    return offlineUsers.map(user => ({
+      id: user.id,
+      name: `${user.name} ${user.lastName}`,
+      status: "offline" as const
+    }));
+  }, [offlineUsers]);
+  const [showMembers, setShowMembers] = useState<boolean>(false)
+
+  const [draft, setDraft] = useState<string>("")
+  const bottomRef = useRef<HTMLDivElement | null>(null)
+
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createParentId, setCreateParentId] = useState<string | undefined>(undefined)
+  const [createName, setCreateName] = useState("")
+  const [createDescription, setCreateDescription] = useState("")
+
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+
+  const selectedRoom = useMemo(() => {
+    const room = rooms.find((r) => r.id === selectedId) ?? rooms[0];
+    console.log('Selected room:', room);
+    return room;
+  }, [selectedId, rooms])
+
+  const roomMessages = useMemo(() => {
+    const filtered = messages.filter((m) => m.roomId === selectedRoom?.id);
+    console.log('Room messages for', selectedRoom?.id, ':', filtered);
+    return filtered;
+  }, [messages, selectedRoom])
+
+  const childrenMap = useMemo(() => {
+    const map = new Map<string, Room[]>()
+    rooms.forEach((r) => {
+      const pid = r.parentId ?? "_root"
+      if (!map.has(pid)) map.set(pid, [])
+      map.get(pid)!.push(r)
+    })
+    for (const [k, arr] of map.entries()) {
+      arr.sort((a, b) => a.name.localeCompare(b.name))
+      map.set(k, arr)
+    }
+    return map
+  }, [rooms])
+
+  const rootRooms = childrenMap.get("_root") ?? []
+
   useEffect(() => {
-    if (socketRef.current && selectedGroupId) {
-      console.log('[SOCKET] Emitiendo join para canal:', selectedGroupId);
-      socketRef.current.emit('join', selectedGroupId);
-    }
-  }, [selectedGroupId]);
+    const next: Record<string, boolean> = { ...expanded }
+    rooms.forEach((r) => {
+      if (childrenMap.get(r.id)?.length) {
+        if (!(r.id in next)) next[r.id] = true
+      }
+    })
+    setExpanded(next)
+  }, [rooms, childrenMap])
 
-  // Mantener scroll al final
+  function formatTimeEs(date: Date) {
+    let hours = date.getHours()
+    const minutes = date.getMinutes().toString().padStart(2, "0")
+    const isPM = hours >= 12
+    hours = hours % 12
+    if (hours === 0) hours = 12
+    return `${hours}:${minutes} ${isPM ? "p. m." : "a. m."}`
+  }
+
+  function sendMessage() {
+    const text = draft.trim()
+    if (!text || !selectedRoom || !realUser) return
+
+    sendSocketMessage({
+      roomId: selectedRoom.id,
+      text,
+    });
+
+
+    const now = new Date()
+    const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `m-${Date.now()}`
+    const newMessage: Message = {
+      id,
+      roomId: selectedRoom.id,
+      text,
+      time: formatTimeEs(now),
+      fromMe: true,
+      userName: `${realUser.name} ${realUser.lastName}`,
+      avatar: '',
+    }
+    setMessages((prev) => [...prev, newMessage])
+    setRooms((prev) =>
+      prev.map((r) =>
+        r.id === selectedRoom.id ? { ...r, lastMessage: newMessage.text, time: newMessage.time, unread: 0 } : r,
+      ),
+    )
+    setDraft("")
+  }
+
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, selectedGroupId]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, selectedGroupId]);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobileView(isMobile());
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  const toggleExpanded = () => {
-    setIsExpanded(!isExpanded);
-  };
-
-  const handleSendMessage = () => {
-    if (!socketRef.current) return;
-
-    if (newMessage.trim() || fileUploads.length > 0) {
-      setIsSending(true);
-      // Timeout de seguridad para evitar bloqueo eterno
-      const timeout = setTimeout(() => setIsSending(false), 7000); // 7 segundos
-
-      const fileAttachments: FileAttachment[] = fileUploads.map(
-        (file, index) => {
-          let type: "image" | "pdf" | "document" | "other" = "other";
-          if (file.type.startsWith("image/")) {
-            type = "image";
-          } else if (file.type === "application/pdf") {
-            type = "pdf";
-          } else if (
-            file.type.includes("document") ||
-            file.type.includes("sheet") ||
-            file.type.includes("text")
-          ) {
-            type = "document";
-          }
-          return {
-            id: Date.now() + index,
-            name: file.name,
-            size: formatFileSize(file.size),
-            type,
-            url: URL.createObjectURL(file),
-            thumbnailUrl:
-              type === "image" ? URL.createObjectURL(file) : undefined,
-          };
-        }
-      );
-
-      const tempMessage: Message = {
-        id: Date.now().toString(),
-        sender: {
-          id: userProfile?.id || "",
-          name: userProfile?.name || "",
-          avatar: userProfile?.profile.profile_picture || "",
-          initials: userProfile?.name.slice(0, 2).toUpperCase() || "",
-          status: "online" as "online",
-        },
-        content: newMessage.trim(),
-        timestamp: getCurrentTime(),
-        isCurrentUser: true,
-        attachments: fileAttachments.length > 0 ? fileAttachments : undefined,
-      };
-
-      setMessages((prev) => ({
-        ...prev,
-        [selectedGroupId]: [...(prev[selectedGroupId] || []), tempMessage],
-      }));
-
-      setChatGroups((prev) =>
-        prev.map((group) =>
-          group.id === selectedGroupId
-            ? {
-                ...group,
-                lastMessage: {
-                  content:
-                    newMessage.trim() ||
-                    (fileAttachments.length > 0
-                      ? `Envió ${fileAttachments.length} archivo(s)`
-                      : ""),
-                  timestamp: getCurrentTime(),
-                },
-              }
-            : group
-        )
-      );
-
-      socketRef.current?.emit(
-        "message",
-        {
-          channel: selectedGroup.id,
-          value: newMessage.trim(),
-        },
-        (response: any) => {
-          clearTimeout(timeout);
-          setIsSending(false);
-          if (response && response.error) {
-            // Si hay error, elimina el mensaje temporal
-            setMessages((prev) => ({
-              ...prev,
-              [selectedGroupId]: prev[selectedGroupId].filter(msg => msg.id !== tempMessage.id)
-            }));
-            // Opcional: muestra un toast o alerta
-            console.error("Error sending message:", response.error);
-          }
-        }
-      );
-
-      setNewMessage("");
-      setFileUploads([]);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setIsUploading(true);
-      setFileUploads([...fileUploads, ...Array.from(e.target.files)]);
-      setIsUploading(false);
-    }
-  };
-
-  const removeFile = (index: number) => {
-    setFileUploads((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + " B";
-    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-    else return (bytes / 1048576).toFixed(1) + " MB";
-  };
-
-  const getFileIcon = (file: File) => {
-    if (file.type.startsWith("image/")) {
-      return <FileImageIcon className="h-4 w-4" />;
-    } else if (file.type === "application/pdf") {
-      return <FilePdfIcon className="h-4 w-4" />;
-    } else if (
-      file.type.includes("document") ||
-      file.type.includes("sheet") ||
-      file.type.includes("text")
-    ) {
-      return <FileTextIcon className="h-4 w-4" />;
-    } else {
-      return <FileIcon className="h-4 w-4" />;
-    }
-  };
-
-  const handleCreateGroup = async () => {
-    if (newGroupName.trim() && selectedMembers.length > 0) {
+    async function loadChannels() {
       try {
-        const payload = {
-          name: newGroupName.trim(),
-          description: newGroupDescription.trim() || "",
-          team_id: team_data.id,
-          user_id: userProfile?.id || "",
-          channel_name: newGroupName.trim() + " grupo",
-          parentChannelId: selectedGroup.id,
-        };
-
-        const response = await apiClient.post(
-          "channels/create-channel",
-          payload
-        );
-        const createdChannel = response.data;
-
-        const finalMembers = [...selectedMembers];
-        const newGroup: ChatGroup = {
-          id: createdChannel.id,
-          name: createdChannel.name,
-          description: createdChannel.description,
-          initials: createdChannel.name
-            .trim()
-            .split(" ")
-            .map((word: string) => word[0])
-            .join("")
-            .toUpperCase()
-            .substring(0, 2),
-          members: finalMembers.map((id) => {
-            const member = teamMembers.find((m) => m.member.id === id)?.member;
-            return {
-              id: member?.id || "",
-              name: member?.name || "",
-              avatar: member?.name.slice(0, 2).toUpperCase() || "",
-              initials: member?.name.slice(0, 2).toUpperCase() || "",
-              status: "online" as "online",
-            };
-          }),
-          unreadCount: 0,
-          lastMessage: undefined,
-        };
-
-        setChatGroups((prev) => [newGroup, ...prev]);
-        setMessages((prev) => ({
-          ...prev,
-          [newGroup.id]: [],
+        const serverId = team_id;
+        const response = await getChannels(serverId);
+        const apiChannels = response.data;
+        const convertedRooms: Room[] = apiChannels.map((channel: any) => ({
+          id: channel.id,
+          name: channel.name,
+          description: channel.description,
+          members: 0,
+          lastMessage: "",
+          time: "",
+          unread: 0,
         }));
-        setSelectedGroupId(newGroup.id);
-        setNewGroupName("");
-        setNewGroupDescription("");
-        setSelectedMembers([]);
-        setShowNewGroupDialog(false);
+
+        setRooms(convertedRooms);
+        if (convertedRooms.length > 0 && !selectedId) {
+          setSelectedId(convertedRooms[0].id);
+        }
       } catch (error) {
-        console.error("Error al crear el canal", error);
+        console.error('Error loading channels:', error);
+        const defaultRoom: Room = {
+          id: "default-channel",
+          name: "General",
+          description: "Canal general",
+          members: 0,
+          lastMessage: "",
+          time: "",
+          unread: 0,
+        };
+        setRooms([defaultRoom]);
+        setSelectedId(defaultRoom.id);
+      } finally {
+        setIsLoadingChannels(false);
       }
     }
-  };
 
-  const renderFileAttachment = (attachment: FileAttachment) => {
-    switch (attachment.type) {
-      case "image":
-        return (
-          <div className="relative rounded-md overflow-hidden border border-border/50 max-w-[200px]">
-            <img
-              src={attachment.thumbnailUrl || attachment.url}
-              alt={attachment.name}
-              className="max-w-full h-auto object-cover"
-            />
-            <div className="absolute bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm p-1 text-xs truncate">
-              {attachment.name}
-            </div>
-          </div>
-        );
-      case "pdf":
-        return (
-          <div className="flex items-center p-2 rounded-md border border-border/50 bg-background/50">
-            <FilePdfIcon className="h-8 w-8 text-red-500 mr-2" />
-            <div className="overflow-hidden">
-              <p className="text-sm font-medium truncate">{attachment.name}</p>
-              <p className="text-xs text-muted-foreground">{attachment.size}</p>
-            </div>
-          </div>
-        );
-      case "document":
-        return (
-          <div className="flex items-center p-2 rounded-md border border-border/50 bg-background/50">
-            <FileTextIcon className="h-8 w-8 text-blue-500 mr-2" />
-            <div className="overflow-hidden">
-              <p className="text-sm font-medium truncate">{attachment.name}</p>
-              <p className="text-xs text-muted-foreground">{attachment.size}</p>
-            </div>
-          </div>
-        );
-      default:
-        return (
-          <div className="flex items-center p-2 rounded-md border border-border/50 bg-background/50">
-            <FileIcon className="h-8 w-8 text-muted-foreground mr-2" />
-            <div className="overflow-hidden">
-              <p className="text-sm font-medium truncate">{attachment.name}</p>
-              <p className="text-xs text-muted-foreground">{attachment.size}</p>
-            </div>
-          </div>
-        );
+    loadChannels();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedId || isLoadingChannels) return;
+
+    setMessages([]);
+
+    async function loadMessages() {
+      setIsLoadingMessages(true);
+      try {
+        console.log('Loading messages for channel:', selectedId);
+        const apiMessages = await getMessages(selectedId, 50);
+        console.log('API Messages received:', apiMessages);
+
+        const convertedMessages: Message[] = apiMessages.map((msg: ApiMessage) => {
+          const isFromMe = realUser ? msg.userName === `${realUser.name} ${realUser.lastName}` : false;
+
+          return {
+            id: msg.message_id,
+            roomId: msg.channel.channel_id,
+            text: msg.value,
+            time: formatTimeEs(new Date(msg.createdAt)),
+            fromMe: isFromMe,
+            userName: msg.userName,
+            avatar: msg.avatar,
+          };
+        });
+
+        console.log('Converted messages:', convertedMessages);
+        setMessages(convertedMessages);
+        console.log('Loaded messages:', convertedMessages.length);
+      } catch (error) {
+        console.error('Error loading messages:', error);
+      } finally {
+        setIsLoadingMessages(false);
+      }
     }
-  };
 
-  if (!selectedGroup || !team_data) {
+    loadMessages();
+  }, [selectedId, isLoadingChannels]);
+
+  useEffect(() => {
+    if (!socket || !isConnected || isLoadingChannels || !socketAuth) {
+      console.log('Cannot join channel:', {
+        hasSocket: !!socket,
+        isConnected,
+        isLoadingChannels,
+        hasSocketAuth: !!socketAuth
+      });
+      return;
+    }
+
+    console.log('Joining channel with auth:', socketAuth);
+    joinChannel();
+  }, [socket, isConnected, selectedId, joinChannel, isLoadingChannels, socketAuth]);
+
+  useEffect(() => {
+    console.log('Connection status:', {
+      isConnected,
+      onlineMembersCount: onlineMembers.length,
+      offlineMembersCount: offlineMembers.length,
+      selectedRoom: selectedRoom?.name
+    });
+  }, [isConnected, onlineMembers.length, offlineMembers.length, selectedRoom]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = (message: any) => {
+      setMessages((prev) => {
+        const messageExists = prev.some(m => m.id === message.id);
+        if (messageExists) {
+          return prev;
+        }
+
+        const isFromMe = realUser ? message.userName === `${realUser.name} ${realUser.lastName}` : false;
+
+        const newMessage: Message = {
+          id: message.id,
+          roomId: message.roomId,
+          text: message.text,
+          time: formatTimeEs(new Date(message.time)),
+          fromMe: isFromMe,
+          userName: message.userName,
+          avatar: message.avatar,
+        };
+
+        return [...prev, newMessage];
+      });
+
+      setRooms((prev) =>
+        prev.map((r) =>
+          r.id === message.roomId ? { ...r, lastMessage: message.text, time: formatTimeEs(new Date(message.time)), unread: 0 } : r,
+        ),
+      );
+    };
+
+    socket.on('new-message', handleNewMessage);
+
+    return () => {
+      socket.off('new-message', handleNewMessage);
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth", block: "end" })
+    }
+  }, [messages, selectedId])
+
+  function openCreateDialog(parentId?: string) {
+    setCreateParentId(parentId)
+    setCreateName("")
+    setCreateDescription("")
+    setCreateOpen(true)
+  }
+
+  function createRoom() {
+    const name = createName.trim()
+    if (!name) return
+    const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `r-${Date.now()}`
+    const nowText = formatTimeEs(new Date())
+    const newRoom: Room = {
+      id,
+      name,
+      description: createDescription.trim() || undefined,
+      parentId: createParentId || undefined,
+      members: 0,
+      lastMessage: "",
+      time: nowText,
+      unread: 0,
+    }
+    setRooms((prev) => [...prev, newRoom])
+    if (createParentId) {
+      setExpanded((e) => ({ ...e, [createParentId]: true }))
+    }
+    setSelectedId(id)
+    setCreateOpen(false)
+  }
+
+  if (loading || !userProfile) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <Loader color="violet" type="bars" />
-      </div>
+      <main className="h-screen w-full bg-white text-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando usuario...</p>
+        </div>
+      </main>
     );
   }
 
   return (
-    <div className={`flex h-[calc(100vh-120px)] ${isMobileView ? 'flex-col' : 'flex-row'}`}>
-      {showSidebar && (
-        <div className={`${isMobileView ? 'w-full' : 'w-80'} border-r`}>
-          <div className="p-3 border-b border-border/40">
+    <main className="h-full w-full bg-gradient-to-br from-slate-50 to-blue-50 text-gray-900 overflow-hidden">
+      <div className="flex h-full bg-white/80 backdrop-blur-sm overflow-hidden">
+        <aside className="w-[300px] border-r border-gray-200 bg-white flex flex-col">
+          <div className="px-6 pt-6 pb-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <Users className="h-5 w-5" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold">Chat</h1>
+                  <p className="text-sm text-blue-100">Comunicación en tiempo real</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/20">
+                <HelpCircle className="h-4 w-4" />
+                <span className="sr-only">Ayuda</span>
+              </Button>
+            </div>
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                type="search"
-                placeholder="Search chats..."
-                className="pl-8 w-full bg-background/50 border-border/50 focus:bg-background"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-10 bg-white/10 border-white/20 text-white placeholder:text-blue-100 focus:bg-white/20"
+                placeholder="Buscar chats..."
               />
             </div>
           </div>
-          <div className="flex items-center justify-between p-3 border-b border-border/40">
-            <h3 className="text-sm font-medium">Chats</h3>
-            <div className="flex gap-1">
+
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <p className="text-sm font-semibold text-gray-700">Canales</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:bg-blue-50 text-blue-600"
+              onClick={() => openCreateDialog(undefined)}
+              title="Crear canal"
+              aria-label="Crear canal"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <ScrollArea className="flex-1 min-h-0">
+            <ul className="px-4 pb-4">
+              {rootRooms.map((room) => (
+                <RoomNode
+                  key={room.id}
+                  room={room}
+                  depth={0}
+                  selectedId={selectedId}
+                  onSelect={(id) => setSelectedId(id)}
+                  childrenMap={childrenMap}
+                  expanded={expanded}
+                  setExpanded={setExpanded}
+                  onCreateSub={(parentId) => openCreateDialog(parentId)}
+                />
+              ))}
+            </ul>
+          </ScrollArea>
+        </aside>
+
+        {/* Conversación centro */}
+        <section className="flex-1 flex flex-col bg-white min-h-0 border-l border-gray-200">
+          <header className="h-16 border-b border-gray-200 px-6 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white flex-shrink-0">
+            <div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">{selectedRoom?.name?.charAt(0).toUpperCase()}</span>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    {selectedRoom?.name}
+                    <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} shadow-sm`}
+                      title={isConnected ? 'Conectado' : 'Desconectado'} />
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {selectedRoom?.members ?? 0} miembros • {onlineMembers.length} en línea
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 hover:bg-gray-100 rounded-lg">
+                <Search className="h-4 w-4" />
+                <span className="sr-only">Buscar en chat</span>
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-full"
-                onClick={() => setShowNewGroupDialog(true)}
+                className={cn("h-10 w-10 text-gray-600 hover:bg-gray-100 rounded-lg", showMembers && "bg-blue-50 text-blue-600")}
+                onClick={() => setShowMembers((v) => !v)}
+                title="Ver miembros"
+                aria-label="Ver miembros"
               >
-                <Plus className="h-4 w-4 text-muted-foreground" />
+                <Users className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 hover:bg-gray-100 rounded-lg">
+                <Info className="h-4 w-4" />
+                <span className="sr-only">Información</span>
+              </Button>
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 hover:bg-gray-100 rounded-lg">
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">Más opciones</span>
               </Button>
             </div>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <div className="h-[calc(100%-120px)] overflow-y-auto p-2 scrollbar-thin">
-              <div className="space-y-1">
-                {chatGroups
-                  .filter(
-                    (group) =>
-                      group.name
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase()) ||
-                      (group.description &&
-                        group.description
-                          .toLowerCase()
-                          .includes(searchQuery.toLowerCase()))
-                  )
-                  .map((group) => (
-                    <button
-                      key={group.id}
-                      className={cn(
-                        "w-full flex items-center p-2 rounded-md text-left transition-colors",
-                        selectedGroupId === group.id
-                          ? "bg-primary/10 text-primary"
-                          : "hover:bg-muted/50"
-                      )}
-                      onClick={() => {
-                        setSelectedGroupId(group.id);
-                        setChatGroups((prev) =>
-                          prev.map((g) =>
-                            g.id === group.id
-                              ? { ...g, unreadCount: 0 }
-                              : g
-                          )
-                        );
-                      }}
-                    >
-                      <div className="relative">
-                        <Avatar className="h-9 w-9 mr-2">
-                          {group.avatar ? (
-                            <AvatarImage src={group.avatar} />
-                          ) : null}
-                          <AvatarFallback className="text-xs font-medium bg-primary/20">
-                            {group.initials}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium text-sm truncate">
-                            {group.name}
-                          </p>
-                          {group.lastMessage && (
-                            <span className="text-xs text-muted-foreground">
-                              {group.lastMessage.timestamp}
-                            </span>
-                          )}
-                        </div>
-                        {group.lastMessage && (
-                          <p className="text-xs text-muted-foreground truncate">
-                            {group.lastMessage.content}
-                          </p>
-                        )}
-                      </div>
-                      {group.unreadCount > 0 && (
-                        <Badge className="ml-1 bg-primary text-primary-foreground h-5 min-w-5 flex items-center justify-center rounded-full text-xs">
-                          {group.unreadCount}
-                        </Badge>
-                      )}
-                    </button>
-                  ))}
-              </div>
-            </div>
-          </div>
-          <div className="p-3 border-t border-border/40 ">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Avatar className="h-8 w-8 mr-2">
-                  <AvatarImage
-                    src={
-                      userProfile?.profile?.profile_picture ||
-                      "/placeholder.svg?height=32&width=32"
-                    }
-                  />
-                  <AvatarFallback className="bg-primary/10 text-xs font-medium">
-                    {userProfile?.name?.slice(0, 2).toUpperCase() ||
-                      "YOU"}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm font-medium">
-                    {userProfile?.name || "You"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Online
-                  </p>
+          </header>
+
+          {/* Mensajes */}
+          <ScrollArea className="flex-1 bg-gray-50 min-h-0 overflow-y-auto">
+            <div className="px-8 py-6">
+              {!isConnected && (
+                <div className="text-center py-8">
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6 max-w-md mx-auto">
+                    <div className="flex items-center justify-center gap-3 mb-3">
+                      <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
+                      <span className="font-semibold text-gray-700">Conectando al servidor...</span>
+                    </div>
+                    <p className="text-sm text-gray-600">Los mensajes se enviarán cuando se establezca la conexión</p>
+                  </div>
                 </div>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 rounded-full"
-                  >
-                    <Settings className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem>Profile</DropdownMenuItem>
-                  <DropdownMenuItem>Preferences</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              )}
+              {isLoadingMessages && (
+                <div className="text-center py-8">
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
+                    <span className="font-medium text-gray-600">Cargando mensajes...</span>
+                  </div>
+                </div>
+              )}
+              {!isLoadingMessages && roomMessages.length === 0 && (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <MessageSquare className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">No hay mensajes</h3>
+                  <p className="text-gray-500">¡Sé el primero en escribir en este canal!</p>
+                </div>
+              )}
+              {roomMessages.map((m) => (
+                <MessageBubble
+                  key={m.id}
+                  text={m.text}
+                  time={m.time}
+                  fromMe={m.fromMe}
+                  userName={m.userName}
+                  userAvatar=""
+                />
+              ))}
+              <div ref={bottomRef} />
             </div>
-          </div>
-        </div>
-      )}
-      <Card className="relative overflow-hidden bg-card border border-border/40 rounded-xl h-full w-full max-w-none flex flex-col overscroll-contain">
-        {chatGroups.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader color="violet" type="bars" />
-          </div>
-        ) : (
+          </ScrollArea>
+
+          {/* Composer */}
+          <footer className="border-t border-gray-200 px-6 py-4 bg-white flex-shrink-0 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
+                <Paperclip className="h-5 w-5" />
+                <span className="sr-only">Adjuntar archivo</span>
+              </Button>
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
+                <Smile className="h-5 w-5" />
+                <span className="sr-only">Insertar emoji</span>
+              </Button>
+
+              <Input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="Escribe tu mensaje..."
+                className="flex-1 h-12 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    sendMessage()
+                  }
+                }}
+              />
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12 bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 rounded-xl shadow-lg"
+                disabled={!draft.trim()}
+                onClick={sendMessage}
+                aria-label="Enviar mensaje"
+                title="Enviar"
+              >
+                <Send className="h-5 w-5" />
+              </Button>
+            </div>
+          </footer>
+        </section>
+
+        {/* Panel de miembros (derecha) */}
+        {showMembers && (
           <>
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
-                    <MessageSquare className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">{team_data?.name || "Cargando..."}</CardTitle>
-                    <CardDescription>
-                      {isExpanded
-                        ? "Real-time communication"
-                        : "5 unread messages"}
-                    </CardDescription>
-                  </div>
-                </div>
+            <div
+              className="fixed inset-0 z-40 bg-black/20 lg:hidden"
+              onClick={() => setShowMembers(false)}
+              aria-hidden="true"
+            />
+            <aside className="fixed right-0 top-0 bottom-0 z-50 w-[85%] max-w-[320px] border-l border-gray-200 bg-white/95 backdrop-blur-sm shadow-xl lg:static lg:z-auto lg:w-[300px] lg:shadow-none flex flex-col">
+              <header className="h-16 border-b border-gray-200 px-6 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white flex-shrink-0">
                 <div className="flex items-center gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-full"
-                      >
-                        <MoreHorizontalIcon className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Chat Options</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        Mute Notifications
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>Search Messages</DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setShowNewGroupDialog(true)}
-                      >
-                        Create Group
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem>Settings</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleExpanded}
-                    aria-label={isExpanded ? "Collapse chat" : "Expand chat"}
-                    className="h-8 w-8 rounded-full"
-                  >
-                    {isExpanded ? (
-                      <ChevronDownIcon className="h-4 w-4" />
-                    ) : (
-                      <ChevronUpIcon className="h-4 w-4" />
-                    )}
-                  </Button>
+                  <Users className="h-5 w-5 text-blue-600" />
+                  <div className="text-lg font-semibold text-gray-900">Miembros</div>
                 </div>
-              </div>
-            </CardHeader>
-            {isExpanded && (
-              <>
-                <CardContent className="p-0 flex flex-1 overflow-hidden">
-                  {/* Messages area */}
-                  <div className="flex-1 flex flex-col overflow-hidden ">
-                    <div className="p-3 flex items-center justify-between">
-                      <div className="flex items-center">
-                        {showSidebar ? (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-full mr-2 md:hidden"
-                            onClick={() => setShowSidebar(false)}
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-full mr-2"
-                            onClick={() => setShowSidebar(true)}
-                          >
-                            <ArrowLeft className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Avatar className="h-8 w-8 mr-2">
-                          {selectedGroup.avatar ? (
-                            <AvatarImage src={selectedGroup.avatar} />
-                          ) : null}
-                          <AvatarFallback>
-                            {selectedGroup.initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium text-sm">
-                            {selectedGroup.name || "Cargando..."}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {selectedGroup.members.length} members
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 rounded-full"
-                        >
-                          <Search className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 rounded-full"
-                            >
-                              <MoreHorizontalIcon className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>View info</DropdownMenuItem>
-                            <DropdownMenuItem>Add members</DropdownMenuItem>
-                            <DropdownMenuItem>
-                              Mute notifications
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-500">
-                              Leave group
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                    <div className="flex-1 overflow-hidden ">
-                      <div className="h-[calc(100%-80px)] overflow-y-auto p-3 scrollbar-thin">
-                        <div className="space-y-4">
-                          {messages[selectedGroupId] &&
-                          messages[selectedGroupId].length > 0 ? (
-                            messages[selectedGroupId].map((message) => (
-                              <div
-                                key={message.id}
-                                className={`flex ${
-                                  message.isCurrentUser
-                                    ? "justify-end"
-                                    : "justify-start"
-                                }`}
-                              >
-                                <div
-                                  className={`flex max-w-[80%] ${
-                                    message.isCurrentUser
-                                      ? "flex-row-reverse"
-                                      : "flex-row"
-                                  }`}
-                                >
-                                  <Avatar
-                                    className={`h-8 w-8 ${
-                                      message.isCurrentUser ? "ml-2" : "mr-2"
-                                    }`}
-                                  >
-                                    <AvatarImage src={message.sender.avatar} />
-                                    <AvatarFallback className="bg-primary/10 text-xs font-medium">
-                                      {message.sender.initials}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div
-                                    className={`rounded-2xl p-3 ${
-                                      message.isCurrentUser
-                                        ? "bg-gradient-to-r from-primary/90 to-primary text-primary-foreground"
-                                        : "bg-card border"
-                                    }`}
-                                  >
-                                    {!message.isCurrentUser && (
-                                      <p className="font-semibold text-sm mb-1">
-                                        {message.sender.name}
-                                      </p>
-                                    )}
-                                    {message.content && (
-                                      <p className="text-sm">
-                                        {message.content}
-                                      </p>
-                                    )}
-                                    {message.attachments &&
-                                      message.attachments.length > 0 && (
-                                        <div
-                                          className={`mt-2 space-y-2 ${
-                                            message.content
-                                              ? "pt-2 border-t border-border/20"
-                                              : ""
-                                          }`}
-                                        >
-                                          {message.attachments.map(
-                                            (attachment) => (
-                                              <div key={attachment.id}>
-                                                {renderFileAttachment(
-                                                  attachment
-                                                )}
-                                              </div>
-                                            )
-                                          )}
-                                        </div>
-                                      )}
-                                    <p
-                                      className={`text-xs mt-1 ${
-                                        message.isCurrentUser
-                                          ? "text-primary-foreground/70"
-                                          : "text-muted-foreground"
-                                      }`}
-                                    >
-                                      {message.timestamp}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-center text-muted-foreground">
-                              No messages
-                            </div>
-                          )}
-                          <div ref={messagesEndRef} />
-                        </div>
-                      </div>
-                    </div>
-                    {fileUploads.length > 0 && (
-                      <div className="px-3 py-2 border-t border-border/40 bg-muted/30">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs font-medium">
-                            Attached files ({fileUploads.length})
-                          </p>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 rounded-full"
-                            onClick={() => setFileUploads([])}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {fileUploads.map((file, index) => (
-                            <div
-                              key={index}
-                              className="relative bg-background rounded-md border border-border/50 p-1.5 pr-7 flex items-center text-xs"
-                            >
-                              {getFileIcon(file)}
-                              <span className="ml-1.5 max-w-[120px] truncate">
-                                {file.name}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5 rounded-full absolute right-1 top-1/2 -translate-y-1/2"
-                                onClick={() => removeFile(index)}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <CardFooter className="border-t bg-card/50 p-3">
-                      <div className="flex items-center w-full gap-2">
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 rounded-full"
-                            onClick={() => fileInputRef.current?.click()}
-                          >
-                            <PaperclipIcon className="h-4 w-4 text-muted-foreground" />
-                            <input
-                              type="file"
-                              ref={fileInputRef}
-                              className="hidden"
-                              onChange={handleFileUpload}
-                              multiple
-                            />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 rounded-full"
-                          >
-                            <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 rounded-full"
-                          >
-                            <MicIcon className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        </div>
-                        <div className="relative flex-1">
-                          <Input
-                            placeholder="Type your message..."
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            className="pr-10 bg-background/50 border-border/50 focus:bg-background rounded-full pl-4"
-                            disabled={isSending || isUploading}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-1 top-1 h-7 w-7 rounded-full"
-                          >
-                            <SmileIcon className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        </div>
-                        <Button
-                          onClick={handleSendMessage}
-                          disabled={
-                            (!newMessage.trim() && fileUploads.length === 0) ||
-                            isSending ||
-                            isUploading
-                          }
-                          className="rounded-full"
-                          size="icon"
-                        >
-                          {isSending || isUploading ? (
-                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                          ) : (
-                            <SendIcon className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </CardFooter>
-                  </div>
-                </CardContent>
-                <Dialog
-                  open={showNewGroupDialog}
-                  onOpenChange={setShowNewGroupDialog}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 lg:hidden hover:bg-gray-100 rounded-lg"
+                  onClick={() => setShowMembers(false)}
+                  aria-label="Cerrar panel"
                 >
-                  <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                      <DialogTitle>Create new group</DialogTitle>
-                      <DialogDescription>
-                        Create a new chat group to collaborate with your team.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="group-name">Group name</Label>
-                        <Input
-                          id="group-name"
-                          placeholder="e.g. Development Team"
-                          value={newGroupName}
-                          onChange={(e) => setNewGroupName(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="group-description">
-                          Description (optional)
-                        </Label>
-                        <Textarea
-                          id="group-description"
-                          placeholder="Describe the purpose of this group"
-                          value={newGroupDescription}
-                          onChange={(e) =>
-                            setNewGroupDescription(e.target.value)
-                          }
-                          className="resize-none"
-                          rows={3}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Members</Label>
-                        <div className="max-h-[200px] overflow-y-auto scrollbar-thin">
-                          <div className="space-y-1">
-                            {teamMembers
-                              .filter((m) => m.member.id !== userProfile?.id)
-                              .map((m) => (
-                                <div
-                                  key={m.member.id}
-                                  className="flex items-center py-1.5 px-2 hover:bg-muted/50 rounded-md"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    id={`member-${m.member.id}`}
-                                    checked={selectedMembers.includes(
-                                      m.member.id
-                                    )}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setSelectedMembers((prev) => [
-                                          ...prev,
-                                          m.member.id,
-                                        ]);
-                                      } else {
-                                        setSelectedMembers((prev) =>
-                                          prev.filter(
-                                            (id) => id !== m.member.id
-                                          )
-                                        );
-                                      }
-                                    }}
-                                    className="mr-2"
-                                  />
-                                  <label
-                                    htmlFor={`member-${m.member.id}`}
-                                    className="flex items-center flex-1 cursor-pointer"
-                                  >
-                                    <Avatar className="h-6 w-6 mr-2">
-                                      <AvatarImage
-                                        src={m.member.name
-                                          .slice(0, 2)
-                                          .toUpperCase()}
-                                      />
-                                      <AvatarFallback className="text-[10px]">
-                                        {m.member.name
-                                          .slice(0, 2)
-                                          .toUpperCase()}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-sm">
-                                      {m.member.name}
-                                    </span>
-                                  </label>
-                                  <Badge
-                                    variant="outline"
-                                    className="ml-auto bg-green-100 text-green-700"
-                                  >
-                                    Online
-                                  </Badge>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowNewGroupDialog(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={handleCreateGroup}
-                        disabled={
-                          !newGroupName.trim() || selectedMembers.length === 0
-                        }
-                      >
-                        <Users className="h-4 w-4 mr-2" />
-                        Create group
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </>
-            )}
+                  <X className="h-4 w-4" />
+                </Button>
+              </header>
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="px-6 py-6 space-y-8">
+                  <MembersSection title={`Conectados (${onlineMembers.length})`} members={onlineMembers} />
+                  <MembersSection title={`Desconectados (${offlineMembers.length})`} members={offlineMembers} />
+                </div>
+              </ScrollArea>
+            </aside>
           </>
         )}
-      </Card>
+      </div>
+
+      {/* Botón de ayuda flotante */}
+      <div className="fixed right-3 bottom-3 flex items-center gap-2">
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full shadow-sm bg-white/90">
+          <HelpCircle className="h-4 w-4 text-gray-600" />
+          <span className="sr-only">Ayuda</span>
+        </Button>
+      </div>
+
+      {/* Dialogo crear sala/subcanal */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Crear {createParentId ? "subcanal" : "sala"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="room-name">Nombre</Label>
+              <Input
+                id="room-name"
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                placeholder="p. ej. Soporte, Ventas, General"
+                autoFocus
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="room-desc">Descripción (opcional)</Label>
+              <Textarea
+                id="room-desc"
+                value={createDescription}
+                onChange={(e) => setCreateDescription(e.target.value)}
+                placeholder="Describe de qué trata esta sala"
+                className="min-h-[84px]"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Ubicación</Label>
+              <Select
+                value={createParentId ?? "root"}
+                onValueChange={(v) => setCreateParentId(v === "root" ? undefined : v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Selecciona ubicación" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="root">Sin padre (nivel raíz)</SelectItem>
+                  {rooms.filter(Boolean).map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {roomPathLabel(r, rooms)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCreateOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={createRoom} disabled={!createName.trim()}>
+              Crear
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </main>
+  )
+}
+
+/* ---------- Lista jerárquica ---------- */
+function RoomNode({
+  room,
+  depth,
+  selectedId,
+  onSelect,
+  childrenMap,
+  expanded,
+  setExpanded,
+  onCreateSub,
+}: {
+  room: Room
+  depth: number
+  selectedId: string
+  onSelect: (id: string) => void
+  childrenMap: Map<string, Room[]>
+  expanded: Record<string, boolean>
+  setExpanded: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
+  onCreateSub: (parentId: string) => void
+}) {
+  const children = childrenMap.get(room.id) ?? []
+  const hasChildren = children.length > 0
+  const isOpen = expanded[room.id] ?? true
+
+  return (
+    <li>
+      <div
+        className={cn(
+          "group relative w-full rounded-xl px-3 py-3 hover:bg-gray-50 transition-all duration-200",
+          selectedId === room.id && "bg-gradient-to-r from-blue-50 to-indigo-50 ring-1 ring-blue-200 shadow-sm",
+        )}
+        style={{ paddingLeft: 12 + depth * 20 }}
+      >
+        <div className="flex items-center gap-2">
+          {/* Chevron */}
+          <button
+            className={cn(
+              "mr-1 h-5 w-5 shrink-0 rounded hover:bg-gray-100",
+              !hasChildren && "opacity-0 pointer-events-none",
+            )}
+            onClick={() => setExpanded((e) => ({ ...e, [room.id]: !isOpen }))}
+            aria-label={isOpen ? "Colapsar" : "Expandir"}
+            title={isOpen ? "Colapsar" : "Expandir"}
+          >
+            {isOpen ? (
+              <ChevronDown className="h-4 w-4 text-gray-500" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-gray-500" />
+            )}
+          </button>
+
+          {/* Avatar y título clickable */}
+          <button onClick={() => onSelect(room.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+            <Avatar className="h-10 w-10 ring-2 ring-gray-100">
+              <AvatarImage src="/avatar-circle.png" alt={room.name} />
+              <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                {room.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="truncate text-sm font-semibold text-gray-900">{room.name}</span>
+                {room.time && (
+                  <span className="text-xs text-gray-400 font-medium">{room.time}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="truncate text-xs text-gray-500">{room.lastMessage || room.description || "Sin mensajes"}</p>
+                {room.unread ? (
+                  <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
+                    {room.unread}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </button>
+
+          {/* Botón crear subcanal */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-1 h-8 w-8 opacity-0 group-hover:opacity-100 hover:bg-blue-50 text-blue-600 transition-all duration-200"
+            onClick={() => onCreateSub(room.id)}
+            title="Crear subcanal"
+            aria-label="Crear subcanal"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Hijos */}
+      {hasChildren && isOpen && (
+        <ul>
+          {children.map((child) => (
+            <RoomNode
+              key={child.id}
+              room={child}
+              depth={depth + 1}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              childrenMap={childrenMap}
+              expanded={expanded}
+              setExpanded={setExpanded}
+              onCreateSub={onCreateSub}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  )
+}
+
+/* ---------- Panel de miembros ---------- */
+function MembersSection({ title, members }: { title: string; members: Member[] }) {
+  return (
+    <div>
+      <div className="mb-4 text-sm font-semibold text-gray-700 flex items-center gap-2">
+        <div className={`w-2 h-2 rounded-full ${title.includes('Conectados') ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+        {title}
+      </div>
+      <ul className="space-y-2">
+        {members.map((m) => (
+          <li key={m.id} className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-gray-50 transition-colors duration-200">
+            <PresenceAvatar name={m.name} status={m.status} />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium text-gray-900">{m.name}</div>
+              <div className="text-xs text-gray-500">{m.status === "online" ? "En línea" : "Desconectado"}</div>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
-  );
+  )
+}
+
+function PresenceAvatar({ name, status }: { name: string; status: "online" | "offline" }) {
+  const initial = name.charAt(0).toUpperCase()
+  const isOnline = status === "online"
+  return (
+    <div className="relative">
+      <Avatar className="h-10 w-10 ring-2 ring-gray-100">
+        <AvatarImage src="/diverse-user-avatars.png" alt={name} />
+        <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+          {initial}
+        </AvatarFallback>
+      </Avatar>
+      <span
+        className={cn(
+          "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white shadow-sm",
+          isOnline ? "bg-emerald-500" : "bg-gray-400",
+        )}
+        aria-label={isOnline ? "Usuario en línea" : "Usuario desconectado"}
+        role="status"
+      />
+    </div>
+  )
+}
+
+/* ---------- Mensajes ---------- */
+function MessageBubble({
+  text = "Mensaje",
+  time = "3:59 p. m.",
+  fromMe = true,
+  userName,
+  userAvatar,
+}: {
+  text?: string
+  time?: string
+  fromMe?: boolean
+  userName?: string
+  userAvatar?: string
+}) {
+  if (fromMe) {
+    return (
+      <div className="mb-2 flex items-end justify-end gap-2">
+        <div className="max-w-[70%]">
+          <div
+            className="inline-block rounded-2xl rounded-br-md bg-blue-500 px-3 py-2 text-white text-[13px] leading-5 shadow-sm break-words whitespace-pre-wrap"
+            style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+          >
+            {text}
+          </div>
+          <div className="mt-1 text-[11px] text-gray-400 text-right">{time}</div>
+        </div>
+        <Avatar className="h-7 w-7">
+          <AvatarImage src={userAvatar || "/diverse-user-avatars.png"} alt="Tú" />
+          <AvatarFallback className="text-[11px]">Tú</AvatarFallback>
+        </Avatar>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mb-2 flex items-end gap-2">
+      <Avatar className="h-7 w-7">
+        <AvatarImage src="/diverse-user-avatars.png" alt={userName || "Usuario"} />
+        <AvatarFallback className="text-[11px]">{(userName || "U").charAt(0).toUpperCase()}</AvatarFallback>
+      </Avatar>
+      <div className="max-w-[70%]">
+        {userName && (
+          <div className="text-[11px] text-gray-500 mb-1">{userName}</div>
+        )}
+        <div
+          className="inline-block rounded-2xl rounded-bl-md bg-gray-100 px-3 py-2 text-[13px] leading-5 text-gray-900 break-words whitespace-pre-wrap"
+          style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+        >
+          {text}
+        </div>
+        <div className="mt-1 text-[11px] text-gray-400">{time}</div>
+      </div>
+    </div>
+  )
+}
+
+/* ---------- Utilidades ---------- */
+function roomPathLabel(room: Room, rooms: Room[]) {
+  // Construir ruta legible: Padre / Hijo / Nieto
+  const byId = new Map(rooms.map((r) => [r.id, r]))
+  const parts: string[] = [room.name]
+  let current = room
+  let safety = 0
+  while (current.parentId && byId.has(current.parentId) && safety < 10) {
+    current = byId.get(current.parentId)!
+    parts.push(current.name)
+    safety++
+  }
+  return parts.reverse().join(" / ")
 }

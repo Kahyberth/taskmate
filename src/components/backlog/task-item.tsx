@@ -166,9 +166,12 @@ export function TaskItem({
             )}
             {task.epic && <EpicBadge epic={task.epic} />}
             <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-2 py-0.5 rounded-full">
-              {typeof task.storyPoints === 'number' && task.storyPoints > 0
-                ? `${task.storyPoints % 1 === 0 ? task.storyPoints : task.storyPoints.toFixed(1)} pts`
-                : "Not estimated"}
+              {(() => {
+                console.log(`Task ${task.id} (${task.title}) - storyPoints:`, task.storyPoints, 'type:', typeof task.storyPoints);
+                return typeof task.storyPoints === 'number' && task.storyPoints > 0
+                  ? `${task.storyPoints % 1 === 0 ? task.storyPoints : task.storyPoints.toFixed(1)} pts`
+                  : "Not estimated";
+              })()}
             </span>
 
             {task.assignedTo ? (

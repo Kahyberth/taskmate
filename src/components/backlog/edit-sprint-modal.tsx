@@ -25,15 +25,17 @@ export function EditSprintModal({
   onSave
 }: EditSprintModalProps) {
   const [editSprintName, setEditSprintName] = useState("");
-  const [editSprintStartDate, setEditSprintStartDate] = useState<Date>();
-  const [editSprintEndDate, setEditSprintEndDate] = useState<Date>();
+  const [editSprintStartDate, setEditSprintStartDate] = useState<Date | undefined>();
+  const [editSprintEndDate, setEditSprintEndDate] = useState<Date | undefined>();
   const [editSprintGoal, setEditSprintGoal] = useState("");
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   useEffect(() => {
     if (sprint) {
       setEditSprintName(sprint.name);
-      setEditSprintStartDate(sprint.startedAt || undefined);
-      setEditSprintEndDate(sprint.fnishedAt || undefined);
+      setEditSprintStartDate(sprint.startedAt ? new Date(sprint.startedAt) : undefined);
+      setEditSprintEndDate(sprint.fnishedAt ? new Date(sprint.fnishedAt) : undefined);
       setEditSprintGoal(sprint.goal || "");
     }
   }, [sprint]);
@@ -53,78 +55,106 @@ export function EditSprintModal({
     onOpenChange(false);
   };
 
+  const handleStartDateSelect = (date: Date | undefined) => {
+    setEditSprintStartDate(date);
+    setStartDateOpen(false);
+  };
+
+  const handleEndDateSelect = (date: Date | undefined) => {
+    setEditSprintEndDate(date);
+    setEndDateOpen(false);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] dark:bg-gray-800 dark:border-gray-700">
+      <DialogContent className="sm:max-w-[425px] bg-background text-foreground">
         <DialogHeader>
-          <DialogTitle className="dark:text-gray-200">Edit Sprint</DialogTitle>
+          <DialogTitle className="text-foreground">Edit Sprint</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-sprint-name" className="text-right dark:text-gray-200">
+            <Label htmlFor="edit-sprint-name" className="text-right text-foreground">
               Name
             </Label>
             <Input
               id="edit-sprint-name"
               value={editSprintName}
               onChange={(e) => setEditSprintName(e.target.value)}
-              className="col-span-3 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:placeholder:text-gray-500"
+              className="col-span-3 bg-background text-foreground border-border"
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right dark:text-gray-200">Start Date</Label>
-            <Popover>
+            <Label className="text-right text-foreground">Start Date</Label>
+            <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant={"outline"}
                   className={cn(
-                    "col-span-3 justify-start text-left font-normal dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800",
-                    !editSprintStartDate && "text-muted-foreground dark:text-gray-500"
+                    "col-span-3 justify-start text-left font-normal bg-background text-foreground border-border",
+                    !editSprintStartDate && "text-muted-foreground"
                   )}
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  <CalendarIcon className="mr-2 h-4 w-4 text-foreground" />
                   {editSprintStartDate ? format(editSprintStartDate, "PPP") : <span>Select date</span>}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 dark:bg-gray-800 dark:border-gray-700">
+              <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
                   selected={editSprintStartDate}
-                  onSelect={setEditSprintStartDate}
+                  onSelect={handleStartDateSelect}
                   initialFocus
+                  disabled={(date) => {
+                    return date < new Date(new Date().setHours(0, 0, 0, 0));
+                  }}
+                  className="rounded-md border bg-popover"
                 />
               </PopoverContent>
             </Popover>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right dark:text-gray-200">End Date</Label>
-            <Popover>
+            <Label className="text-right text-foreground">End Date</Label>
+            <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant={"outline"}
                   className={cn(
-                    "col-span-3 justify-start text-left font-normal dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800",
-                    !editSprintEndDate && "text-muted-foreground dark:text-gray-500"
+                    "col-span-3 justify-start text-left font-normal bg-background text-foreground border-border",
+                    !editSprintEndDate && "text-muted-foreground"
                   )}
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  <CalendarIcon className="mr-2 h-4 w-4 text-foreground" />
                   {editSprintEndDate ? format(editSprintEndDate, "PPP") : <span>Select date</span>}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 dark:bg-gray-800 dark:border-gray-700">
-                <Calendar mode="single" selected={editSprintEndDate} onSelect={setEditSprintEndDate} initialFocus />
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar 
+                  mode="single" 
+                  selected={editSprintEndDate} 
+                  onSelect={handleEndDateSelect} 
+                  initialFocus
+                  disabled={(date) => {
+                    
+                    if (editSprintStartDate) {
+                      return date < editSprintStartDate;
+                    }
+                    
+                    return date < new Date(new Date().setHours(0, 0, 0, 0));
+                  }}
+                  className="rounded-md border bg-popover"
+                />
               </PopoverContent>
             </Popover>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-sprint-goal" className="text-right dark:text-gray-200">
+            <Label htmlFor="edit-sprint-goal" className="text-right text-foreground">
               Goal
             </Label>
             <Textarea
               id="edit-sprint-goal"
               value={editSprintGoal}
               onChange={(e) => setEditSprintGoal(e.target.value)}
-              className="col-span-3 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:placeholder:text-gray-500"
+              className="col-span-3 bg-background text-foreground border-border"
               rows={3}
             />
           </div>
@@ -133,14 +163,15 @@ export function EditSprintModal({
           <Button 
             variant="outline" 
             onClick={() => onOpenChange(false)}
-            className="dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+            className="bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground"
           >
             Cancel
           </Button>
           <Button 
             type="submit" 
             onClick={handleSaveSprintEdit}
-            className="dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+            disabled={!editSprintName.trim()}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             Save Changes
           </Button>
