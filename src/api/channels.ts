@@ -5,6 +5,10 @@ export interface Channel {
   name: string;
   description?: string;
   serverId?: string;
+  parentId?: string;
+  created_by?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -68,5 +72,46 @@ export async function getMessages(channelId: string, limit: number = 20, before?
   } catch (error) {
     console.error('Error fetching messages:', error);
     return [];
+  }
+}
+
+export interface CreateChannelDto {
+  name: string;
+  description?: string;
+  created_by: string;
+  serverId: string;
+  parentId?: string | "";
+}
+
+export interface ServerInfo {
+  server_id: string;
+  serverName: string;
+  description: string;
+  isAlive: boolean;
+  created_by: string;
+  teamId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getServerByTeamId(teamId: string): Promise<ServerInfo> {
+  try {
+    const response = await apiClient.get(`/server/get-server/team/${teamId}`);
+    console.log('Server info fetched successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching server info:', error);
+    throw error;
+  }
+}
+
+export async function createChannel(channelData: CreateChannelDto): Promise<Channel> {
+  try {
+    const response = await apiClient.post('/server/create-channel', channelData);
+    console.log('Channel created successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating channel:', error);
+    throw error;
   }
 }

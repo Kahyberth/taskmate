@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useContext } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,8 +19,9 @@ import {
   Home,
   Bot
 } from "lucide-react"
-import { getChannels } from "@/api/channels"
+import { getChannels, createChannel, getServerByTeamId } from "@/api/channels"
 import { useNavigate } from "react-router-dom"
+import { AuthContext } from "@/context/AuthContext"
 
 type Room = {
   id: string
@@ -42,12 +43,14 @@ interface ChannelsSidebarProps {
 
 export default function ChannelsSidebar({ team_id, selectedId, onSelectChannel, showAIAssistant }: ChannelsSidebarProps) {
   const navigate = useNavigate();
+  const { userProfile } = useContext(AuthContext);
   const [rooms, setRooms] = useState<Room[]>([])
   const [isLoadingChannels, setIsLoadingChannels] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
   const [createParentId, setCreateParentId] = useState<string | undefined>(undefined)
   const [createName, setCreateName] = useState("")
   const [createDescription, setCreateDescription] = useState("")
+  const [creating, setCreating] = useState(false)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   const childrenMap = useMemo(() => {
@@ -76,14 +79,7 @@ export default function ChannelsSidebar({ team_id, selectedId, onSelectChannel, 
     setExpanded(next)
   }, [rooms, childrenMap])
 
-  function formatTimeEs(date: Date) {
-    let hours = date.getHours()
-    const minutes = date.getMinutes().toString().padStart(2, "0")
-    const isPM = hours >= 12
-    hours = hours % 12
-    if (hours === 0) hours = 12
-    return `${hours}:${minutes} ${isPM ? "p. m." : "a. m."}`
-  }
+
 
   useEffect(() => {
     async function loadChannels() {
@@ -95,9 +91,10 @@ export default function ChannelsSidebar({ team_id, selectedId, onSelectChannel, 
         
         if (apiChannels && apiChannels.length > 0) {
           const convertedRooms: Room[] = apiChannels.map((channel: any) => ({
-            id: channel.id,
+            id: channel.id || channel.channel_id,
             name: channel.name,
             description: channel.description,
+            parentId: channel.parentId || channel.parent_id || undefined,
             members: 0,
             lastMessage: "",
             time: "",
@@ -190,27 +187,76 @@ export default function ChannelsSidebar({ team_id, selectedId, onSelectChannel, 
     setCreateOpen(true)
   }
 
-  function createRoom() {
+  async function createRoom() {
     const name = createName.trim()
-    if (!name) return
-    const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `r-${Date.now()}`
-    const nowText = formatTimeEs(new Date())
-    const newRoom: Room = {
-      id,
-      name,
-      description: createDescription.trim() || undefined,
-      parentId: createParentId || undefined,
-      members: 0,
-      lastMessage: "",
-      time: nowText,
-      unread: 0,
+    if (!name || !userProfile) {
+      console.log('createRoom: Missing name or userProfile', { name, userProfile: !!userProfile })
+      return
     }
-    setRooms((prev) => [...prev, newRoom])
-    if (createParentId) {
-      setExpanded((e) => ({ ...e, [createParentId]: true }))
+
+    console.log('createRoom: Starting creation process', { name, team_id, userProfile: userProfile.id })
+
+    try {
+      setCreating(true)
+      
+      // Obtener serverId real usando team_id
+      console.log('createRoom: Fetching server info for team_id:', team_id)
+      const server = await getServerByTeamId(team_id)
+      console.log('createRoom: Server info received:', server)
+      
+      const payload: any = {
+        name,
+        description: createDescription.trim() || undefined,
+        created_by: userProfile.id,
+        serverId: server.server_id,
+        parentId: (createParentId && createParentId !== 'root') ? createParentId : ""
+      }
+      
+      console.log('createRoom: Payload to send:', payload)
+
+      const created = await createChannel(payload)
+      console.log('createRoom: Channel created, response:', created)
+      const createdId = (created as any).id || (created as any).channel_id
+      console.log('createRoom: Extracted created ID:', createdId)
+
+      // Refrescar canales desde API
+      console.log('createRoom: Refreshing channels list...')
+      const refreshed = await getChannels(team_id)
+      console.log('createRoom: Refreshed channels:', refreshed)
+      const apiChannels = refreshed.data
+      const convertedRooms: Room[] = apiChannels.map((channel: any) => ({
+        id: channel.id || channel.channel_id,
+        name: channel.name,
+        description: channel.description,
+        parentId: channel.parentId || channel.parent_id || undefined,
+        members: 0,
+        lastMessage: "",
+        time: "",
+        unread: 0,
+      }))
+      console.log('createRoom: Converted rooms:', convertedRooms)
+      
+      setRooms(convertedRooms)
+      if ((created as any).parentId || (created as any).parent_id) {
+        const pid = (created as any).parentId || (created as any).parent_id
+        setExpanded((e) => ({ ...e, [pid as string]: true }))
+      }
+      if (createdId) onSelectChannel(createdId)
+      setCreateOpen(false)
+      setCreateName("")
+      setCreateDescription("")
+      setCreateParentId(undefined)
+      console.log('createRoom: Process completed successfully')
+    } catch (err) {
+      console.error('Error creating channel:', err)
+      if (err instanceof Error) {
+        console.error('Error message:', err.message)
+        console.error('Error stack:', err.stack)
+      }
+      alert(`No se pudo crear el canal: ${err instanceof Error ? err.message : 'Error desconocido'}`)
+    } finally {
+      setCreating(false)
     }
-    onSelectChannel(id)
-    setCreateOpen(false)
   }
 
   if (isLoadingChannels) {
@@ -439,8 +485,8 @@ export default function ChannelsSidebar({ team_id, selectedId, onSelectChannel, 
             <Button variant="ghost" onClick={() => setCreateOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={createRoom} disabled={!createName.trim()}>
-              Crear
+            <Button onClick={createRoom} disabled={!createName.trim() || creating}>
+              {creating ? 'Creando...' : 'Crear'}
             </Button>
           </DialogFooter>
         </DialogContent>

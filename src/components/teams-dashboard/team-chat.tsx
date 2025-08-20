@@ -1,11 +1,15 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react"
+import { useContext, useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import {
+  Plus,
   Search,
   MoreVertical,
   Paperclip,
@@ -17,12 +21,23 @@ import {
   X,
   MessageSquare,
 } from "lucide-react"
+import data from '@emoji-mart/data'
+import Picker from '@emoji-mart/react'
 import { useChatSocket } from "@/hooks/useChatSocket"
-import { getMessages, Message as ApiMessage } from "@/api/channels"
+import { getChannels, getMessages, Message as ApiMessage, getServerByTeamId, createChannel } from "@/api/channels"
 import { AuthContext } from "@/context/AuthContext"
 import { useOutletContext } from "react-router-dom"
 
-
+type Room = {
+  id: string
+  name: string
+  description?: string
+  parentId?: string | null
+  members?: number
+  lastMessage?: string
+  time?: string
+  unread?: number
+}
 
 type Message = {
   id: string
@@ -40,26 +55,15 @@ type Member = {
   status: "online" | "offline"
 }
 
-interface ChatContext {
-  selectedChannelId: string;
-}
+type ChatContext = { selectedChannelId: string }
 
-export default function Page() {
-  const { selectedChannelId } = useOutletContext<ChatContext>();
+export default function Page({ team_id }: { team_id: string }) {
   
-  if (!selectedChannelId) {
-    return (
-      <main className="h-full w-full bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 overflow-hidden flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <MessageSquare className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Selecciona un canal</h3>
-          <p className="text-gray-500 dark:text-gray-400">Elige un canal del sidebar para comenzar a chatear</p>
-        </div>
-      </main>
-    );
-  }
+
+  const [rooms, setRooms] = useState<Room[]>([])
+  const [selectedId, setSelectedId] = useState<string>("")
+  const { selectedChannelId } = useOutletContext<ChatContext>()
+  const [isLoadingChannels, setIsLoadingChannels] = useState(true)
   const [isLoadingMessages, setIsLoadingMessages] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const { userProfile, loading } = useContext(AuthContext);
@@ -103,13 +107,13 @@ export default function Page() {
 
 
   const socketAuth = useMemo(() => {
-    if (!realUser || !selectedChannelId) return null;
+    if (!realUser || !selectedId) return null;
 
     return {
-      room: selectedChannelId,
+      room: selectedId,
       user: realUser
     };
-  }, [selectedChannelId, realUser]);
+  }, [selectedId, realUser]);
 
   const socketUrl = import.meta.env.VITE_CHAT_WS || 'http://localhost:3001';
 
@@ -138,14 +142,66 @@ export default function Page() {
     }));
   }, [offlineUsers]);
   const [showMembers, setShowMembers] = useState<boolean>(false)
+
   const [draft, setDraft] = useState<string>("")
   const bottomRef = useRef<HTMLDivElement | null>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const emojiPickerRef = useRef<HTMLDivElement | null>(null)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createParentId, setCreateParentId] = useState<string | undefined>(undefined)
+  const [createName, setCreateName] = useState("")
+  const [createDescription, setCreateDescription] = useState("")
+  const [creating, setCreating] = useState(false)
+
+
+
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+
+  const selectedRoom = useMemo(() => {
+    const room = rooms.find((r) => r.id === selectedId) ?? rooms[0];
+    return room;
+  }, [selectedId, rooms])
 
   const roomMessages = useMemo(() => {
-    const filtered = messages.filter((m) => m.roomId === selectedChannelId);
-    console.log('Room messages for', selectedChannelId, ':', filtered);
+    const filtered = messages.filter((m) => m.roomId === selectedRoom?.id);
     return filtered;
-  }, [messages, selectedChannelId])
+  }, [messages, selectedRoom])
+
+  const childrenMap = useMemo(() => {
+    const map = new Map<string, Room[]>()
+    rooms.forEach((r) => {
+      const pid = r.parentId ?? "_root"
+      if (!map.has(pid)) map.set(pid, [])
+      map.get(pid)!.push(r)
+    })
+    for (const [k, arr] of map.entries()) {
+      arr.sort((a, b) => a.name.localeCompare(b.name))
+      map.set(k, arr)
+    }
+    return map
+  }, [rooms])
+
+  // Nota: el sidebar externo renderiza canales; internamente no usamos rootRooms
+  // const rootRooms = childrenMap.get("_root") ?? []
+
+  useEffect(() => {
+    // Sincronizar selección con el sidebar externo (layout)
+    if (selectedChannelId) {
+      setSelectedId(selectedChannelId)
+    }
+  }, [selectedChannelId])
+
+  useEffect(() => {
+    const next: Record<string, boolean> = { ...expanded }
+    rooms.forEach((r) => {
+      if (childrenMap.get(r.id)?.length) {
+        if (!(r.id in next)) next[r.id] = true
+      }
+    })
+    setExpanded(next)
+  }, [rooms, childrenMap])
 
   function formatTimeEs(date: Date) {
     let hours = date.getHours()
@@ -158,18 +214,19 @@ export default function Page() {
 
   function sendMessage() {
     const text = draft.trim()
-    if (!text || !selectedChannelId || !realUser) return
+    if (!text || !selectedRoom || !realUser) return
 
     sendSocketMessage({
-      roomId: selectedChannelId,
+      roomId: selectedRoom.id,
       text,
     });
+
 
     const now = new Date()
     const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `m-${Date.now()}`
     const newMessage: Message = {
       id,
-      roomId: selectedChannelId,
+      roomId: selectedRoom.id,
       text,
       time: formatTimeEs(now),
       fromMe: true,
@@ -177,21 +234,117 @@ export default function Page() {
       avatar: '',
     }
     setMessages((prev) => [...prev, newMessage])
+    setRooms((prev) =>
+      prev.map((r) =>
+        r.id === selectedRoom.id ? { ...r, lastMessage: newMessage.text, time: newMessage.time, unread: 0 } : r,
+      ),
+    )
     setDraft("")
   }
 
+  /* ---------- Message Skeleton Loader ---------- */
+  function MessageSkeleton({ fromMe = false }: { fromMe?: boolean }) {
+    return (
+      <div className={cn("mb-4 flex items-end gap-2", fromMe ? "justify-end" : "justify-start")}>
+        {!fromMe && (
+          <div className="h-7 w-7 bg-gray-200 dark:bg-gray-600 rounded-full animate-pulse"></div>
+        )}
+        
+        <div className={cn("max-w-[70%]", fromMe && "flex flex-col items-end")}>
+          {!fromMe && (
+            <div className="h-3 w-16 bg-gray-200 dark:bg-gray-600 rounded animate-pulse mb-1"></div>
+          )}
+          
+          <div
+            className={cn(
+              "inline-block rounded-2xl px-3 py-2 animate-pulse",
+              fromMe 
+                ? "rounded-br-md bg-gray-200 dark:bg-gray-600" 
+                : "rounded-bl-md bg-gray-150 dark:bg-gray-650"
+            )}
+          >
+            <div className="space-y-1">
+              <div className={cn(
+                "h-4 bg-gray-300 dark:bg-gray-500 rounded",
+                fromMe ? "w-32" : "w-40"
+              )}></div>
+              <div className={cn(
+                "h-4 bg-gray-300 dark:bg-gray-500 rounded",
+                fromMe ? "w-24" : "w-28"
+              )}></div>
+            </div>
+          </div>
+          
+          <div className={cn(
+            "mt-1 h-2 w-12 bg-gray-150 dark:bg-gray-650 rounded animate-pulse",
+            fromMe ? "self-end" : "self-start"
+          )}></div>
+        </div>
+        
+        {fromMe && (
+          <div className="h-7 w-7 bg-gray-200 dark:bg-gray-600 rounded-full animate-pulse"></div>
+        )}
+      </div>
+    )
+  }
+
+  function ChatSkeleton() {
+    return (
+      <div className="px-8 py-6 space-y-4">
+        <MessageSkeleton fromMe={false} />
+        <MessageSkeleton fromMe={true} />
+        <MessageSkeleton fromMe={false} />
+        <MessageSkeleton fromMe={false} />
+        <MessageSkeleton fromMe={true} />
+        <MessageSkeleton fromMe={false} />
+      </div>
+    )
+  }
 
 
   useEffect(() => {
-    if (!selectedChannelId) return;
+    async function loadChannels() {
+      try {
+        // Pedimos canales por teamId (API espera teamId)
+        const response = await getChannels(team_id);
+        const apiChannels = response.data;
+        const convertedRooms: Room[] = apiChannels.map((channel: any) => ({
+          id: channel.id || channel.channel_id,
+          name: channel.name,
+          description: channel.description,
+          parentId: channel.parentId || channel.parent_id || undefined,
+          members: 0,
+          lastMessage: "",
+          time: "",
+          unread: 0,
+        }));
+
+        setRooms(convertedRooms);
+        if (convertedRooms.length > 0 && !selectedId) {
+          setSelectedId(convertedRooms[0].id);
+        }
+      } catch (error) {
+        console.error('Error loading channels:', error);
+      } finally {
+        setIsLoadingChannels(false);
+      }
+    }
+
+    loadChannels();
+  }, [team_id]);
+
+  useEffect(() => {
+    if (!selectedId || isLoadingChannels) return;
 
     setMessages([]);
 
     async function loadMessages() {
       setIsLoadingMessages(true);
+      const minLoadingTime = 600;
+      const startTime = Date.now();
       try {
-        console.log('Loading messages for channel:', selectedChannelId);
-        const apiMessages = await getMessages(selectedChannelId, 50);
+        console.log('Loading messages for channel:', selectedId);
+        const apiMessages = await getMessages(selectedId, 50);
         console.log('API Messages received:', apiMessages);
 
         const convertedMessages: Message[] = apiMessages.map((msg: ApiMessage) => {
@@ -214,18 +367,21 @@ export default function Page() {
       } catch (error) {
         console.error('Error loading messages:', error);
       } finally {
-        setIsLoadingMessages(false);
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, minLoadingTime - elapsed);
+        setTimeout(() => setIsLoadingMessages(false), remaining);
       }
     }
 
     loadMessages();
-  }, [selectedChannelId, realUser]);
+  }, [selectedId, isLoadingChannels]);
 
   useEffect(() => {
-    if (!socket || !isConnected || !socketAuth) {
+    if (!socket || !isConnected || isLoadingChannels || !socketAuth) {
       console.log('Cannot join channel:', {
         hasSocket: !!socket,
         isConnected,
+        isLoadingChannels,
         hasSocketAuth: !!socketAuth
       });
       return;
@@ -233,16 +389,16 @@ export default function Page() {
 
     console.log('Joining channel with auth:', socketAuth);
     joinChannel();
-  }, [socket, isConnected, selectedChannelId, joinChannel, socketAuth]);
+  }, [socket, isConnected, selectedId, joinChannel, isLoadingChannels, socketAuth]);
 
   useEffect(() => {
     console.log('Connection status:', {
       isConnected,
       onlineMembersCount: onlineMembers.length,
       offlineMembersCount: offlineMembers.length,
-      selectedChannelId
+      selectedRoom: selectedRoom?.name
     });
-  }, [isConnected, onlineMembers.length, offlineMembers.length, selectedChannelId]);
+  }, [isConnected, onlineMembers.length, offlineMembers.length, selectedRoom]);
 
   useEffect(() => {
     if (!socket) return;
@@ -269,7 +425,11 @@ export default function Page() {
         return [...prev, newMessage];
       });
 
-
+      setRooms((prev) =>
+        prev.map((r) =>
+          r.id === message.roomId ? { ...r, lastMessage: message.text, time: formatTimeEs(new Date(message.time)), unread: 0 } : r,
+        ),
+      );
     };
 
     socket.on('new-message', handleNewMessage);
@@ -283,9 +443,86 @@ export default function Page() {
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth", block: "end" })
     }
-  }, [messages, selectedChannelId])
+  }, [messages, selectedId])
 
+  const openCreateDialog = useCallback((parentId?: string) => {
+    setCreateParentId(parentId)
+    setCreateName("")
+    setCreateDescription("")
+    setCreateOpen(true)
+  }, [])
 
+  async function createRoom() {
+    const name = createName.trim()
+    if (!name || !userProfile) {
+      console.log('createRoom: Missing name or userProfile', { name, userProfile: !!userProfile })
+      return
+    }
+
+    console.log('createRoom: Starting creation process', { name, team_id, userProfile: userProfile.id })
+
+    try {
+      setCreating(true)
+      
+      // Obtener serverId real usando team_id
+      console.log('createRoom: Fetching server info for team_id:', team_id)
+      const server = await getServerByTeamId(team_id)
+      console.log('createRoom: Server info received:', server)
+      
+      const payload: any = {
+        name,
+        description: createDescription.trim() || undefined,
+        created_by: userProfile.id,
+        serverId: server.server_id,
+        parentId: (createParentId && createParentId !== 'root') ? createParentId : ""
+      }
+      
+      console.log('createRoom: Payload to send:', payload)
+
+      const created = await createChannel(payload)
+      console.log('createRoom: Channel created, response:', created)
+      const createdId = (created as any).id || (created as any).channel_id
+      console.log('createRoom: Extracted created ID:', createdId)
+
+      // Refrescar canales desde API
+      console.log('createRoom: Refreshing channels list...')
+      const refreshed = await getChannels(team_id)
+      console.log('createRoom: Refreshed channels:', refreshed)
+      const apiChannels = refreshed.data
+      const convertedRooms: Room[] = apiChannels.map((channel: any) => ({
+        id: channel.id || channel.channel_id,
+        name: channel.name,
+        description: channel.description,
+        parentId: channel.parentId || channel.parent_id || undefined,
+        members: 0,
+        lastMessage: "",
+        time: "",
+        unread: 0,
+      }))
+      console.log('createRoom: Converted rooms:', convertedRooms)
+      
+      setRooms(convertedRooms)
+      if ((created as any).parentId || (created as any).parent_id) {
+        const pid = (created as any).parentId || (created as any).parent_id
+        setExpanded((e) => ({ ...e, [pid as string]: true }))
+      }
+      if (createdId) setSelectedId(createdId)
+      setCreateOpen(false)
+      setCreateName("")
+      setCreateDescription("")
+      setCreateParentId(undefined)
+      console.log('createRoom: Process completed successfully')
+    } catch (err) {
+      console.error('Error creating channel:', err)
+      if (err instanceof Error) {
+        console.error('Error message:', err.message)
+        console.error('Error stack:', err.stack)
+      }
+      alert(`No se pudo crear el canal: ${err instanceof Error ? err.message : 'Error desconocido'}`)
+    } finally {
+      setCreating(false)
+    }
+  }
 
   if (loading || !userProfile) {
     return (
@@ -300,17 +537,20 @@ export default function Page() {
 
   return (
     <main className="h-full w-full bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 overflow-hidden">
-      {/* Conversación principal */}
-      <section className="flex flex-col h-full bg-white dark:bg-gray-900 min-h-0">
+      <div className="flex h-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm overflow-hidden">
+        {/* Sidebar de canales provisto por el layout. Este aside interno se ha removido para evitar duplicados. */}
+
+        {/* Conversación centro */}
+        <section className="flex-1 flex flex-col bg-white dark:bg-gray-900 min-h-0">
           <header className="h-16 border-b border-gray-200 dark:border-gray-700 px-6 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 flex-shrink-0">
             <div>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">{selectedChannelId?.charAt(0).toUpperCase() || 'C'}</span>
+                  <span className="text-white font-bold text-sm">{selectedRoom?.name?.charAt(0).toUpperCase()}</span>
                 </div>
                 <div>
                   <div className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    Canal Activo
+                    {selectedRoom?.name}
                     <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} shadow-sm`}
                       title={isConnected ? 'Conectado' : 'Desconectado'} />
                   </div>
@@ -324,6 +564,16 @@ export default function Page() {
               <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <Search className="h-4 w-4" />
                 <span className="sr-only">Buscar en chat</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                onClick={() => openCreateDialog(undefined)}
+                title="Crear canal o subcanal"
+                aria-label="Crear canal o subcanal"
+              >
+                <Plus className="h-4 w-4" />
               </Button>
               <Button
                 variant="ghost"
@@ -360,15 +610,9 @@ export default function Page() {
                   </div>
                 </div>
               )}
-              {isLoadingMessages && (
-                <div className="text-center py-8">
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
-                    <span className="font-medium text-gray-600 dark:text-gray-400">Cargando mensajes...</span>
-                  </div>
-                </div>
-              )}
-              {!isLoadingMessages && roomMessages.length === 0 && (
+              {isLoadingMessages ? (
+                <ChatSkeleton />
+              ) : roomMessages.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
                     <MessageSquare className="h-8 w-8 text-blue-600 dark:text-blue-400" />
@@ -376,7 +620,8 @@ export default function Page() {
                   <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No hay mensajes</h3>
                   <p className="text-gray-500 dark:text-gray-400">¡Sé el primero en escribir en este canal!</p>
                 </div>
-              )}
+              ) : (
+                <div>
               {roomMessages.map((m) => (
                 <MessageBubble
                   key={m.id}
@@ -387,6 +632,8 @@ export default function Page() {
                   userAvatar=""
                 />
               ))}
+                </div>
+              )}
               <div ref={bottomRef} />
             </div>
           </ScrollArea>
@@ -398,12 +645,48 @@ export default function Page() {
                 <Paperclip className="h-5 w-5" />
                 <span className="sr-only">Adjuntar archivo</span>
               </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+
+              {/* Emoji button + anchored picker */}
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "h-10 w-10 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors",
+                    showEmojiPicker && "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                  )}
+                  onClick={() => setShowEmojiPicker((v) => !v)}
+                >
                 <Smile className="h-5 w-5" />
                 <span className="sr-only">Insertar emoji</span>
               </Button>
+                {showEmojiPicker && (
+                  <div
+                    ref={emojiPickerRef}
+                    className="absolute bottom-full left-0 mb-2 z-50 shadow-2xl rounded-lg border border-gray-200 dark:border-gray-600"
+                  >
+                    <Picker
+                      data={data}
+                      onEmojiSelect={(emoji: any) => {
+                        const newText = draft + emoji.native
+                        setDraft(newText)
+                        setShowEmojiPicker(false)
+                        if (inputRef.current) inputRef.current.focus()
+                      }}
+                      theme="auto"
+                      set="native"
+                      previewPosition="none"
+                      skinTonePosition="none"
+                      maxFrequentRows={2}
+                      perLine={8}
+                      searchPosition="top"
+                    />
+                  </div>
+                )}
+              </div>
 
               <Input
+                ref={inputRef}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Escribe tu mensaje..."
@@ -412,6 +695,9 @@ export default function Page() {
                   if (e.key === "Enter") {
                     e.preventDefault()
                     sendMessage()
+                  }
+                  if (e.key === "Escape" && showEmojiPicker) {
+                    setShowEmojiPicker(false)
                   }
                 }}
               />
@@ -464,6 +750,7 @@ export default function Page() {
             </aside>
           </>
         )}
+      </div>
 
       {/* Botón de ayuda flotante */}
       <div className="fixed right-3 bottom-3 flex items-center gap-2">
@@ -473,12 +760,69 @@ export default function Page() {
         </Button>
       </div>
 
-
+      {/* Dialogo crear sala/subcanal */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Crear {createParentId ? "subcanal" : "sala"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="room-name">Nombre</Label>
+              <Input
+                id="room-name"
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                placeholder="p. ej. Soporte, Ventas, General"
+                autoFocus
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="room-desc">Descripción (opcional)</Label>
+              <Textarea
+                id="room-desc"
+                value={createDescription}
+                onChange={(e) => setCreateDescription(e.target.value)}
+                placeholder="Describe de qué trata esta sala"
+                className="min-h-[84px]"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Ubicación</Label>
+              <Select
+                value={createParentId ?? "root"}
+                onValueChange={(v) => setCreateParentId(v === "root" ? undefined : v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Selecciona ubicación" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="root">Sin padre (nivel raíz)</SelectItem>
+                  {rooms.filter(Boolean).map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {roomPathLabel(r, rooms)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCreateOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={createRoom} disabled={!createName.trim() || creating}>
+              {creating ? 'Creando...' : 'Crear'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   )
 }
 
-
+// El listado de canales ahora lo provee el layout externo, por lo que el
+// componente RoomNode ya no es necesario en este archivo.
 
 /* ---------- Panel de miembros ---------- */
 function MembersSection({ title, members }: { title: string; members: Member[] }) {
@@ -582,4 +926,17 @@ function MessageBubble({
   )
 }
 
-
+/* ---------- Utilidades ---------- */
+function roomPathLabel(room: Room, rooms: Room[]) {
+  // Construir ruta legible: Padre / Hijo / Nieto
+  const byId = new Map(rooms.map((r) => [r.id, r]))
+  const parts: string[] = [room.name]
+  let current = room
+  let safety = 0
+  while (current.parentId && byId.has(current.parentId) && safety < 10) {
+    current = byId.get(current.parentId)!
+    parts.push(current.name)
+    safety++
+  }
+  return parts.reverse().join(" / ")
+}
