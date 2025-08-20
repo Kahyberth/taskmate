@@ -425,7 +425,7 @@ export default function ProjectManagement() {
         status: updatedTask.status || editingTask.status,
         assignedTo: updatedTask.assignedTo || user?.id,
         type: updatedTask.type || editingTask.type,
-        acceptanceCriteria: editingTask.acceptanceCriteria || "",
+        acceptanceCriteria: updatedTask.acceptanceCriteria !== undefined ? updatedTask.acceptanceCriteria : editingTask.acceptanceCriteria || "",
         story_points: null as number | null, 
         epicId: updatedTask.epic?.id,
       };
@@ -442,6 +442,7 @@ export default function ProjectManagement() {
         priority: taskData.priority,
         status: taskData.status,
         type: taskData.type,
+        acceptanceCriteria: taskData.acceptanceCriteria,
         epic: updatedTask.epic,
         storyPoints: taskData.story_points || 0, // Asegurar que los story points se actualicen
       };
@@ -481,6 +482,7 @@ export default function ProjectManagement() {
             priority: data.priority || editingTask.priority,
             status: data.status || editingTask.status,
             type: data.type || editingTask.type,
+            acceptanceCriteria: data.acceptanceCriteria || taskData.acceptanceCriteria,
           };
           
           console.log("Task modified with story points:", taskModified.storyPoints);
