@@ -2,16 +2,23 @@ import { useState, useEffect } from "react";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { cn } from "@/lib/utils";
 import { AIAssistantDialog } from "@/components/dashboard/ai-assistant-dialog";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useParams } from "react-router-dom";
 import { Sidebar } from "@/components/dashboard/navbar";
+import ChannelsSidebar from "@/components/teams-dashboard/channels-sidebar";
 
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [selectedChannelId, setSelectedChannelId] = useState<string>("");
   const location = useLocation();
+  const { team_id } = useParams<{ team_id: string }>();
 
-  const isChatPage = location.pathname.includes('/chat');
+  // Extraer team_id directamente de la URL como fallback
+  const urlTeamId = location.pathname.match(/\/teams\/dashboard\/([^\/]+)/)?.[1];
+  const finalTeamId = team_id || urlTeamId;
+
+  const isChatPage = location.pathname.includes('/chat') || location.pathname.endsWith('/chat');
 
   useEffect(() => {
     const checkIfMobile = () => {
@@ -28,7 +35,8 @@ export default function MainLayout() {
 
   return (
     <div className={cn(
-      isChatPage ? "h-screen bg-white" : "min-h-screen dark:bg-slate-950 dark:text-white text-gray-900"
+      "min-h-screen dark:bg-slate-950 dark:text-white text-gray-900",
+      isChatPage ? "h-screen" : ""
     )}>
       {!isChatPage && (
         <DashboardHeader
@@ -38,7 +46,14 @@ export default function MainLayout() {
       )}
 
       <div className={cn("flex flex-1", isChatPage ? "h-full" : "overflow-hidden")}>
-        {!isChatPage && (
+        {isChatPage && finalTeamId ? (
+          <ChannelsSidebar
+            team_id={finalTeamId}
+            selectedId={selectedChannelId}
+            onSelectChannel={setSelectedChannelId}
+            showAIAssistant={() => setShowAIAssistant(true)}
+          />
+        ) : (
           <Sidebar
             sidebarOpen={sidebarOpen}
             isMobile={isMobile}
@@ -52,7 +67,7 @@ export default function MainLayout() {
             isChatPage ? "h-full" : (sidebarOpen ? "md:ml-64" : "ml-0 overflow-x-hidden p-4 sm:p-6")
           )}
         >
-          <Outlet />
+          <Outlet context={{ selectedChannelId }} />
         </main>
       </div>
 
