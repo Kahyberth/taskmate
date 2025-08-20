@@ -17,8 +17,7 @@ import { useContainerSize } from "@/hooks/use-container-size"
 import { useSprintsByProject, useSprintBurndownData } from "@/api/queries"
 
 import { Skeleton } from "@/components/ui/skeleton"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
+
 
 type ApiDay = { 
   date: string; 
@@ -202,7 +201,7 @@ interface BurndownChartProps {
 }
 
 export default function BurndownChart({ selectedProjectId }: BurndownChartProps) {
-  const [includeCompletedSprints, setIncludeCompletedSprints] = useState(true);
+  const [includeCompletedSprints] = useState(true);
   
   const { data: sprints = [], isLoading: isLoadingSprints } = useSprintsByProject(selectedProjectId || undefined, includeCompletedSprints);
   
