@@ -406,19 +406,19 @@ export default function Page({ team_id }: { team_id: string }) {
 
   if (loading || !userProfile) {
     return (
-      <main className="h-screen w-full bg-white text-gray-900 flex items-center justify-center">
+      <main className="h-screen w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando usuario...</p>
+          <p className="text-gray-600 dark:text-gray-400">Cargando usuario...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="h-full w-full bg-gradient-to-br from-slate-50 to-blue-50 text-gray-900 overflow-hidden">
-      <div className="flex h-full bg-white/80 backdrop-blur-sm overflow-hidden">
-        <aside className="w-[300px] border-r border-gray-200 bg-white flex flex-col">
+    <main className="h-full w-full bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 overflow-hidden">
+      <div className="flex h-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm overflow-hidden">
+        <aside className="w-[300px] border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col">
           <div className="px-6 pt-6 pb-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -444,15 +444,15 @@ export default function Page({ team_id }: { team_id: string }) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <p className="text-sm font-semibold text-gray-700">Canales</p>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Canales</p>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 hover:bg-blue-50 text-blue-600"
+              className="h-8 w-8 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
               onClick={() => openCreateDialog(undefined)}
               title="Crear canal"
               aria-label="Crear canal"
@@ -481,45 +481,45 @@ export default function Page({ team_id }: { team_id: string }) {
         </aside>
 
         {/* Conversación centro */}
-        <section className="flex-1 flex flex-col bg-white min-h-0 border-l border-gray-200">
-          <header className="h-16 border-b border-gray-200 px-6 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white flex-shrink-0">
+        <section className="flex-1 flex flex-col bg-white dark:bg-gray-900 min-h-0 border-l border-gray-200 dark:border-gray-700">
+          <header className="h-16 border-b border-gray-200 dark:border-gray-700 px-6 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 flex-shrink-0">
             <div>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm">{selectedRoom?.name?.charAt(0).toUpperCase()}</span>
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <div className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                     {selectedRoom?.name}
                     <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} shadow-sm`}
                       title={isConnected ? 'Conectado' : 'Desconectado'} />
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
                     {selectedRoom?.members ?? 0} miembros • {onlineMembers.length} en línea
                   </div>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 hover:bg-gray-100 rounded-lg">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <Search className="h-4 w-4" />
                 <span className="sr-only">Buscar en chat</span>
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn("h-10 w-10 text-gray-600 hover:bg-gray-100 rounded-lg", showMembers && "bg-blue-50 text-blue-600")}
+                className={cn("h-10 w-10 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg", showMembers && "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400")}
                 onClick={() => setShowMembers((v) => !v)}
                 title="Ver miembros"
                 aria-label="Ver miembros"
               >
                 <Users className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 hover:bg-gray-100 rounded-lg">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <Info className="h-4 w-4" />
                 <span className="sr-only">Información</span>
               </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 hover:bg-gray-100 rounded-lg">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <MoreVertical className="h-4 w-4" />
                 <span className="sr-only">Más opciones</span>
               </Button>
@@ -527,16 +527,16 @@ export default function Page({ team_id }: { team_id: string }) {
           </header>
 
           {/* Mensajes */}
-          <ScrollArea className="flex-1 bg-gray-50 min-h-0 overflow-y-auto">
+          <ScrollArea className="flex-1 bg-gray-50 dark:bg-gray-800 min-h-0 overflow-y-auto">
             <div className="px-8 py-6">
               {!isConnected && (
                 <div className="text-center py-8">
-                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6 max-w-md mx-auto">
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-700 rounded-2xl p-6 max-w-md mx-auto">
                     <div className="flex items-center justify-center gap-3 mb-3">
                       <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
-                      <span className="font-semibold text-gray-700">Conectando al servidor...</span>
+                      <span className="font-semibold text-gray-700 dark:text-gray-300">Conectando al servidor...</span>
                     </div>
-                    <p className="text-sm text-gray-600">Los mensajes se enviarán cuando se establezca la conexión</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Los mensajes se enviarán cuando se establezca la conexión</p>
                   </div>
                 </div>
               )}
@@ -544,17 +544,17 @@ export default function Page({ team_id }: { team_id: string }) {
                 <div className="text-center py-8">
                   <div className="flex items-center justify-center gap-3">
                     <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
-                    <span className="font-medium text-gray-600">Cargando mensajes...</span>
+                    <span className="font-medium text-gray-600 dark:text-gray-400">Cargando mensajes...</span>
                   </div>
                 </div>
               )}
               {!isLoadingMessages && roomMessages.length === 0 && (
                 <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <MessageSquare className="h-8 w-8 text-blue-600" />
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <MessageSquare className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">No hay mensajes</h3>
-                  <p className="text-gray-500">¡Sé el primero en escribir en este canal!</p>
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No hay mensajes</h3>
+                  <p className="text-gray-500 dark:text-gray-400">¡Sé el primero en escribir en este canal!</p>
                 </div>
               )}
               {roomMessages.map((m) => (
@@ -572,13 +572,13 @@ export default function Page({ team_id }: { team_id: string }) {
           </ScrollArea>
 
           {/* Composer */}
-          <footer className="border-t border-gray-200 px-6 py-4 bg-white flex-shrink-0 shadow-sm">
+          <footer className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 bg-white dark:bg-gray-900 flex-shrink-0 shadow-sm">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <Paperclip className="h-5 w-5" />
                 <span className="sr-only">Adjuntar archivo</span>
               </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <Smile className="h-5 w-5" />
                 <span className="sr-only">Insertar emoji</span>
               </Button>
@@ -587,7 +587,7 @@ export default function Page({ team_id }: { team_id: string }) {
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Escribe tu mensaje..."
-                className="flex-1 h-12 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
+                className="flex-1 h-12 text-sm border-gray-200 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault()
@@ -619,16 +619,16 @@ export default function Page({ team_id }: { team_id: string }) {
               onClick={() => setShowMembers(false)}
               aria-hidden="true"
             />
-            <aside className="fixed right-0 top-0 bottom-0 z-50 w-[85%] max-w-[320px] border-l border-gray-200 bg-white/95 backdrop-blur-sm shadow-xl lg:static lg:z-auto lg:w-[300px] lg:shadow-none flex flex-col">
-              <header className="h-16 border-b border-gray-200 px-6 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white flex-shrink-0">
+            <aside className="fixed right-0 top-0 bottom-0 z-50 w-[85%] max-w-[320px] border-l border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-xl lg:static lg:z-auto lg:w-[300px] lg:shadow-none flex flex-col">
+              <header className="h-16 border-b border-gray-200 dark:border-gray-700 px-6 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 flex-shrink-0">
                 <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  <div className="text-lg font-semibold text-gray-900">Miembros</div>
+                  <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Miembros</div>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-10 w-10 lg:hidden hover:bg-gray-100 rounded-lg"
+                  className="h-10 w-10 lg:hidden hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                   onClick={() => setShowMembers(false)}
                   aria-label="Cerrar panel"
                 >
@@ -648,8 +648,8 @@ export default function Page({ team_id }: { team_id: string }) {
 
       {/* Botón de ayuda flotante */}
       <div className="fixed right-3 bottom-3 flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full shadow-sm bg-white/90">
-          <HelpCircle className="h-4 w-4 text-gray-600" />
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full shadow-sm bg-white/90 dark:bg-gray-800/90">
+          <HelpCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
           <span className="sr-only">Ayuda</span>
         </Button>
       </div>
@@ -743,8 +743,8 @@ function RoomNode({
     <li>
       <div
         className={cn(
-          "group relative w-full rounded-xl px-3 py-3 hover:bg-gray-50 transition-all duration-200",
-          selectedId === room.id && "bg-gradient-to-r from-blue-50 to-indigo-50 ring-1 ring-blue-200 shadow-sm",
+          "group relative w-full rounded-xl px-3 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200",
+          selectedId === room.id && "bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 ring-1 ring-blue-200 dark:ring-blue-700 shadow-sm",
         )}
         style={{ paddingLeft: 12 + depth * 20 }}
       >
@@ -752,7 +752,7 @@ function RoomNode({
           {/* Chevron */}
           <button
             className={cn(
-              "mr-1 h-5 w-5 shrink-0 rounded hover:bg-gray-100",
+              "mr-1 h-5 w-5 shrink-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700",
               !hasChildren && "opacity-0 pointer-events-none",
             )}
             onClick={() => setExpanded((e) => ({ ...e, [room.id]: !isOpen }))}
@@ -760,15 +760,15 @@ function RoomNode({
             title={isOpen ? "Colapsar" : "Expandir"}
           >
             {isOpen ? (
-              <ChevronDown className="h-4 w-4 text-gray-500" />
+              <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             ) : (
-              <ChevronRight className="h-4 w-4 text-gray-500" />
+              <ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             )}
           </button>
 
           {/* Avatar y título clickable */}
           <button onClick={() => onSelect(room.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-            <Avatar className="h-10 w-10 ring-2 ring-gray-100">
+            <Avatar className="h-10 w-10 ring-2 ring-gray-100 dark:ring-gray-700">
               <AvatarImage src="/avatar-circle.png" alt={room.name} />
               <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
                 {room.name.charAt(0).toUpperCase()}
@@ -776,13 +776,13 @@ function RoomNode({
             </Avatar>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between">
-                <span className="truncate text-sm font-semibold text-gray-900">{room.name}</span>
+                <span className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{room.name}</span>
                 {room.time && (
-                  <span className="text-xs text-gray-400 font-medium">{room.time}</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">{room.time}</span>
                 )}
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <p className="truncate text-xs text-gray-500">{room.lastMessage || room.description || "Sin mensajes"}</p>
+                <p className="truncate text-xs text-gray-500 dark:text-gray-400">{room.lastMessage || room.description || "Sin mensajes"}</p>
                 {room.unread ? (
                   <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
                     {room.unread}
@@ -796,7 +796,7 @@ function RoomNode({
           <Button
             variant="ghost"
             size="icon"
-            className="ml-1 h-8 w-8 opacity-0 group-hover:opacity-100 hover:bg-blue-50 text-blue-600 transition-all duration-200"
+            className="ml-1 h-8 w-8 opacity-0 group-hover:opacity-100 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 transition-all duration-200"
             onClick={() => onCreateSub(room.id)}
             title="Crear subcanal"
             aria-label="Crear subcanal"
@@ -832,17 +832,17 @@ function RoomNode({
 function MembersSection({ title, members }: { title: string; members: Member[] }) {
   return (
     <div>
-      <div className="mb-4 text-sm font-semibold text-gray-700 flex items-center gap-2">
+      <div className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
         <div className={`w-2 h-2 rounded-full ${title.includes('Conectados') ? 'bg-green-500' : 'bg-gray-400'}`}></div>
         {title}
       </div>
       <ul className="space-y-2">
         {members.map((m) => (
-          <li key={m.id} className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-gray-50 transition-colors duration-200">
+          <li key={m.id} className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200">
             <PresenceAvatar name={m.name} status={m.status} />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium text-gray-900">{m.name}</div>
-              <div className="text-xs text-gray-500">{m.status === "online" ? "En línea" : "Desconectado"}</div>
+              <div className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{m.name}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{m.status === "online" ? "En línea" : "Desconectado"}</div>
             </div>
           </li>
         ))}
@@ -856,7 +856,7 @@ function PresenceAvatar({ name, status }: { name: string; status: "online" | "of
   const isOnline = status === "online"
   return (
     <div className="relative">
-      <Avatar className="h-10 w-10 ring-2 ring-gray-100">
+      <Avatar className="h-10 w-10 ring-2 ring-gray-100 dark:ring-gray-700">
         <AvatarImage src="/diverse-user-avatars.png" alt={name} />
         <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
           {initial}
@@ -864,7 +864,7 @@ function PresenceAvatar({ name, status }: { name: string; status: "online" | "of
       </Avatar>
       <span
         className={cn(
-          "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white shadow-sm",
+          "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white dark:ring-gray-900 shadow-sm",
           isOnline ? "bg-emerald-500" : "bg-gray-400",
         )}
         aria-label={isOnline ? "Usuario en línea" : "Usuario desconectado"}
@@ -898,7 +898,7 @@ function MessageBubble({
           >
             {text}
           </div>
-          <div className="mt-1 text-[11px] text-gray-400 text-right">{time}</div>
+          <div className="mt-1 text-[11px] text-gray-400 dark:text-gray-500 text-right">{time}</div>
         </div>
         <Avatar className="h-7 w-7">
           <AvatarImage src={userAvatar || "/diverse-user-avatars.png"} alt="Tú" />
@@ -916,15 +916,15 @@ function MessageBubble({
       </Avatar>
       <div className="max-w-[70%]">
         {userName && (
-          <div className="text-[11px] text-gray-500 mb-1">{userName}</div>
+          <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">{userName}</div>
         )}
         <div
-          className="inline-block rounded-2xl rounded-bl-md bg-gray-100 px-3 py-2 text-[13px] leading-5 text-gray-900 break-words whitespace-pre-wrap"
+          className="inline-block rounded-2xl rounded-bl-md bg-gray-100 dark:bg-gray-700 px-3 py-2 text-[13px] leading-5 text-gray-900 dark:text-gray-100 break-words whitespace-pre-wrap"
           style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
         >
           {text}
         </div>
-        <div className="mt-1 text-[11px] text-gray-400">{time}</div>
+        <div className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">{time}</div>
       </div>
     </div>
   )
