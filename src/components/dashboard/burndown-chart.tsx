@@ -391,19 +391,7 @@ export default function BurndownChart({ selectedProjectId }: BurndownChartProps)
               </SelectContent>
             </Select>
             
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="include-completed"
-                checked={includeCompletedSprints}
-                onCheckedChange={(checked) => {
-                  setIncludeCompletedSprints(checked);
-                  setSelectedSprintId(null);
-                }}
-              />
-              <Label htmlFor="include-completed" className="text-sm text-gray-600 dark:text-gray-400">
-                Show completed sprints
-              </Label>
-            </div>
+
             
             <div className="text-xs text-gray-500 dark:text-gray-400">
               {current?.startDate} - {current?.endDate}
@@ -412,18 +400,7 @@ export default function BurndownChart({ selectedProjectId }: BurndownChartProps)
         </div>
       </div>
 
-      {/* Debug information */}
-      <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-        <h4 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">Debug Info:</h4>
-        <div className="text-xs text-yellow-700 dark:text-yellow-300 space-y-1">
-          <div>Project ID: {selectedProjectId || 'None'}</div>
-          <div>Sprints count: {sprints.length}</div>
-          <div>Selected Sprint ID: {selectedSprintId || 'None'}</div>
-          <div>Burndown data: {burndownData ? 'Available' : 'None'}</div>
-          <div>Chart data length: {chartData.length}</div>
-          <div>Loading states: Sprints={isLoadingSprints ? 'Yes' : 'No'}, Burndown={isLoadingBurndown ? 'Yes' : 'No'}</div>
-        </div>
-      </div>
+
 
       <div className="relative">
         {/* Legend */}

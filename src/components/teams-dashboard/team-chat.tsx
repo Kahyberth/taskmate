@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react"
+import { useContext, useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,13 +19,14 @@ import {
   HelpCircle,
   Users,
   X,
-  ChevronRight,
-  ChevronDown,
   MessageSquare,
 } from "lucide-react"
+import data from '@emoji-mart/data'
+import Picker from '@emoji-mart/react'
 import { useChatSocket } from "@/hooks/useChatSocket"
-import { getChannels, getMessages, Message as ApiMessage } from "@/api/channels"
+import { getChannels, getMessages, Message as ApiMessage, getServerByTeamId, createChannel } from "@/api/channels"
 import { AuthContext } from "@/context/AuthContext"
+import { useOutletContext } from "react-router-dom"
 
 type Room = {
   id: string
@@ -54,9 +55,14 @@ type Member = {
   status: "online" | "offline"
 }
 
+type ChatContext = { selectedChannelId: string }
+
 export default function Page({ team_id }: { team_id: string }) {
+  
+
   const [rooms, setRooms] = useState<Room[]>([])
   const [selectedId, setSelectedId] = useState<string>("")
+  const { selectedChannelId } = useOutletContext<ChatContext>()
   const [isLoadingChannels, setIsLoadingChannels] = useState(true)
   const [isLoadingMessages, setIsLoadingMessages] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -139,23 +145,27 @@ export default function Page({ team_id }: { team_id: string }) {
 
   const [draft, setDraft] = useState<string>("")
   const bottomRef = useRef<HTMLDivElement | null>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const emojiPickerRef = useRef<HTMLDivElement | null>(null)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
   const [createOpen, setCreateOpen] = useState(false)
   const [createParentId, setCreateParentId] = useState<string | undefined>(undefined)
   const [createName, setCreateName] = useState("")
   const [createDescription, setCreateDescription] = useState("")
+  const [creating, setCreating] = useState(false)
+
+
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   const selectedRoom = useMemo(() => {
     const room = rooms.find((r) => r.id === selectedId) ?? rooms[0];
-    console.log('Selected room:', room);
     return room;
   }, [selectedId, rooms])
 
   const roomMessages = useMemo(() => {
     const filtered = messages.filter((m) => m.roomId === selectedRoom?.id);
-    console.log('Room messages for', selectedRoom?.id, ':', filtered);
     return filtered;
   }, [messages, selectedRoom])
 
@@ -173,7 +183,15 @@ export default function Page({ team_id }: { team_id: string }) {
     return map
   }, [rooms])
 
-  const rootRooms = childrenMap.get("_root") ?? []
+  // Nota: el sidebar externo renderiza canales; internamente no usamos rootRooms
+  // const rootRooms = childrenMap.get("_root") ?? []
+
+  useEffect(() => {
+    // Sincronizar selección con el sidebar externo (layout)
+    if (selectedChannelId) {
+      setSelectedId(selectedChannelId)
+    }
+  }, [selectedChannelId])
 
   useEffect(() => {
     const next: Record<string, boolean> = { ...expanded }
@@ -224,17 +242,77 @@ export default function Page({ team_id }: { team_id: string }) {
     setDraft("")
   }
 
+  /* ---------- Message Skeleton Loader ---------- */
+  function MessageSkeleton({ fromMe = false }: { fromMe?: boolean }) {
+    return (
+      <div className={cn("mb-4 flex items-end gap-2", fromMe ? "justify-end" : "justify-start")}>
+        {!fromMe && (
+          <div className="h-7 w-7 bg-gray-200 dark:bg-gray-600 rounded-full animate-pulse"></div>
+        )}
+        
+        <div className={cn("max-w-[70%]", fromMe && "flex flex-col items-end")}>
+          {!fromMe && (
+            <div className="h-3 w-16 bg-gray-200 dark:bg-gray-600 rounded animate-pulse mb-1"></div>
+          )}
+          
+          <div
+            className={cn(
+              "inline-block rounded-2xl px-3 py-2 animate-pulse",
+              fromMe 
+                ? "rounded-br-md bg-gray-200 dark:bg-gray-600" 
+                : "rounded-bl-md bg-gray-150 dark:bg-gray-650"
+            )}
+          >
+            <div className="space-y-1">
+              <div className={cn(
+                "h-4 bg-gray-300 dark:bg-gray-500 rounded",
+                fromMe ? "w-32" : "w-40"
+              )}></div>
+              <div className={cn(
+                "h-4 bg-gray-300 dark:bg-gray-500 rounded",
+                fromMe ? "w-24" : "w-28"
+              )}></div>
+            </div>
+          </div>
+          
+          <div className={cn(
+            "mt-1 h-2 w-12 bg-gray-150 dark:bg-gray-650 rounded animate-pulse",
+            fromMe ? "self-end" : "self-start"
+          )}></div>
+        </div>
+        
+        {fromMe && (
+          <div className="h-7 w-7 bg-gray-200 dark:bg-gray-600 rounded-full animate-pulse"></div>
+        )}
+      </div>
+    )
+  }
+
+  function ChatSkeleton() {
+    return (
+      <div className="px-8 py-6 space-y-4">
+        <MessageSkeleton fromMe={false} />
+        <MessageSkeleton fromMe={true} />
+        <MessageSkeleton fromMe={false} />
+        <MessageSkeleton fromMe={false} />
+        <MessageSkeleton fromMe={true} />
+        <MessageSkeleton fromMe={false} />
+      </div>
+    )
+  }
+
 
   useEffect(() => {
     async function loadChannels() {
       try {
-        const serverId = team_id;
-        const response = await getChannels(serverId);
+        // Pedimos canales por teamId (API espera teamId)
+        const response = await getChannels(team_id);
         const apiChannels = response.data;
         const convertedRooms: Room[] = apiChannels.map((channel: any) => ({
-          id: channel.id,
+          id: channel.id || channel.channel_id,
           name: channel.name,
           description: channel.description,
+          parentId: channel.parentId || channel.parent_id || undefined,
           members: 0,
           lastMessage: "",
           time: "",
@@ -247,24 +325,13 @@ export default function Page({ team_id }: { team_id: string }) {
         }
       } catch (error) {
         console.error('Error loading channels:', error);
-        const defaultRoom: Room = {
-          id: "default-channel",
-          name: "General",
-          description: "Canal general",
-          members: 0,
-          lastMessage: "",
-          time: "",
-          unread: 0,
-        };
-        setRooms([defaultRoom]);
-        setSelectedId(defaultRoom.id);
       } finally {
         setIsLoadingChannels(false);
       }
     }
 
     loadChannels();
-  }, []);
+  }, [team_id]);
 
   useEffect(() => {
     if (!selectedId || isLoadingChannels) return;
@@ -273,6 +340,8 @@ export default function Page({ team_id }: { team_id: string }) {
 
     async function loadMessages() {
       setIsLoadingMessages(true);
+      const minLoadingTime = 600;
+      const startTime = Date.now();
       try {
         console.log('Loading messages for channel:', selectedId);
         const apiMessages = await getMessages(selectedId, 50);
@@ -298,7 +367,9 @@ export default function Page({ team_id }: { team_id: string }) {
       } catch (error) {
         console.error('Error loading messages:', error);
       } finally {
-        setIsLoadingMessages(false);
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, minLoadingTime - elapsed);
+        setTimeout(() => setIsLoadingMessages(false), remaining);
       }
     }
 
@@ -374,152 +445,151 @@ export default function Page({ team_id }: { team_id: string }) {
     }
   }, [messages, selectedId])
 
-  function openCreateDialog(parentId?: string) {
+  const openCreateDialog = useCallback((parentId?: string) => {
     setCreateParentId(parentId)
     setCreateName("")
     setCreateDescription("")
     setCreateOpen(true)
-  }
+  }, [])
 
-  function createRoom() {
+  async function createRoom() {
     const name = createName.trim()
-    if (!name) return
-    const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `r-${Date.now()}`
-    const nowText = formatTimeEs(new Date())
-    const newRoom: Room = {
-      id,
-      name,
-      description: createDescription.trim() || undefined,
-      parentId: createParentId || undefined,
-      members: 0,
-      lastMessage: "",
-      time: nowText,
-      unread: 0,
+    if (!name || !userProfile) {
+      console.log('createRoom: Missing name or userProfile', { name, userProfile: !!userProfile })
+      return
     }
-    setRooms((prev) => [...prev, newRoom])
-    if (createParentId) {
-      setExpanded((e) => ({ ...e, [createParentId]: true }))
+
+    console.log('createRoom: Starting creation process', { name, team_id, userProfile: userProfile.id })
+
+    try {
+      setCreating(true)
+      
+      // Obtener serverId real usando team_id
+      console.log('createRoom: Fetching server info for team_id:', team_id)
+      const server = await getServerByTeamId(team_id)
+      console.log('createRoom: Server info received:', server)
+      
+      const payload: any = {
+        name,
+        description: createDescription.trim() || undefined,
+        created_by: userProfile.id,
+        serverId: server.server_id,
+        parentId: (createParentId && createParentId !== 'root') ? createParentId : ""
+      }
+      
+      console.log('createRoom: Payload to send:', payload)
+
+      const created = await createChannel(payload)
+      console.log('createRoom: Channel created, response:', created)
+      const createdId = (created as any).id || (created as any).channel_id
+      console.log('createRoom: Extracted created ID:', createdId)
+
+      // Refrescar canales desde API
+      console.log('createRoom: Refreshing channels list...')
+      const refreshed = await getChannels(team_id)
+      console.log('createRoom: Refreshed channels:', refreshed)
+      const apiChannels = refreshed.data
+      const convertedRooms: Room[] = apiChannels.map((channel: any) => ({
+        id: channel.id || channel.channel_id,
+        name: channel.name,
+        description: channel.description,
+        parentId: channel.parentId || channel.parent_id || undefined,
+        members: 0,
+        lastMessage: "",
+        time: "",
+        unread: 0,
+      }))
+      console.log('createRoom: Converted rooms:', convertedRooms)
+      
+      setRooms(convertedRooms)
+      if ((created as any).parentId || (created as any).parent_id) {
+        const pid = (created as any).parentId || (created as any).parent_id
+        setExpanded((e) => ({ ...e, [pid as string]: true }))
+      }
+      if (createdId) setSelectedId(createdId)
+      setCreateOpen(false)
+      setCreateName("")
+      setCreateDescription("")
+      setCreateParentId(undefined)
+      console.log('createRoom: Process completed successfully')
+    } catch (err) {
+      console.error('Error creating channel:', err)
+      if (err instanceof Error) {
+        console.error('Error message:', err.message)
+        console.error('Error stack:', err.stack)
+      }
+      alert(`No se pudo crear el canal: ${err instanceof Error ? err.message : 'Error desconocido'}`)
+    } finally {
+      setCreating(false)
     }
-    setSelectedId(id)
-    setCreateOpen(false)
   }
 
   if (loading || !userProfile) {
     return (
-      <main className="h-screen w-full bg-white text-gray-900 flex items-center justify-center">
+      <main className="h-screen w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando usuario...</p>
+          <p className="text-gray-600 dark:text-gray-400">Cargando usuario...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="h-full w-full bg-gradient-to-br from-slate-50 to-blue-50 text-gray-900 overflow-hidden">
-      <div className="flex h-full bg-white/80 backdrop-blur-sm overflow-hidden">
-        <aside className="w-[300px] border-r border-gray-200 bg-white flex flex-col">
-          <div className="px-6 pt-6 pb-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                  <Users className="h-5 w-5" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold">Chat</h1>
-                  <p className="text-sm text-blue-100">Comunicación en tiempo real</p>
-                </div>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/20">
-                <HelpCircle className="h-4 w-4" />
-                <span className="sr-only">Ayuda</span>
-              </Button>
-            </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                className="pl-10 h-10 bg-white/10 border-white/20 text-white placeholder:text-blue-100 focus:bg-white/20"
-                placeholder="Buscar chats..."
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <p className="text-sm font-semibold text-gray-700">Canales</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 hover:bg-blue-50 text-blue-600"
-              onClick={() => openCreateDialog(undefined)}
-              title="Crear canal"
-              aria-label="Crear canal"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <ScrollArea className="flex-1 min-h-0">
-            <ul className="px-4 pb-4">
-              {rootRooms.map((room) => (
-                <RoomNode
-                  key={room.id}
-                  room={room}
-                  depth={0}
-                  selectedId={selectedId}
-                  onSelect={(id) => setSelectedId(id)}
-                  childrenMap={childrenMap}
-                  expanded={expanded}
-                  setExpanded={setExpanded}
-                  onCreateSub={(parentId) => openCreateDialog(parentId)}
-                />
-              ))}
-            </ul>
-          </ScrollArea>
-        </aside>
+    <main className="h-full w-full bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 overflow-hidden">
+      <div className="flex h-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm overflow-hidden">
+        {/* Sidebar de canales provisto por el layout. Este aside interno se ha removido para evitar duplicados. */}
 
         {/* Conversación centro */}
-        <section className="flex-1 flex flex-col bg-white min-h-0 border-l border-gray-200">
-          <header className="h-16 border-b border-gray-200 px-6 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white flex-shrink-0">
+        <section className="flex-1 flex flex-col bg-white dark:bg-gray-900 min-h-0">
+          <header className="h-16 border-b border-gray-200 dark:border-gray-700 px-6 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 flex-shrink-0">
             <div>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm">{selectedRoom?.name?.charAt(0).toUpperCase()}</span>
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <div className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                     {selectedRoom?.name}
                     <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} shadow-sm`}
                       title={isConnected ? 'Conectado' : 'Desconectado'} />
                   </div>
-                  <div className="text-sm text-gray-500">
-                    {selectedRoom?.members ?? 0} miembros • {onlineMembers.length} en línea
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {onlineMembers.length} en línea
                   </div>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 hover:bg-gray-100 rounded-lg">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <Search className="h-4 w-4" />
                 <span className="sr-only">Buscar en chat</span>
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn("h-10 w-10 text-gray-600 hover:bg-gray-100 rounded-lg", showMembers && "bg-blue-50 text-blue-600")}
+                className="h-10 w-10 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                onClick={() => openCreateDialog(undefined)}
+                title="Crear canal o subcanal"
+                aria-label="Crear canal o subcanal"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn("h-10 w-10 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg", showMembers && "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400")}
                 onClick={() => setShowMembers((v) => !v)}
                 title="Ver miembros"
                 aria-label="Ver miembros"
               >
                 <Users className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 hover:bg-gray-100 rounded-lg">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <Info className="h-4 w-4" />
                 <span className="sr-only">Información</span>
               </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 hover:bg-gray-100 rounded-lg">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <MoreVertical className="h-4 w-4" />
                 <span className="sr-only">Más opciones</span>
               </Button>
@@ -527,36 +597,31 @@ export default function Page({ team_id }: { team_id: string }) {
           </header>
 
           {/* Mensajes */}
-          <ScrollArea className="flex-1 bg-gray-50 min-h-0 overflow-y-auto">
+          <ScrollArea className="flex-1 bg-gray-50 dark:bg-gray-800 min-h-0 overflow-y-auto">
             <div className="px-8 py-6">
               {!isConnected && (
                 <div className="text-center py-8">
-                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6 max-w-md mx-auto">
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-700 rounded-2xl p-6 max-w-md mx-auto">
                     <div className="flex items-center justify-center gap-3 mb-3">
                       <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
-                      <span className="font-semibold text-gray-700">Conectando al servidor...</span>
+                      <span className="font-semibold text-gray-700 dark:text-gray-300">Conectando al servidor...</span>
                     </div>
-                    <p className="text-sm text-gray-600">Los mensajes se enviarán cuando se establezca la conexión</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Los mensajes se enviarán cuando se establezca la conexión</p>
                   </div>
                 </div>
               )}
-              {isLoadingMessages && (
-                <div className="text-center py-8">
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
-                    <span className="font-medium text-gray-600">Cargando mensajes...</span>
-                  </div>
-                </div>
-              )}
-              {!isLoadingMessages && roomMessages.length === 0 && (
+              {isLoadingMessages ? (
+                <ChatSkeleton />
+              ) : roomMessages.length === 0 ? (
                 <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <MessageSquare className="h-8 w-8 text-blue-600" />
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <MessageSquare className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">No hay mensajes</h3>
-                  <p className="text-gray-500">¡Sé el primero en escribir en este canal!</p>
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No hay mensajes</h3>
+                  <p className="text-gray-500 dark:text-gray-400">¡Sé el primero en escribir en este canal!</p>
                 </div>
-              )}
+              ) : (
+                <div>
               {roomMessages.map((m) => (
                 <MessageBubble
                   key={m.id}
@@ -567,31 +632,72 @@ export default function Page({ team_id }: { team_id: string }) {
                   userAvatar=""
                 />
               ))}
+                </div>
+              )}
               <div ref={bottomRef} />
             </div>
           </ScrollArea>
 
           {/* Composer */}
-          <footer className="border-t border-gray-200 px-6 py-4 bg-white flex-shrink-0 shadow-sm">
+          <footer className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 bg-white dark:bg-gray-900 flex-shrink-0 shadow-sm">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <Paperclip className="h-5 w-5" />
                 <span className="sr-only">Adjuntar archivo</span>
               </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
+
+              {/* Emoji button + anchored picker */}
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "h-10 w-10 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors",
+                    showEmojiPicker && "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                  )}
+                  onClick={() => setShowEmojiPicker((v) => !v)}
+                >
                 <Smile className="h-5 w-5" />
                 <span className="sr-only">Insertar emoji</span>
               </Button>
+                {showEmojiPicker && (
+                  <div
+                    ref={emojiPickerRef}
+                    className="absolute bottom-full left-0 mb-2 z-50 shadow-2xl rounded-lg border border-gray-200 dark:border-gray-600"
+                  >
+                    <Picker
+                      data={data}
+                      onEmojiSelect={(emoji: any) => {
+                        const newText = draft + emoji.native
+                        setDraft(newText)
+                        setShowEmojiPicker(false)
+                        if (inputRef.current) inputRef.current.focus()
+                      }}
+                      theme="auto"
+                      set="native"
+                      previewPosition="none"
+                      skinTonePosition="none"
+                      maxFrequentRows={2}
+                      perLine={8}
+                      searchPosition="top"
+                    />
+                  </div>
+                )}
+              </div>
 
               <Input
+                ref={inputRef}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Escribe tu mensaje..."
-                className="flex-1 h-12 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
+                className="flex-1 h-12 text-sm border-gray-200 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault()
                     sendMessage()
+                  }
+                  if (e.key === "Escape" && showEmojiPicker) {
+                    setShowEmojiPicker(false)
                   }
                 }}
               />
@@ -619,16 +725,16 @@ export default function Page({ team_id }: { team_id: string }) {
               onClick={() => setShowMembers(false)}
               aria-hidden="true"
             />
-            <aside className="fixed right-0 top-0 bottom-0 z-50 w-[85%] max-w-[320px] border-l border-gray-200 bg-white/95 backdrop-blur-sm shadow-xl lg:static lg:z-auto lg:w-[300px] lg:shadow-none flex flex-col">
-              <header className="h-16 border-b border-gray-200 px-6 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white flex-shrink-0">
+            <aside className="fixed right-0 top-0 bottom-0 z-50 w-[85%] max-w-[320px] border-l border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-xl lg:static lg:z-auto lg:w-[300px] lg:shadow-none flex flex-col">
+              <header className="h-16 border-b border-gray-200 dark:border-gray-700 px-6 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 flex-shrink-0">
                 <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  <div className="text-lg font-semibold text-gray-900">Miembros</div>
+                  <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Miembros</div>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-10 w-10 lg:hidden hover:bg-gray-100 rounded-lg"
+                  className="h-10 w-10 lg:hidden hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                   onClick={() => setShowMembers(false)}
                   aria-label="Cerrar panel"
                 >
@@ -648,8 +754,8 @@ export default function Page({ team_id }: { team_id: string }) {
 
       {/* Botón de ayuda flotante */}
       <div className="fixed right-3 bottom-3 flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full shadow-sm bg-white/90">
-          <HelpCircle className="h-4 w-4 text-gray-600" />
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full shadow-sm bg-white/90 dark:bg-gray-800/90">
+          <HelpCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
           <span className="sr-only">Ayuda</span>
         </Button>
       </div>
@@ -705,8 +811,8 @@ export default function Page({ team_id }: { team_id: string }) {
             <Button variant="ghost" onClick={() => setCreateOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={createRoom} disabled={!createName.trim()}>
-              Crear
+            <Button onClick={createRoom} disabled={!createName.trim() || creating}>
+              {creating ? 'Creando...' : 'Crear'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -715,134 +821,24 @@ export default function Page({ team_id }: { team_id: string }) {
   )
 }
 
-/* ---------- Lista jerárquica ---------- */
-function RoomNode({
-  room,
-  depth,
-  selectedId,
-  onSelect,
-  childrenMap,
-  expanded,
-  setExpanded,
-  onCreateSub,
-}: {
-  room: Room
-  depth: number
-  selectedId: string
-  onSelect: (id: string) => void
-  childrenMap: Map<string, Room[]>
-  expanded: Record<string, boolean>
-  setExpanded: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
-  onCreateSub: (parentId: string) => void
-}) {
-  const children = childrenMap.get(room.id) ?? []
-  const hasChildren = children.length > 0
-  const isOpen = expanded[room.id] ?? true
-
-  return (
-    <li>
-      <div
-        className={cn(
-          "group relative w-full rounded-xl px-3 py-3 hover:bg-gray-50 transition-all duration-200",
-          selectedId === room.id && "bg-gradient-to-r from-blue-50 to-indigo-50 ring-1 ring-blue-200 shadow-sm",
-        )}
-        style={{ paddingLeft: 12 + depth * 20 }}
-      >
-        <div className="flex items-center gap-2">
-          {/* Chevron */}
-          <button
-            className={cn(
-              "mr-1 h-5 w-5 shrink-0 rounded hover:bg-gray-100",
-              !hasChildren && "opacity-0 pointer-events-none",
-            )}
-            onClick={() => setExpanded((e) => ({ ...e, [room.id]: !isOpen }))}
-            aria-label={isOpen ? "Colapsar" : "Expandir"}
-            title={isOpen ? "Colapsar" : "Expandir"}
-          >
-            {isOpen ? (
-              <ChevronDown className="h-4 w-4 text-gray-500" />
-            ) : (
-              <ChevronRight className="h-4 w-4 text-gray-500" />
-            )}
-          </button>
-
-          {/* Avatar y título clickable */}
-          <button onClick={() => onSelect(room.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-            <Avatar className="h-10 w-10 ring-2 ring-gray-100">
-              <AvatarImage src="/avatar-circle.png" alt={room.name} />
-              <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                {room.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between">
-                <span className="truncate text-sm font-semibold text-gray-900">{room.name}</span>
-                {room.time && (
-                  <span className="text-xs text-gray-400 font-medium">{room.time}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="truncate text-xs text-gray-500">{room.lastMessage || room.description || "Sin mensajes"}</p>
-                {room.unread ? (
-                  <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
-                    {room.unread}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </button>
-
-          {/* Botón crear subcanal */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="ml-1 h-8 w-8 opacity-0 group-hover:opacity-100 hover:bg-blue-50 text-blue-600 transition-all duration-200"
-            onClick={() => onCreateSub(room.id)}
-            title="Crear subcanal"
-            aria-label="Crear subcanal"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Hijos */}
-      {hasChildren && isOpen && (
-        <ul>
-          {children.map((child) => (
-            <RoomNode
-              key={child.id}
-              room={child}
-              depth={depth + 1}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              childrenMap={childrenMap}
-              expanded={expanded}
-              setExpanded={setExpanded}
-              onCreateSub={onCreateSub}
-            />
-          ))}
-        </ul>
-      )}
-    </li>
-  )
-}
+// El listado de canales ahora lo provee el layout externo, por lo que el
+// componente RoomNode ya no es necesario en este archivo.
 
 /* ---------- Panel de miembros ---------- */
 function MembersSection({ title, members }: { title: string; members: Member[] }) {
   return (
     <div>
-      <div className="mb-4 text-sm font-semibold text-gray-700 flex items-center gap-2">
+      <div className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
         <div className={`w-2 h-2 rounded-full ${title.includes('Conectados') ? 'bg-green-500' : 'bg-gray-400'}`}></div>
         {title}
       </div>
       <ul className="space-y-2">
         {members.map((m) => (
-          <li key={m.id} className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-gray-50 transition-colors duration-200">
+          <li key={m.id} className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200">
             <PresenceAvatar name={m.name} status={m.status} />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium text-gray-900">{m.name}</div>
-              <div className="text-xs text-gray-500">{m.status === "online" ? "En línea" : "Desconectado"}</div>
+              <div className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{m.name}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{m.status === "online" ? "En línea" : "Desconectado"}</div>
             </div>
           </li>
         ))}
@@ -856,7 +852,7 @@ function PresenceAvatar({ name, status }: { name: string; status: "online" | "of
   const isOnline = status === "online"
   return (
     <div className="relative">
-      <Avatar className="h-10 w-10 ring-2 ring-gray-100">
+      <Avatar className="h-10 w-10 ring-2 ring-gray-100 dark:ring-gray-700">
         <AvatarImage src="/diverse-user-avatars.png" alt={name} />
         <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
           {initial}
@@ -864,7 +860,7 @@ function PresenceAvatar({ name, status }: { name: string; status: "online" | "of
       </Avatar>
       <span
         className={cn(
-          "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white shadow-sm",
+          "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white dark:ring-gray-900 shadow-sm",
           isOnline ? "bg-emerald-500" : "bg-gray-400",
         )}
         aria-label={isOnline ? "Usuario en línea" : "Usuario desconectado"}
@@ -898,7 +894,7 @@ function MessageBubble({
           >
             {text}
           </div>
-          <div className="mt-1 text-[11px] text-gray-400 text-right">{time}</div>
+          <div className="mt-1 text-[11px] text-gray-400 dark:text-gray-500 text-right">{time}</div>
         </div>
         <Avatar className="h-7 w-7">
           <AvatarImage src={userAvatar || "/diverse-user-avatars.png"} alt="Tú" />
@@ -916,15 +912,15 @@ function MessageBubble({
       </Avatar>
       <div className="max-w-[70%]">
         {userName && (
-          <div className="text-[11px] text-gray-500 mb-1">{userName}</div>
+          <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">{userName}</div>
         )}
         <div
-          className="inline-block rounded-2xl rounded-bl-md bg-gray-100 px-3 py-2 text-[13px] leading-5 text-gray-900 break-words whitespace-pre-wrap"
+          className="inline-block rounded-2xl rounded-bl-md bg-gray-100 dark:bg-gray-700 px-3 py-2 text-[13px] leading-5 text-gray-900 dark:text-gray-100 break-words whitespace-pre-wrap"
           style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
         >
           {text}
         </div>
-        <div className="mt-1 text-[11px] text-gray-400">{time}</div>
+        <div className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">{time}</div>
       </div>
     </div>
   )
