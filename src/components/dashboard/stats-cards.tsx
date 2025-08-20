@@ -3,7 +3,7 @@ import { useContext, useEffect, useState } from "react"
 import { AuthContext } from "@/context/AuthContext"
 import { useQuery } from "@tanstack/react-query"
 import { apiClient } from "@/api/client-gateway"
-import { useProjectIssues, useProjectById } from "@/api/queries"
+import { useProjectIssues, useProjectById, useProjectsByUser } from "@/api/queries"
 
 interface DashboardStat {
   title: string
@@ -35,19 +35,37 @@ export function StatsCards({ selectedProjectId }: StatsCardsProps) {
   const [stats, setStats] = useState<DashboardStat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
+  // Get all user projects for aggregation when selectedProjectId is null
+  const { data: userProjects, isLoading: isLoadingUserProjects } = useProjectsByUser(user?.id);
+  
   const { data: userIssues, isLoading: isLoadingUserIssues } = useQuery({
-    queryKey: ['userIssues', user?.id],
+    queryKey: ['allProjectsIssues', user?.id, userProjects?.projects],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!user?.id || !userProjects?.projects || userProjects.projects.length === 0) return [];
+      
       try {
-        const response = await apiClient.get(`/issues/user/${user.id}`);
-        return response.data as Issue[] || [];
+        // Aggregate issues from all user projects
+        const allIssuesPromises = userProjects.projects.map(async (project: any) => {
+          try {
+            const response = await apiClient.get(`/issues/by-project/${project.id}`);
+            return Array.isArray(response.data) ? response.data : [];
+          } catch (error) {
+            console.error(`Error fetching issues for project ${project.id}:`, error);
+            return [];
+          }
+        });
+        
+        const allProjectsIssues = await Promise.all(allIssuesPromises);
+        const flattenedIssues = allProjectsIssues.flat();
+        
+        console.log(`Aggregated ${flattenedIssues.length} issues from ${userProjects.projects.length} projects`);
+        return flattenedIssues as Issue[];
       } catch (error) {
-        console.error("Error fetching user issues:", error);
+        console.error("Error fetching aggregated user issues:", error);
         return [];
       }
     },
-    enabled: !!user?.id && !selectedProjectId,
+    enabled: !!user?.id && !selectedProjectId && !!userProjects?.projects,
   });
   
 
@@ -70,7 +88,7 @@ export function StatsCards({ selectedProjectId }: StatsCardsProps) {
     const issues = selectedProjectId ? projectIssues : userIssues;
     const isDataLoading = selectedProjectId 
       ? (isLoadingProjectIssues || isLoadingProject) 
-      : isLoadingUserIssues;
+      : (isLoadingUserIssues || isLoadingUserProjects);
     
     // Si no hay datos cargando y tenemos una respuesta (aunque sea vacía)
     if (!isDataLoading) {
@@ -142,7 +160,7 @@ export function StatsCards({ selectedProjectId }: StatsCardsProps) {
       
       setIsLoading(false);
     }
-  }, [userIssues, isLoadingUserIssues, projectIssues, isLoadingProjectIssues, projectData, isLoadingProject, selectedProjectId]);
+  }, [userIssues, isLoadingUserIssues, isLoadingUserProjects, projectIssues, isLoadingProjectIssues, projectData, isLoadingProject, selectedProjectId]);
 
   if (isLoading) {
     return (
