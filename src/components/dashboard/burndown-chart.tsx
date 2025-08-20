@@ -12,10 +12,10 @@ import {
 import { Card } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useMemo, useState, useContext, useEffect } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { useContainerSize } from "@/hooks/use-container-size"
 import { useSprintsByProject, useSprintBurndownData } from "@/api/queries"
-import { AuthContext } from "@/context/AuthContext"
+
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -58,7 +58,6 @@ function normalize(api: ApiPayload): SprintsByName {
     console.log(`Date range: ${s.startDate} to ${s.endDate}`);
     
     const startRemaining = s.days[0]?.remaining ?? 0
-    const len = s.days.length
     
     const workingDays = s.days.filter(d => !d.isWeekend).length
     const slope = workingDays > 0 ? startRemaining / workingDays : 0
@@ -203,8 +202,6 @@ interface BurndownChartProps {
 }
 
 export default function BurndownChart({ selectedProjectId }: BurndownChartProps) {
-  const { user } = useContext(AuthContext);
-  
   const [includeCompletedSprints, setIncludeCompletedSprints] = useState(true);
   
   const { data: sprints = [], isLoading: isLoadingSprints } = useSprintsByProject(selectedProjectId || undefined, includeCompletedSprints);

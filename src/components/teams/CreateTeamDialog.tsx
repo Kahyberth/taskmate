@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog"
 
 import { notifications } from "@mantine/notifications"
-import { ImageUpload } from "@/components/teams/ImageUpload"
+import { TeamImageUpload } from "@/components/teams/TeamImageUpload"
 import { AuthContext } from "@/context/AuthContext"
 import axios from "axios"
 import useTeamService from "@/hooks/useTeamService"
@@ -93,9 +93,9 @@ export function CreateTeamDialog({ open, onOpenChange }: CreateTeamDialogProps) 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <label htmlFor="team-cover">Cover Image</label>
-              <ImageUpload
+              <TeamImageUpload
                 currentImage={teamImage || undefined}
-                onImageChange={(image) => setTeamImage(image)}
+                onImageChange={(image: string | null) => setTeamImage(image)}
               />
             </div>
             <div className="grid gap-2">

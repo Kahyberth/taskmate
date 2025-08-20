@@ -3,19 +3,26 @@ import { X, Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Progress } from "@/components/ui/progress"
 import { notifications } from "@mantine/notifications"
-import { uploadImage } from "@/api/images"
+import { uploadProfilePicture, uploadProfileBanner } from "@/api/images"
+import { useContext } from "react"
+import { AuthContext } from "@/context/AuthContext"
 
-export const ImageUpload = ({
-  currentImage,
-  onImageChange,
-  onUploadStart,
-  onUploadComplete,
-}: {
+interface ProfileImageUploadProps {
   currentImage?: string
   onImageChange: (image: string | null) => void
+  type: 'profile-picture' | 'profile-banner'
   onUploadStart?: () => void
   onUploadComplete?: (url: string) => void
-}) => {
+}
+
+export const ProfileImageUpload = ({
+  currentImage,
+  onImageChange,
+  type,
+  onUploadStart,
+  onUploadComplete,
+}: ProfileImageUploadProps) => {
+  const { user } = useContext(AuthContext)
   const [dragActive, setDragActive] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
@@ -49,10 +56,20 @@ export const ImageUpload = ({
   }
 
   const handleFile = async (file: File) => {
-    if (file.size > 2 * 1024 * 1024) {
+    const maxSize = type === 'profile-banner' ? 10 * 1024 * 1024 : 5 * 1024 * 1024 // 10MB para banner, 5MB para foto
+    if (file.size > maxSize) {
       notifications.show({
         title: "Image too large",
-        message: "Please upload an image smaller than 2MB",
+        message: `Please upload an image smaller than ${maxSize / (1024 * 1024)}MB`,
+        color: "red",
+      })
+      return
+    }
+
+    if (!user?.id) {
+      notifications.show({
+        title: "Error",
+        message: "User not authenticated",
         color: "red",
       })
       return
@@ -74,7 +91,12 @@ export const ImageUpload = ({
     }, 100)
 
     try {
-      const result = await uploadImage(file)
+      let result
+      if (type === 'profile-picture') {
+        result = await uploadProfilePicture(file, user.id)
+      } else {
+        result = await uploadProfileBanner(file, user.id)
+      }
       
       if (result.success) {
         setUploadProgress(100)
@@ -83,7 +105,7 @@ export const ImageUpload = ({
         
         notifications.show({
           title: "Success",
-          message: "Image uploaded successfully",
+          message: `${type === 'profile-picture' ? 'Profile picture' : 'Profile banner'} uploaded successfully`,
           color: "green",
         })
       } else {
@@ -109,7 +131,6 @@ export const ImageUpload = ({
     if (inputRef.current) {
       inputRef.current.value = ""
     }
-    
   }
 
   return (
@@ -126,8 +147,18 @@ export const ImageUpload = ({
         onDrop={handleDrop}
       >
         {currentImage ? (
-          <div className="relative aspect-video w-full overflow-hidden rounded-lg">
-            <img src={currentImage || "/placeholder.svg"} alt="Preview" className="object-cover w-full h-full" />
+          <div className={cn(
+            "relative overflow-hidden rounded-lg",
+            type === 'profile-picture' ? "w-32 h-32" : "aspect-video w-full"
+          )}>
+            <img 
+              src={currentImage} 
+              alt={`${type === 'profile-picture' ? 'Profile picture' : 'Profile banner'} preview`} 
+              className={cn(
+                "object-cover",
+                type === 'profile-picture' ? "w-full h-full rounded-full" : "w-full h-full"
+              )} 
+            />
             <button
               onClick={removeImage}
               className="absolute right-2 top-2 rounded-full bg-background/80 p-1 hover:bg-background z-20"
@@ -139,7 +170,9 @@ export const ImageUpload = ({
           <div className="flex flex-col items-center justify-center text-center">
             <Upload className="h-8 w-8 text-muted-foreground" />
             <p className="mt-2 text-sm font-medium">Drag & drop or click to upload</p>
-            <p className="text-xs text-muted-foreground">SVG, PNG, JPG or GIF (max. 2MB)</p>
+            <p className="text-xs text-muted-foreground">
+              SVG, PNG, JPG or GIF (max. {type === 'profile-banner' ? '10MB' : '5MB'})
+            </p>
           </div>
         )}
         <input

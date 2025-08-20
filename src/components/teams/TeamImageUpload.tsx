@@ -3,19 +3,23 @@ import { X, Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Progress } from "@/components/ui/progress"
 import { notifications } from "@mantine/notifications"
-import { uploadImage } from "@/api/images"
+import { uploadTeamImage } from "@/api/images"
 
-export const ImageUpload = ({
-  currentImage,
-  onImageChange,
-  onUploadStart,
-  onUploadComplete,
-}: {
+interface TeamImageUploadProps {
   currentImage?: string
   onImageChange: (image: string | null) => void
+  teamId?: string // Opcional, para equipos existentes
   onUploadStart?: () => void
   onUploadComplete?: (url: string) => void
-}) => {
+}
+
+export const TeamImageUpload = ({
+  currentImage,
+  onImageChange,
+  teamId,
+  onUploadStart,
+  onUploadComplete,
+}: TeamImageUploadProps) => {
   const [dragActive, setDragActive] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
@@ -74,7 +78,15 @@ export const ImageUpload = ({
     }, 100)
 
     try {
-      const result = await uploadImage(file)
+      // Si no hay teamId (equipo nuevo), usar el endpoint genérico
+      let result
+      if (teamId) {
+        result = await uploadTeamImage(file, teamId)
+      } else {
+        // Para equipos nuevos, usar el endpoint genérico
+        const { uploadImage } = await import('@/api/images')
+        result = await uploadImage(file)
+      }
       
       if (result.success) {
         setUploadProgress(100)
@@ -83,7 +95,7 @@ export const ImageUpload = ({
         
         notifications.show({
           title: "Success",
-          message: "Image uploaded successfully",
+          message: "Team image uploaded successfully",
           color: "green",
         })
       } else {
@@ -109,7 +121,6 @@ export const ImageUpload = ({
     if (inputRef.current) {
       inputRef.current.value = ""
     }
-    
   }
 
   return (
@@ -127,7 +138,7 @@ export const ImageUpload = ({
       >
         {currentImage ? (
           <div className="relative aspect-video w-full overflow-hidden rounded-lg">
-            <img src={currentImage || "/placeholder.svg"} alt="Preview" className="object-cover w-full h-full" />
+            <img src={currentImage} alt="Team image preview" className="object-cover w-full h-full" />
             <button
               onClick={removeImage}
               className="absolute right-2 top-2 rounded-full bg-background/80 p-1 hover:bg-background z-20"

@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ImageUpload } from "@/components/teams/ImageUpload";
+import { ProfileImageUpload } from "@/components/profile/ProfileImageUpload";
 import { v4 as uuidv4 } from "uuid";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -277,9 +277,10 @@ export function ProfileEditModal({ open, onOpenChange }: ProfileEditModalProps) 
               <div>
                 <Label>Profile Banner</Label>
                 <div className="mt-1">
-                  <ImageUpload
+                  <ProfileImageUpload
                     currentImage={profileBanner || undefined}
                     onImageChange={(image) => setProfileBanner(image)}
+                    type="profile-banner"
                   />
                 </div>
               </div>
@@ -287,9 +288,10 @@ export function ProfileEditModal({ open, onOpenChange }: ProfileEditModalProps) 
               <div>
                 <Label>Profile Picture</Label>
                 <div className="mt-1">
-                  <ImageUpload
+                  <ProfileImageUpload
                     currentImage={profilePicture || undefined}
                     onImageChange={(image) => setProfilePicture(image)}
+                    type="profile-picture"
                   />
                 </div>
               </div>
