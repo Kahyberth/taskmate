@@ -69,26 +69,70 @@ export function CreateRoomDialog({
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
 
+  // Fetch projects when team changes
   useEffect(() => {
-    if (!selectedProjectId) return;
+    if (!selectedTeamId) {
+      setProjects([]);
+      setSelectedProjectId("");
+      setUserStories([]);
+      setSelectedStories([]);
+      return;
+    }
 
-    const fetchProductBacklogId = async () => {
-      const fetchProductBacklogId = await apiClient.get(
-        `/backlog/get-backlog-by-project/${selectedProjectId}`
-      );
-
-      
-
-      const { id: productBacklogId } = fetchProductBacklogId.data;
-
-      if (productBacklogId !== null) {
-        const fetchUserStories = await apiClient.get(
-          `/backlog/get-all-issues/${productBacklogId}`
+    const fetchProjectsByTeam = async () => {
+      try {
+        const fetchProjectsByTeam = await apiClient.get(
+          `/projects/team-projects?teamId=${selectedTeamId}`
         );
 
-        const userStories = fetchUserStories.data;
+        const { data: projects } = fetchProjectsByTeam;
+        setProjects(projects || []);
+        
+        // Reset project selection and related data when team changes
+        setSelectedProjectId("");
+        setUserStories([]);
+        setSelectedStories([]);
+      } catch (error) {
+        console.error("Error al cargar proyectos del equipo:", error);
+        setProjects([]);
+        setSelectedProjectId("");
+        setUserStories([]);
+        setSelectedStories([]);
+      }
+    };
 
-        setUserStories(userStories || []);
+    fetchProjectsByTeam();
+  }, [selectedTeamId]);
+
+  // Fetch user stories when project changes
+  useEffect(() => {
+    if (!selectedProjectId) {
+      setUserStories([]);
+      setSelectedStories([]);
+      return;
+    }
+
+    const fetchProductBacklogId = async () => {
+      try {
+        const fetchProductBacklogId = await apiClient.get(
+          `/backlog/get-backlog-by-project/${selectedProjectId}`
+        );
+
+        const { id: productBacklogId } = fetchProductBacklogId.data;
+
+        if (productBacklogId !== null) {
+          const fetchUserStories = await apiClient.get(
+            `/backlog/get-all-issues/${productBacklogId}`
+          );
+
+          const userStories = fetchUserStories.data;
+          setUserStories(userStories || []);
+          setSelectedStories([]); // Clear selected stories when project changes
+        }
+      } catch (error) {
+        console.error("Error al cargar historias de usuario:", error);
+        setUserStories([]);
+        setSelectedStories([]);
       }
     };
 
@@ -109,38 +153,12 @@ export function CreateRoomDialog({
           const { data: teams } = fetchTeams.data;
           setTeams(teams || []);
 
+          // Set the first team as selected - this will trigger the projects loading
           if (teams && teams.length > 0) {
             const teamId = teams[0].id.toString();
             setSelectedTeamId(teamId);
-
-            const fetchProjectsByTeam = await apiClient.get(
-              `/projects/team-projects?teamId=${teamId}`
-            );
-
-            const { data: projects } = fetchProjectsByTeam;
-            setProjects(projects || []);
-
-            if (projects && projects.length > 0) {
-              const projectId = projects[0].id.toString();
-              setSelectedProjectId(projectId);
-
-              const fetchProductBacklogId = await apiClient.get(
-                `/backlog/get-backlog-by-project/${projectId}`
-              );
-
-              const { id: productBacklogId } = fetchProductBacklogId.data;
-
-              if (productBacklogId !== null) {
-                const fetchUserStories = await apiClient.get(
-                  `/backlog/get-all-issues/${productBacklogId}`
-                );
-
-                const userStories = fetchUserStories.data;
-
-                setUserStories(userStories || []);
-              }
-            }
           }
+          
           setIsDataLoaded(true);
         } catch (error) {
           console.error("Error al cargar equipos:", error);
